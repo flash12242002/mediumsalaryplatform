@@ -1,0 +1,161 @@
+{
+  "entities": {
+    "SalesConfig": {
+      "title": "SalesConfig",
+      "description": "Configuration parameters for the sales commission and bonus tiers",
+      "type": "object",
+      "properties": {
+        "tiers": {
+          "type": "array",
+          "description": "Array of commission/bonus tier rules"
+        },
+        "targetBonus": {
+          "type": "number",
+          "description": "Additional bonus amount when target is reached"
+        },
+        "targetAmount": {
+          "type": "number",
+          "description": "Sales target amount required to unlock targetBonus"
+        }
+      },
+      "required": ["tiers", "targetBonus", "targetAmount"]
+    },
+    "SalesRecord": {
+      "title": "SalesRecord",
+      "description": "Quarterly or monthly sales and bonus calculation detail for a salesperson",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "empId": { "type": "string" },
+        "name": { "type": "string" },
+        "baseSalary": { "type": "number" },
+        "salesAmount": { "type": "number" },
+        "commission": { "type": "number" },
+        "bonus": { "type": "number" },
+        "totalPay": { "type": "number" },
+        "period": { "type": "string" },
+        "status": { "type": "string", "enum": ["已計算", "核准中", "已發放"] }
+      },
+      "required": ["id", "empId", "name", "baseSalary", "salesAmount", "commission", "bonus", "totalPay", "period", "status"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Salary, welfare, and employment details of all non-managerial full-time staff used for median reports",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "empId": { "type": "string" },
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "department": { "type": "string" },
+        "salary": { "type": "number" },
+        "welfare": { "type": "number" },
+        "year": { "type": "number" },
+        "months": { "type": "number" }
+      },
+      "required": ["id", "empId", "name", "title", "department", "salary", "welfare", "year"]
+    },
+    "Backup": {
+      "title": "Backup",
+      "description": "Cloud S3 storage backup record for median salary reports and commission sheets",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "filename": { "type": "string" },
+        "fileType": { "type": "string" },
+        "size": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "url": { "type": "string" }
+      },
+      "required": ["id", "filename", "fileType", "size", "createdBy", "createdAt", "url"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "System audit log tracking configuration changes, report exports, and access",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "role": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "username", "role", "action", "details", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "System user account with specific roles and access privileges",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["HR_ADMIN", "EXECUTIVE", "SALES_LEADER"] }
+      },
+      "required": ["email", "username", "name", "password", "role"]
+    },
+    "RolePermissions": {
+      "title": "RolePermissions",
+      "description": "Permission configuration mapping for each access role",
+      "type": "object",
+      "properties": {
+        "view_salary": { "type": "boolean" },
+        "calculate_commission": { "type": "boolean" },
+        "manage_backups": { "type": "boolean" },
+        "ai_compliance": { "type": "boolean" },
+        "audit_trail": { "type": "boolean" },
+        "permission_management": { "type": "boolean" }
+      },
+      "required": ["view_salary", "calculate_commission", "manage_backups", "ai_compliance", "audit_trail", "permission_management"]
+    },
+    "Insiders": {
+      "title": "Insiders",
+      "description": "List of employee IDs flagged as internal/insider employees",
+      "type": "object",
+      "properties": {
+        "list": {
+          "type": "array",
+          "description": "List of empId strings"
+        }
+      },
+      "required": ["list"]
+    }
+  },
+  "firestore": {
+    "/config/salesConfig": {
+      "schema": "SalesConfig",
+      "description": "Global sales commission configuration"
+    },
+    "/config/rolePermissions": {
+      "schema": "RolePermissions",
+      "description": "Permission configurations mapped per role"
+    },
+    "/config/insiders": {
+      "schema": "Insiders",
+      "description": "Insiders employee ID list"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "System users collection"
+    },
+    "/salesRecords/{recordId}": {
+      "schema": "SalesRecord",
+      "description": "Quarterly sales records collection"
+    },
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Detailed employee salaries dataset"
+    },
+    "/backups/{backupId}": {
+      "schema": "Backup",
+      "description": "Cloud backup items index"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Immutable system audit trail log collection"
+    }
+  }
+}

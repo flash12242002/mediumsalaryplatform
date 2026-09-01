@@ -1,0 +1,8 @@
+{
+  "name": "HR 薪酬相關報表平台 (HR C&B Related Report Platform)",
+  "description": "提供HR人員一鍵計算業績獎金、非主管職務之全時員工中位數報表、互動數據圖表。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

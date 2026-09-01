@@ -1,0 +1,167 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default catch-all deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isServerWrite(data) {
+      return data != null && 'serverSecret' in data && data.serverSecret == 'LDC_SUPER_SECRET_TOKEN_2026';
+    }
+
+    function isServerRead(resourceData) {
+      return resourceData != null && 'serverSecret' in resourceData && resourceData.serverSecret == 'LDC_SUPER_SECRET_TOKEN_2026';
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.email.endsWith('@ldchotels.com'));
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return getUserData().role;
+    }
+
+    function isHRAdmin() {
+      return isSignedIn() && getUserRole() == "HR_ADMIN";
+    }
+
+    function isExecutive() {
+      return isSignedIn() && getUserRole() == "EXECUTIVE";
+    }
+
+    function isSalesLeader() {
+      return isSignedIn() && getUserRole() == "SALES_LEADER";
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Schema and static validations
+    function isValidSalesConfig(data) {
+      return data.keys().hasAll(['tiers', 'targetBonus', 'targetAmount'])
+        && data.keys().size() == 3
+        && data.tiers is list
+        && data.targetBonus is number
+        && data.targetAmount is number;
+    }
+
+    function isValidSalesRecord(data) {
+      return data.keys().hasAll(['id', 'empId', 'name', 'baseSalary', 'salesAmount', 'commission', 'bonus', 'totalPay', 'period', 'status'])
+        && data.keys().size() == 10
+        && data.id is string
+        && data.empId is string
+        && data.name is string
+        && data.baseSalary is number
+        && data.salesAmount is number
+        && data.commission is number
+        && data.bonus is number
+        && data.totalPay is number
+        && data.period is string
+        && (data.status == '已計算' || data.status == '核准中' || data.status == '已發放');
+    }
+
+    function isValidEmployee(data) {
+      return data.keys().hasAll(['id', 'empId', 'name', 'title', 'department', 'salary', 'welfare', 'year'])
+        && data.id is string
+        && data.empId is string
+        && data.name is string
+        && data.title is string
+        && data.department is string
+        && data.salary is number
+        && data.welfare is number
+        && data.year is number;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'username', 'name', 'password', 'role'])
+        && data.keys().size() == 5
+        && data.email is string
+        && data.username is string
+        && data.name is string
+        && data.password is string
+        && (data.role == 'HR_ADMIN' || data.role == 'EXECUTIVE' || data.role == 'SALES_LEADER');
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'username', 'role', 'action', 'details', 'createdAt'])
+        && data.keys().size() == 6
+        && data.id is string
+        && data.username is string
+        && data.role is string
+        && data.action is string
+        && data.details is string
+        && data.createdAt is string;
+    }
+
+    // -------------------------------------------------------------------------
+    // Path Declarations
+    // -------------------------------------------------------------------------
+
+    // Global configurations
+    match /config/salesConfig {
+      allow read: if isSignedIn() || resource == null || isServerRead(resource.data);
+      allow write: if (isHRAdmin() && isValidSalesConfig(request.resource.data)) || isServerWrite(request.resource.data);
+    }
+
+    match /config/rolePermissions {
+      allow read: if isSignedIn() || resource == null || isServerRead(resource.data);
+      allow write: if isHRAdmin() || isServerWrite(request.resource.data);
+    }
+
+    match /config/insiders {
+      allow read: if isSignedIn() || resource == null || isServerRead(resource.data);
+      allow write: if isHRAdmin() || isServerWrite(request.resource.data);
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if (isSignedIn() && (request.auth.uid == userId || isHRAdmin())) || resource == null || isServerRead(resource.data);
+      allow create, update: if (isHRAdmin() && isValidUser(request.resource.data)) || isServerWrite(request.resource.data);
+      allow delete: if isHRAdmin() || isServerRead(resource.data);
+    }
+
+    // Sales Records Collection
+    match /salesRecords/{recordId} {
+      allow read: if (isSignedIn() && (isHRAdmin() || isExecutive() || isSalesLeader())) || resource == null || isServerRead(resource.data);
+      allow create: if (isHRAdmin() && isValidSalesRecord(request.resource.data)) || isServerWrite(request.resource.data);
+      allow delete: if isHRAdmin() || isServerRead(resource.data);
+      allow update: if (isHRAdmin() && isValidSalesRecord(request.resource.data))
+                    || isServerWrite(request.resource.data)
+                    || (isSalesLeader() 
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) 
+                        && request.resource.data.status == '核准中');
+    }
+
+    // Employees Collection
+    match /employees/{employeeId} {
+      allow read: if (isSignedIn() && (isHRAdmin() || isExecutive())) || resource == null || isServerRead(resource.data);
+      allow write: if (isHRAdmin() && isValidEmployee(request.resource.data)) || isServerWrite(request.resource.data);
+    }
+
+    // Backups Collection
+    match /backups/{backupId} {
+      allow read: if (isSignedIn() && (isHRAdmin() || isExecutive())) || resource == null || isServerRead(resource.data);
+      allow write: if isHRAdmin() || isServerWrite(request.resource.data);
+    }
+
+    // Audit Logs Collection
+    match /auditLogs/{logId} {
+      allow read: if (isSignedIn() && (isHRAdmin() || isExecutive())) || resource == null || isServerRead(resource.data);
+      allow create: if (isSignedIn() && isValidAuditLog(request.resource.data)) || isServerWrite(request.resource.data);
+      allow update: if isServerWrite(request.resource.data);
+      allow delete: if false; // Immutable audit log trail
+    }
+  }
+}
