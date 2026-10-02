@@ -1,421 +1,178 @@
-import React, { useState, useEffect } from "react";
-import { User, EmployeeStats } from "./types";
-import LoginScreen from "./components/LoginScreen";
-import SalesCommissionTab from "./components/SalesCommissionTab";
-import ListingsReportTab from "./components/ListingsReportTab";
-import CloudBackupsTab from "./components/CloudBackupsTab";
-
-import AuditTrailTab from "./components/AuditTrailTab";
-import PermissionManagementTab from "./components/PermissionManagementTab";
-import { 
-  Shield, LogOut, Briefcase, FileBarChart2, CloudLightning, 
-  Bot, ShieldAlert, History, User as UserIcon, RefreshCw, Key, Lock, Settings
-} from "lucide-react";
+import { useState, useEffect } from 'react';
+import Login from './components/Login';
+import EmployeeDashboard from './components/EmployeeDashboard';
+import HrDashboard from './components/HrDashboard';
+import ResetPassword from './components/ResetPassword';
+import { Employee } from './types';
+import { AlertCircle, X } from 'lucide-react';
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("sales_commission");
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<EmployeeStats[]>([]);
+  const [session, setSession] = useState<{
+    role: 'hr' | 'employee' | null;
+    user: any;
+    adminEmails: string[];
+  }>({
+    role: null,
+    user: null,
+    adminEmails: []
+  });
 
-  // Restores session from localStorage if present
+  const [loading, setLoading] = useState(true);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
+
+  // Hook window.alert to direct to our custom state toaster
   useEffect(() => {
-    const savedUser = localStorage.getItem("hr_user");
-    if (savedUser) {
+    try {
+      window.alert = (msg: string) => {
+        console.log("Global window.alert interceptor:", msg);
+        setToast({ message: msg, type: 'info' });
+      };
+    } catch (e) {
+      console.warn("Could not patch window.alert:", e);
+    }
+  }, []);
+
+  // Dismiss toast after 5s
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  // Check URL on load for password reset token
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('reset_token');
+      if (token) {
+        setResetToken(token);
+        try {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (e) {
+          console.warn('replaceState blocked by browser or sandbox:', e);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to access search params:', e);
+    }
+  }, []);
+
+  // Check LocalStorage for existing session on load
+  useEffect(() => {
+    let savedRole: string | null = null;
+    let savedUser: string | null = null;
+    try {
+      savedRole = localStorage.getItem('ldc_onboard_role');
+      savedUser = localStorage.getItem('ldc_onboard_user');
+    } catch (e) {
+      console.warn('Reading from localStorage is blocked or disabled dynamic configurations:', e);
+    }
+    
+    if (savedRole && savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        setSession({
+          role: savedRole as 'hr' | 'employee',
+          user: JSON.parse(savedUser),
+          adminEmails: []
+        });
       } catch (e) {
-        console.error("Session restore failed", e);
+        try {
+          localStorage.removeItem('ldc_onboard_role');
+          localStorage.removeItem('ldc_onboard_user');
+        } catch (removeError) {
+          console.warn('Failed to remove corrupted session storage item:', removeError);
+        }
       }
     }
     setLoading(false);
   }, []);
 
-  // Fetching statistics to pass to the AI Analyst and Listings tabs
-  const fetchStats = async (currentUser: User) => {
-    if (currentUser.role === "SALES_LEADER") return; // block fetching for sales manager
+  const handleLoginSuccess = (role: 'hr' | 'employee', user: any, adminEmails?: string[]) => {
     try {
-      const response = await fetch(`/api/employees/statistics?role=${currentUser.role}`);
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (err) {
-      console.error("載入統計失敗", err);
+      localStorage.setItem('ldc_onboard_role', role);
+      localStorage.setItem('ldc_onboard_user', JSON.stringify(user));
+    } catch (e) {
+      console.warn('Writing to localStorage blocked or denied:', e);
     }
-  };
-
-  const syncUserPermissions = async (currentUser: User) => {
-    try {
-      const response = await fetch("/api/permissions");
-      if (response.ok) {
-        const data = await response.json();
-        const found = data.users.find((u: any) => 
-          u.email.toLowerCase() === currentUser.email.toLowerCase() || 
-          u.username.toLowerCase() === currentUser.username.toLowerCase()
-        );
-        if (found) {
-          const currentRolePermissions = data.rolePermissions[found.role] || {};
-          
-          // Check if there's any actual change in role or permissions before setting state
-          const hasRoleChanged = currentUser.role !== found.role;
-          const hasPermissionsChanged = JSON.stringify(currentUser.permissions) !== JSON.stringify(currentRolePermissions);
-          
-          if (hasRoleChanged || hasPermissionsChanged) {
-            const updatedUser = {
-              ...currentUser,
-              role: found.role,
-              permissions: currentRolePermissions
-            };
-            setUser(updatedUser);
-            localStorage.setItem("hr_user", JSON.stringify(updatedUser));
-          }
-        }
-      }
-    } catch (err) {
-      console.error("同步使用者權限失敗", err);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchStats(user);
-      // Sync on mount/login
-      syncUserPermissions(user);
-    }
-  }, [user?.role, user?.username]);
-
-  const handleLoginSuccess = (loggedInUser: User) => {
-    setUser(loggedInUser);
-    localStorage.setItem("hr_user", JSON.stringify(loggedInUser));
+    
+    setSession({
+      role,
+      user,
+      adminEmails: adminEmails || []
+    });
   };
 
   const handleLogout = () => {
-    if (user) {
-      // Send audit log for logout
-      fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: "LOGOUT", password: "" })
-      }).catch(err => console.error(err));
-    }
-    
-    setUser(null);
-    localStorage.removeItem("hr_user");
-    setActiveTab("sales_commission");
-  };
-
-  // Helper to add log entries dynamically from children tabs
-  const handleLogAction = async (action: string, details: string) => {
-    if (!user) return;
     try {
-      // Create backup endpoint triggers log automatically, 
-      // but we can also trigger manually by calling the server
-      console.log(`Audited Action: [${action}] - ${details}`);
+      localStorage.removeItem('ldc_onboard_role');
+      localStorage.removeItem('ldc_onboard_user');
     } catch (e) {
-      console.error(e);
+      console.warn('Removing storage item blocked or denied:', e);
     }
+    setSession({
+      role: null,
+      user: null,
+      adminEmails: []
+    });
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2" />
-          <span className="text-slate-500 text-xs font-semibold">系統初始化中，請稍候...</span>
-        </div>
+      <div className="min-h-screen bg-[#FAF6F0] flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#8D1B1B]/10 border-t-[#8D1B1B] rounded-full animate-spin"></div>
+        <p className="text-xs text-stone-500 mt-4 tracking-wider">正在載入資料中...</p>
       </div>
     );
   }
 
-  if (!user) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  // Reset Password Token intercepts, Hr, Employee and Login routing with global custom alert toasts
+  let mainContent;
+  if (resetToken) {
+    mainContent = (
+      <ResetPassword
+        token={resetToken}
+        onBackToLogin={() => setResetToken(null)}
+      />
+    );
+  } else if (session.role === 'hr') {
+    mainContent = (
+      <HrDashboard
+        currentUser={session.user}
+        initialEmployees={[]} // Will be loaded dynamically inside HrDashboard
+        onLogout={handleLogout}
+      />
+    );
+  } else if (session.role === 'employee') {
+    mainContent = (
+      <EmployeeDashboard
+        initialEmployee={session.user}
+        onLogout={handleLogout}
+      />
+    );
+  } else {
+    mainContent = <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
-  const isSalesLeader = user.role === "SALES_LEADER";
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800">
-      
-      {/* Platform Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm no-print">
-        <div className="max-w-7xl xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            
-            {/* Title with Primary Traditional Chinese & Secondary English */}
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 bg-blue-50 border border-blue-100 rounded-lg text-blue-600">
-                <Shield className="w-5 h-5" />
-              </div>
-              <div>
-                <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-800">
-                  HR 薪酬相關報表平台
-                </h1>
-                <p className="text-[9px] text-slate-400 font-semibold tracking-wider font-mono">
-                  HR C&B Related Report Platform
-                </p>
-              </div>
-            </div>
-
-            {/* User Profile & Role Badges & Logout */}
-            <div className="flex items-center gap-4 text-xs">
-              <div className="hidden sm:block text-right border-r border-slate-200 pr-4">
-                <span className="font-bold text-slate-700 flex items-center gap-1.5 justify-end">
-                  <UserIcon className="w-3.5 h-3.5 text-slate-400" />
-                  {user.username}
-                </span>
-                <span className="text-[10px] text-slate-400 block font-mono">{user.email}</span>
-              </div>
-
-              {/* Role Badges */}
-              <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                  user.role === "HR_ADMIN" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                  user.role === "EXECUTIVE" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                  "bg-amber-50 text-amber-700 border-amber-200"
-                }`}>
-                  {user.role === "HR_ADMIN" ? "HR 行政管理員" :
-                   user.role === "EXECUTIVE" ? "高階決策主管" :
-                   "業務團隊主管"}
-                </span>
-
-                <button
-                  onClick={handleLogout}
-                  className="p-1.5 bg-slate-50 hover:bg-slate-100 hover:text-red-500 text-slate-500 rounded-lg transition-colors border border-slate-200"
-                  title="安全登出 Secure Logout"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-
-            </div>
-
-          </div>
+    <>
+      {mainContent}
+      {toast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-stone-900 border border-[#D4AF37]/50 text-stone-100 text-xs font-medium px-5 py-3.5 rounded-xl shadow-2xl max-w-sm sm:max-w-md animate-in fade-in slide-in-from-top-4 duration-300">
+          <AlertCircle className="w-4 h-4 text-[#D4AF37] shrink-0" />
+          <div className="flex-1 pr-2 tracking-wide leading-relaxed">{toast.message}</div>
+          <button 
+            type="button"
+            onClick={() => setToast(null)}
+            className="text-stone-400 hover:text-white transition duration-200 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
-      </header>
-
-      {/* Main Layout containing Side Navigation and Content stage */}
-      <div className="flex-1 max-w-7xl xl:max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6">
-        
-        {/* Left Side Navigation Links with Role-based constraints (no-print) */}
-        <aside className="w-full md:w-64 shrink-0 no-print">
-          <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 space-y-1.5">
-            
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">
-              功能導航 / Navigation
-            </div>
-
-            {/* Helper to check dynamic permissions */}
-            {(() => {
-              const getHasPermission = (permKey: string) => {
-                if (!user) return false;
-                if (user.permissions && user.permissions[permKey] !== undefined) {
-                  return user.permissions[permKey];
-                }
-                // Fallbacks
-                if (user.role === "HR_ADMIN") return true;
-                if (user.role === "EXECUTIVE") {
-                  if (permKey === "view_salary" || permKey === "ai_compliance" || permKey === "audit_trail") return true;
-                  return false;
-                }
-                if (user.role === "SALES_LEADER") {
-                  if (permKey === "calculate_commission") return true;
-                  return false;
-                }
-                return false;
-              };
-
-              return (
-                <>
-                  {/* Tab 1: Sales Commission */}
-                  <button
-                    onClick={() => setActiveTab("sales_commission")}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
-                      activeTab === "sales_commission" 
-                        ? "bg-blue-50 text-blue-600 border-blue-100 shadow-xs" 
-                        : "text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 text-left">
-                      <Briefcase className="w-4 h-4 shrink-0" />
-                      <span className="text-left">業績獎金計算 <span className="block text-[9px] font-normal opacity-70 text-left">Sales Bonus</span></span>
-                    </div>
-                    {!getHasPermission("calculate_commission") && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                  </button>
-
-                  {/* Tab 2: Listings Report */}
-                  <button
-                    onClick={() => setActiveTab("listings_report")}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
-                      activeTab === "listings_report" 
-                        ? "bg-blue-50 text-blue-600 border-blue-100 shadow-xs" 
-                        : "text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 text-left">
-                      <FileBarChart2 className="w-4 h-4 shrink-0" />
-                      <span className="text-left">全時人員中位數 <span className="block text-[9px] font-normal opacity-70 text-left">Median Salaries</span></span>
-                    </div>
-                    {!getHasPermission("view_salary") && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                  </button>
-
-                  {/* Tab 3: Cloud Backups */}
-                  <button
-                    onClick={() => setActiveTab("cloud_backups")}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
-                      activeTab === "cloud_backups" 
-                        ? "bg-blue-50 text-blue-600 border-blue-100 shadow-xs" 
-                        : "text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 text-left">
-                      <CloudLightning className="w-4 h-4 shrink-0" />
-                      <span className="text-left">雲端備份與稽核 <span className="block text-[9px] font-normal opacity-70 text-left">Cloud Backups</span></span>
-                    </div>
-                    {!getHasPermission("manage_backups") && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                  </button>
-
-                  {/* Tab 5: Security Trail / Logs */}
-                  <button
-                    onClick={() => setActiveTab("audit_trail")}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
-                      activeTab === "audit_trail" 
-                        ? "bg-blue-50 text-blue-600 border-blue-100 shadow-xs" 
-                        : "text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 text-left">
-                      <History className="w-4 h-4 shrink-0" />
-                      <span className="text-left">異動紀錄 <span className="block text-[9px] font-normal opacity-70 text-left">Change Records</span></span>
-                    </div>
-                    {!getHasPermission("audit_trail") && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                  </button>
-
-                  {/* Tab 6: Permission Management */}
-                  <button
-                    onClick={() => setActiveTab("permission_management")}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
-                      activeTab === "permission_management" 
-                        ? "bg-blue-50 text-blue-600 border-blue-100 shadow-xs" 
-                        : "text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 text-left">
-                      <Settings className="w-4 h-4 shrink-0" />
-                      <span className="text-left">權限管理中心<span className="block text-[9px] font-normal opacity-70 text-left">Permissions & Users</span></span>
-                    </div>
-                    {!getHasPermission("permission_management") && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                  </button>
-                </>
-              );
-            })()}
-
-            {/* Quick Informational Badge */}
-            <div className="pt-4 border-t border-slate-100 mt-4 text-[11px] text-slate-400 px-3 space-y-1">
-              <span className="font-bold text-slate-500 block">安全提示 Secure Notice：</span>
-              <p>當前帳號：{user.username}</p>
-              <p>當前角色：{user.role === "HR_ADMIN" ? "HR 行政管理員" : user.role === "EXECUTIVE" ? "高階決策主管" : "業務團隊主管"}</p>
-            </div>
-
-          </div>
-        </aside>
-
-        {/* Dynamic Display Area / Workspace Component stage */}
-        <main className="flex-1 bg-white border border-slate-200 shadow-sm rounded-xl p-6 overflow-hidden print-card">
-          
-          {(() => {
-            const getHasPermission = (permKey: string) => {
-              if (!user) return false;
-              if (user.permissions && user.permissions[permKey] !== undefined) {
-                return user.permissions[permKey];
-              }
-              if (user.role === "HR_ADMIN") return true;
-              if (user.role === "EXECUTIVE") {
-                if (permKey === "view_salary" || permKey === "ai_compliance" || permKey === "audit_trail") return true;
-                return false;
-              }
-              if (user.role === "SALES_LEADER") {
-                if (permKey === "calculate_commission") return true;
-                return false;
-              }
-              return false;
-            };
-
-            const renderLockedScreen = (moduleName: string, subText: string) => {
-              return (
-                <div className="p-8 max-w-2xl mx-auto text-center font-sans space-y-4 my-12">
-                  <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border border-red-200 shadow-sm">
-                    <Lock className="w-8 h-8" />
-                  </div>
-                  <h2 className="text-xl font-bold text-slate-850">
-                    系統功能存取管制 <span className="text-xs text-slate-400 block mt-1">/ Restricted System Function</span>
-                  </h2>
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 space-y-2 text-left">
-                    <p className="font-bold text-slate-800">🔒 被阻擋功能：{moduleName}</p>
-                    <p>{subText}</p>
-                    <p className="text-slate-500">
-                      依據本公司的內部控制規範與系統功能存取管理策略，此模組目前對您的帳號為禁用狀態。
-                    </p>
-                  </div>
-                </div>
-              );
-            };
-
-            if (activeTab === "sales_commission") {
-              if (!getHasPermission("calculate_commission")) {
-                return renderLockedScreen("業績獎金計算 (Sales Bonus Calculation)", "檢視及計算團隊業績佣金之功能目前已被關閉。");
-              }
-              return <SalesCommissionTab user={user} onLogAction={handleLogAction} />;
-            }
-
-            if (activeTab === "listings_report") {
-              if (!getHasPermission("view_salary")) {
-                return renderLockedScreen("全時人員中位數申報 (Median Salaries Report)", "調閱、申報、下載員工敏感薪酬所得、中位數、董事排除統計明細之功能目前已被關閉。");
-              }
-              return <ListingsReportTab user={user} onLogAction={handleLogAction} />;
-            }
-
-            if (activeTab === "cloud_backups") {
-              if (!getHasPermission("manage_backups")) {
-                return renderLockedScreen("雲端備份與稽核 (Cloud Backups & Auditing)", "對系統統計結果進行雲端快照備份、刪除或還原之功能目前已被關閉。");
-              }
-              return <CloudBackupsTab user={user} onLogAction={handleLogAction} />;
-            }
-
-            if (activeTab === "audit_trail") {
-              if (!getHasPermission("audit_trail")) {
-                return renderLockedScreen("稽核操作日誌 (Audit Trail Log Viewer)", "查看系統內人員之核心登入與資料修改稽核足跡之功能目前已被關閉。");
-              }
-              return <AuditTrailTab user={user} />;
-            }
-
-            if (activeTab === "permission_management") {
-              if (!getHasPermission("permission_management")) {
-                return renderLockedScreen("權限管理中心 (Role & Permission Control Center)", "新增同仁登入帳號、修改系統存取控制矩陣、管理同仁角色權限之功能目前已被關閉。");
-              }
-              return <PermissionManagementTab user={user} onLogAction={handleLogAction} />;
-            }
-
-            return null;
-          })()}
-
-        </main>
-
-      </div>
-
-      {/* Platform Footer (no-print) */}
-      <footer className="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500 space-y-1 no-print">
-        <p className="font-bold text-slate-700">
-          HR 獎金與上市櫃全時人員申報系統 (HR Bonus and Listings Report System)
-        </p>
-        <p>
-          伺服器連線狀態：<span className="text-emerald-500 font-bold">● 連線正常 (Online)</span> | 安全驗證核心：OAuth / ABAC Fortified | 版本：v2.1.0-TS
-        </p>
-        <p className="text-[10px] text-slate-400">
-          © 2026 雲朗觀光股份有限公司 人力資源處。本系統所顯示數據、分析及日誌受營業秘密法及金管會合規規範保護。
-        </p>
-      </footer>
-
-    </div>
+      )}
+    </>
   );
 }

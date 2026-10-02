@@ -639,7 +639,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
       const idxName = findColumnIndex(rows, ["pers_nam", "姓名"]);
       const idxGrade = findColumnIndex(rows, ["grade_cod", "職等"]);
       const idxOnboarding = findColumnIndex(rows, ["enter_dat", "到職日"]);
-      const idxDept = findColumnIndex(rows, ["dept_nam", "部門", "科別", "部處"]);
+      const idxDept = findColumnIndex(rows, ["dept_nam", "部門", "科別", "單位", "處", "組", "部門名稱", "Department", "Dept"]);
       
       if (idxEmpId < 0 || idxName < 0) {
         alert(`檔案解析失敗！未能找到必要的「員編」與「姓名」欄位。\n請確認表格標頭。`);
@@ -1575,7 +1575,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
           empId: merged.empId,
           name: merged.name,
           title: "全時人員",
-          department: merged.department || ".",
+          department: merged.department || "",
           salary,
           welfare: 70000, 
           year: targetYear,
@@ -2269,7 +2269,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
           empId: merged.empId,
           name: merged.name,
           title: "全時人員",
-          department: merged.department || ".",
+          department: merged.department || "",
           salary,
           welfare: 70000, 
           year: importYear,

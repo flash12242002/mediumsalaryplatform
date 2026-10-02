@@ -2,8 +2,12 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import mysql from "mysql2/promise";
+import { open, Database } from "sqlite";
+import sqlite3 from "sqlite3";
 import dotenv from "dotenv";
+import fs from 'fs';
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 dotenv.config();
 
@@ -23,20 +27,20 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 app.use(express.json());
 
 // ==========================================
-// MySQL Connection Pool
+// SQLite Database Connection
 // ==========================================
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || "127.0.0.1",
-  port: parseInt(process.env.DB_PORT || "3306"),
-  user: process.env.DB_USER || "hr_app",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "hr_system",
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  timezone: "+08:00",
-  charset: "utf8mb4",
-});
+let db: Database;
+async function getDb() {
+  if (!db) {
+    db = await open({
+      filename: process.env.DB_PATH || "./database.sqlite",
+      driver: sqlite3.Database,
+    });
+    await db.run("PRAGMA journal_mode = WAL;");
+    await db.run("PRAGMA foreign_keys = ON;");
+  }
+  return db;
+}
 
 // ==========================================
 // Helper Functions
@@ -82,14 +86,15 @@ function getMedian(values: number[]) {
 
 async function addAuditLog(username: string, role: string, action: string, details: string) {
   try {
+    const db = await getDb();
     const id = `log_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
-    await pool.query(
+    await db.run(
       `INSERT INTO audit_logs (id, username, role, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
       [id, username, role, action, details, formatTime()]
     );
     // Keep only last 100 logs
-    await pool.query(
-      `DELETE FROM audit_logs WHERE id NOT IN (SELECT id FROM (SELECT id FROM audit_logs ORDER BY created_at DESC LIMIT 100) t)`
+    await db.run(
+      `DELETE FROM audit_logs WHERE id NOT IN (SELECT id FROM audit_logs ORDER BY created_at DESC LIMIT 100)`
     );
   } catch (err) {
     console.error("Error writing audit log:", err);
@@ -97,8 +102,9 @@ async function addAuditLog(username: string, role: string, action: string, detai
 }
 
 async function getSalesConfig() {
-  const [rows] = await pool.query(`SELECT * FROM sales_config WHERE id = 1`) as any[];
-  if ((rows as any[]).length === 0) {
+  const db = await getDb();
+  const row = await db.get(`SELECT * FROM sales_config WHERE id = 1`);
+  if (!row) {
     return {
       tiers: [
         { id: "t1", min: 0, max: 50000, rate: 2, label: "基本業績" },
@@ -110,7 +116,6 @@ async function getSalesConfig() {
       targetAmount: 200000
     };
   }
-  const row = (rows as any[])[0];
   return {
     tiers: typeof row.tiers === 'string' ? JSON.parse(row.tiers) : row.tiers,
     targetBonus: row.target_bonus,
@@ -120,11 +125,12 @@ async function getSalesConfig() {
 
 async function refreshCommissionRecords() {
   try {
+    const db = await getDb();
     const config = await getSalesConfig();
-    const [records] = await pool.query(`SELECT * FROM sales_records`) as any[];
-    for (const rec of (records as any[])) {
+    const records = await db.all(`SELECT * FROM sales_records`);
+    for (const rec of records) {
       const cal = calculateCommission(Number(rec.sales_amount), config);
-      await pool.query(
+      await db.run(
         `UPDATE sales_records SET commission=?, bonus=?, total_pay=? WHERE id=?`,
         [cal.commission, cal.bonus, Number(rec.base_salary) + cal.totalPay, rec.id]
       );
@@ -135,217 +141,214 @@ async function refreshCommissionRecords() {
 }
 
 // ==========================================
-// MySQL Table Initialization + Seeding
+// SQLite Table Initialization + Seeding
 // ==========================================
-async function initMySQL() {
-  console.log("Initializing MySQL tables...");
-  const conn = await pool.getConnection();
+async function initSQLite() {
+  console.log("Initializing SQLite tables...");
+  const db = await getDb();
   try {
-    await conn.query(`SET NAMES utf8mb4`);
-
     // Users table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(255) NOT NULL UNIQUE,
-        username VARCHAR(255) NOT NULL UNIQUE,
-        name VARCHAR(255) NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        role VARCHAR(50) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        username TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      )
     `);
 
     // Role Permissions table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS role_permissions (
-        role VARCHAR(50) PRIMARY KEY,
-        permissions JSON NOT NULL
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        role TEXT PRIMARY KEY,
+        permissions TEXT NOT NULL
+      )
     `);
 
     // Employees table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS employees (
-        id VARCHAR(100) PRIMARY KEY,
-        emp_id VARCHAR(50) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        title VARCHAR(255),
-        department VARCHAR(255),
-        salary BIGINT NOT NULL DEFAULT 0,
-        welfare BIGINT NOT NULL DEFAULT 0,
-        year INT NOT NULL,
-        months FLOAT,
-        original_annual_salary BIGINT,
-        first_year_end_bonus BIGINT,
-        second_perf_bonus BIGINT,
-        other_bonus BIGINT,
-        bonus28 BIGINT,
-        company_stock_contribution BIGINT,
-        sales_commission BIGINT,
-        work_bonus BIGINT,
-        festival_bonus BIGINT,
-        birthday_gift BIGINT,
-        overtime BIGINT,
-        severance BIGINT,
-        maternity_allowance BIGINT,
-        non_regular_salary BIGINT,
-        monthly_salaries JSON,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_emp_id (emp_id),
-        INDEX idx_year (year)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        id TEXT PRIMARY KEY,
+        emp_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        title TEXT,
+        department TEXT,
+        salary INTEGER NOT NULL DEFAULT 0,
+        welfare INTEGER NOT NULL DEFAULT 0,
+        year INTEGER NOT NULL,
+        months REAL,
+        original_annual_salary INTEGER,
+        first_year_end_bonus INTEGER,
+        second_perf_bonus INTEGER,
+        other_bonus INTEGER,
+        bonus28 INTEGER,
+        company_stock_contribution INTEGER,
+        sales_commission INTEGER,
+        work_bonus INTEGER,
+        festival_bonus INTEGER,
+        birthday_gift INTEGER,
+        overtime INTEGER,
+        severance INTEGER,
+        maternity_allowance INTEGER,
+        non_regular_salary INTEGER,
+        monthly_salaries TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      )
     `);
+    await db.run(`CREATE INDEX IF NOT EXISTS idx_emp_id ON employees (emp_id)`);
+    await db.run(`CREATE INDEX IF NOT EXISTS idx_year ON employees (year)`);
 
     // Members table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS members (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        emp_id VARCHAR(50) NOT NULL UNIQUE,
-        name VARCHAR(255) NOT NULL,
-        grade VARCHAR(50),
-        onboarding_date VARCHAR(50),
-        department VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        emp_id TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        grade TEXT,
+        onboarding_date TEXT,
+        department TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      )
     `);
 
     // Sales Config table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS sales_config (
-        id INT PRIMARY KEY DEFAULT 1,
-        tiers JSON NOT NULL,
-        target_bonus INT NOT NULL DEFAULT 10000,
-        target_amount INT NOT NULL DEFAULT 200000
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        tiers TEXT NOT NULL,
+        target_bonus INTEGER NOT NULL DEFAULT 10000,
+        target_amount INTEGER NOT NULL DEFAULT 200000
+      )
     `);
 
     // Sales Records table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS sales_records (
-        id VARCHAR(100) PRIMARY KEY,
-        emp_id VARCHAR(50) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        base_salary BIGINT NOT NULL DEFAULT 0,
-        sales_amount BIGINT NOT NULL DEFAULT 0,
-        commission BIGINT NOT NULL DEFAULT 0,
-        bonus BIGINT NOT NULL DEFAULT 0,
-        total_pay BIGINT NOT NULL DEFAULT 0,
-        period VARCHAR(50),
-        status VARCHAR(50) DEFAULT '已計算',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        id TEXT PRIMARY KEY,
+        emp_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        base_salary INTEGER NOT NULL DEFAULT 0,
+        sales_amount INTEGER NOT NULL DEFAULT 0,
+        commission INTEGER NOT NULL DEFAULT 0,
+        bonus INTEGER NOT NULL DEFAULT 0,
+        total_pay INTEGER NOT NULL DEFAULT 0,
+        period TEXT,
+        status TEXT DEFAULT '已計算',
+        created_at TEXT DEFAULT (datetime('now'))
+      )
     `);
 
     // Insiders table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS insiders (
-        emp_id VARCHAR(50) PRIMARY KEY
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        emp_id TEXT PRIMARY KEY
+      )
     `);
 
     // Audit Logs table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS audit_logs (
-        id VARCHAR(100) PRIMARY KEY,
-        username VARCHAR(255),
-        role VARCHAR(50),
-        action VARCHAR(255),
+        id TEXT PRIMARY KEY,
+        username TEXT,
+        role TEXT,
+        action TEXT,
         details TEXT,
-        created_at VARCHAR(50),
-        INDEX idx_created_at (created_at)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        created_at TEXT
+      )
     `);
+    await db.run(`CREATE INDEX IF NOT EXISTS idx_audit_created_at ON audit_logs (created_at)`);
 
     // Backups table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS backups (
-        id VARCHAR(100) PRIMARY KEY,
-        filename VARCHAR(500),
-        file_type VARCHAR(50),
-        size VARCHAR(50),
-        created_by VARCHAR(255),
-        created_at VARCHAR(50),
+        id TEXT PRIMARY KEY,
+        filename TEXT,
+        file_type TEXT,
+        size TEXT,
+        created_by TEXT,
+        created_at TEXT,
         url TEXT
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      )
     `);
 
     // Drive Sync Settings table
-    await conn.query(`
+    await db.run(`
       CREATE TABLE IF NOT EXISTS drive_sync_settings (
-        id INT PRIMARY KEY DEFAULT 1,
-        folder_url VARCHAR(500),
-        folder_id VARCHAR(200),
-        auto_sync BOOLEAN DEFAULT FALSE,
-        frequency VARCHAR(50) DEFAULT 'manual',
-        last_sync_time VARCHAR(50),
-        last_sync_status VARCHAR(50) DEFAULT 'idle',
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        folder_url TEXT,
+        folder_id TEXT,
+        auto_sync INTEGER DEFAULT 0,
+        frequency TEXT DEFAULT 'manual',
+        last_sync_time TEXT,
+        last_sync_status TEXT DEFAULT 'idle',
         last_sync_log TEXT,
-        target_year INT DEFAULT 2025,
-        auth_mode VARCHAR(50) DEFAULT 'direct',
-        google_client_id VARCHAR(500)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        target_year INTEGER DEFAULT 2025,
+        auth_mode TEXT DEFAULT 'direct',
+        google_client_id TEXT
+      )
     `);
 
     // ── Seed Default Data (only if tables are empty) ──
 
     // Default Users
-    const [existingUsers] = await conn.query(`SELECT COUNT(*) as count FROM users`) as any[];
-    if ((existingUsers as any[])[0].count === 0) {
-      await conn.query(`
-        INSERT INTO users (email, username, name, password, role) VALUES
-        ('gordon.huang@ldchotels.com', 'gordon.huang@ldchotels.com', 'Gordon', 'mis', 'HR_ADMIN'),
-        ('vivian.chiang@ldchotels.com', 'vivian.chiang@ldchotels.com', '高階主管', 'mis', 'EXECUTIVE'),
-        ('sales_director@ldchotels.com', 'sales_leader', '業務主管', 'sales', 'SALES_LEADER'),
-        ('ann.hsu@ldchotels.com', 'ann.hsu@ldchotels.com', 'Ann', 'mis', 'HR_ADMIN')
-      `);
+    const existingUsers = await db.get(`SELECT COUNT(*) as count FROM users`);
+    if (existingUsers.count === 0) {
+      await db.run(`INSERT INTO users (email, username, name, password, role) VALUES (?,?,?,?,?)`,
+        ['gordon.huang@ldchotels.com', 'gordon.huang@ldchotels.com', 'Gordon', 'mis', 'HR_ADMIN']);
+      await db.run(`INSERT INTO users (email, username, name, password, role) VALUES (?,?,?,?,?)`,
+        ['vivian.chiang@ldchotels.com', 'vivian.chiang@ldchotels.com', '高階主管', 'mis', 'EXECUTIVE']);
+      await db.run(`INSERT INTO users (email, username, name, password, role) VALUES (?,?,?,?,?)`,
+        ['sales_director@ldchotels.com', 'sales_leader', '業務主管', 'sales', 'SALES_LEADER']);
+      await db.run(`INSERT INTO users (email, username, name, password, role) VALUES (?,?,?,?,?)`,
+        ['ann.hsu@ldchotels.com', 'ann.hsu@ldchotels.com', 'Ann', 'mis', 'HR_ADMIN']);
       console.log("✅ Seeded default users.");
     }
 
     // Default Role Permissions
-    const [existingPerms] = await conn.query(`SELECT COUNT(*) as count FROM role_permissions`) as any[];
-    if ((existingPerms as any[])[0].count === 0) {
+    const existingPerms = await db.get(`SELECT COUNT(*) as count FROM role_permissions`);
+    if (existingPerms.count === 0) {
       const perms = [
-        ['HR_ADMIN', JSON.stringify({ view_salary: true, calculate_commission: true, manage_backups: true, ai_compliance: true, audit_trail: true, permission_management: true })],
-        ['EXECUTIVE', JSON.stringify({ view_salary: true, calculate_commission: false, manage_backups: false, ai_compliance: true, audit_trail: true, permission_management: false })],
-        ['SALES_LEADER', JSON.stringify({ view_salary: false, calculate_commission: true, manage_backups: false, ai_compliance: false, audit_trail: false, permission_management: false })],
+        ['HR_ADMIN', JSON.stringify({ view_salary: true, calculate_commission: true, manage_backups: true, onboarding_portal: true, audit_trail: true, permission_management: true })],
+        ['EXECUTIVE', JSON.stringify({ view_salary: true, calculate_commission: false, manage_backups: false, onboarding_portal: true, audit_trail: true, permission_management: false })],
+        ['SALES_LEADER', JSON.stringify({ view_salary: false, calculate_commission: true, manage_backups: false, onboarding_portal: false, audit_trail: false, permission_management: false })],
       ];
       for (const [role, permissions] of perms) {
-        await conn.query(`INSERT INTO role_permissions (role, permissions) VALUES (?, ?)`, [role, permissions]);
+        await db.run(`INSERT INTO role_permissions (role, permissions) VALUES (?, ?)`, [role, permissions]);
       }
       console.log("✅ Seeded default role permissions.");
     }
 
     // Default Sales Config
-    const [existingConfig] = await conn.query(`SELECT COUNT(*) as count FROM sales_config`) as any[];
-    if ((existingConfig as any[])[0].count === 0) {
+    const existingConfig = await db.get(`SELECT COUNT(*) as count FROM sales_config`);
+    if (existingConfig.count === 0) {
       const tiers = JSON.stringify([
         { id: "t1", min: 0, max: 50000, rate: 2, label: "基本業績" },
         { id: "t2", min: 50001, max: 150000, rate: 5, label: "標準業績" },
         { id: "t3", min: 150001, max: 300000, rate: 8, label: "優良業績" },
         { id: "t4", min: 300001, max: 99999999, rate: 12, label: "卓越業績" }
       ]);
-      await conn.query(`INSERT INTO sales_config (id, tiers, target_bonus, target_amount) VALUES (1, ?, 10000, 200000)`, [tiers]);
+      await db.run(`INSERT INTO sales_config (id, tiers, target_bonus, target_amount) VALUES (1, ?, 10000, 200000)`, [tiers]);
       console.log("✅ Seeded default sales config.");
     }
 
     // Default Drive Sync Settings
-    const [existingDrive] = await conn.query(`SELECT COUNT(*) as count FROM drive_sync_settings`) as any[];
-    if ((existingDrive as any[])[0].count === 0) {
-      await conn.query(`
+    const existingDrive = await db.get(`SELECT COUNT(*) as count FROM drive_sync_settings`);
+    if (existingDrive.count === 0) {
+      await db.run(`
         INSERT INTO drive_sync_settings (id, folder_url, folder_id, auto_sync, frequency, last_sync_status, target_year, auth_mode, google_client_id)
         VALUES (1, 'https://drive.google.com/drive/folders/1i8t5Q1r5-Y4RZeadGcq9QGEzLUponwQ7',
-                '1i8t5Q1r5-Y4RZeadGcq9QGEzLUponwQ7', FALSE, 'manual', 'idle', 2025, 'direct', '')
+                '1i8t5Q1r5-Y4RZeadGcq9QGEzLUponwQ7', 0, 'manual', 'idle', 2025, 'direct', '')
       `);
       console.log("✅ Seeded default drive sync settings.");
     }
 
-    console.log("🎉 MySQL initialization complete!");
+    console.log("🎉 SQLite initialization complete!");
   } catch (err) {
-    console.error("❌ Failed to initialize MySQL tables:", err);
+    console.error("❌ Failed to initialize SQLite tables:", err);
     throw err;
-  } finally {
-    conn.release();
   }
 }
 
@@ -355,29 +358,57 @@ async function initMySQL() {
 
 // Auth Endpoint
 app.post("/api/auth/login", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, email, authToken, role } = req.body;
 
-  if (username === "LOGOUT") {
+  // Handle HR login mapping from Onboarding UI integration or fallback to traditional
+  const loginRole = role || 'hr';
+  const loginIdentifier = email || username;
+  const loginSecret = authToken || password;
+
+  if (loginIdentifier === "LOGOUT") {
     return res.json({ success: true });
   }
 
-  try {
-    const [users] = await pool.query(
-      `SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)`,
-      [username, username]
-    ) as any[];
+  // Employee Login Path (checking onboard_db employees)
+  if (loginRole === 'employee') {
+    const normalizedEmail = loginIdentifier.trim().toLowerCase();
+    
+    // Check real employees DB
+    const employee = employees.find(
+      (emp) => emp.email.toLowerCase() === normalizedEmail && emp.authToken.trim() === loginSecret.trim()
+    );
 
-    const [permRows] = await pool.query(`SELECT * FROM role_permissions`) as any[];
+    if (employee) {
+      await addAuditLog(employee.name, 'employee', "員工報到登入", "新進員工透過專屬授權碼登入系統");
+      return res.json({ success: true, user: employee, role: 'employee' });
+    } else {
+      return res.status(401).json({ success: false, message: "登入失敗，電子郵件或授權碼不正確 (Invalid token)" });
+    }
+  }
+
+  // HR / Admin Login Path
+  try {
+    const db = await getDb();
+    const userRecord = await db.get(
+      `SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)`,
+      [loginIdentifier, loginIdentifier]
+    );
+
+    const permRows = await db.all(`SELECT * FROM role_permissions`);
     const rolePermissions: any = {};
-    for (const row of (permRows as any[])) {
-      rolePermissions[row.role] = typeof row.permissions === 'string' ? JSON.parse(row.permissions) : row.permissions;
+    for (const row of permRows) {
+      let perms = typeof row.permissions === 'string' ? JSON.parse(row.permissions) : row.permissions;
+      if (perms && perms.ai_compliance !== undefined && perms.onboarding_portal === undefined) {
+        perms.onboarding_portal = perms.ai_compliance;
+        delete perms.ai_compliance;
+      }
+      rolePermissions[row.role] = perms;
     }
 
-    if ((users as any[]).length > 0 && (users as any[])[0].password === password) {
-      const userRecord = (users as any[])[0];
+    if (userRecord && userRecord.password === loginSecret) {
       const permissions = rolePermissions[userRecord.role] || {
         view_salary: false, calculate_commission: false, manage_backups: false,
-        ai_compliance: false, audit_trail: false, permission_management: false
+        onboarding_portal: false, audit_trail: false, permission_management: false
       };
       const matchedUser = {
         username: userRecord.name || userRecord.username,
@@ -386,7 +417,7 @@ app.post("/api/auth/login", async (req, res) => {
         permissions
       };
       await addAuditLog(matchedUser.username, matchedUser.role, "登入系統", `成功登入系統，授予 ${matchedUser.role} 權限`);
-      return res.json({ success: true, user: matchedUser });
+      return res.json({ success: true, user: matchedUser, role: matchedUser.role });
     }
 
     return res.status(401).json({ success: false, message: "帳號或密碼錯誤 (Invalid username or password)" });
@@ -399,10 +430,11 @@ app.post("/api/auth/login", async (req, res) => {
 // Permissions API Endpoints
 app.get("/api/permissions", async (req, res) => {
   try {
-    const [users] = await pool.query(`SELECT email, username, name, role FROM users`) as any[];
-    const [permRows] = await pool.query(`SELECT * FROM role_permissions`) as any[];
+    const db = await getDb();
+    const users = await db.all(`SELECT email, username, name, role FROM users`);
+    const permRows = await db.all(`SELECT * FROM role_permissions`);
     const rolePermissions: any = {};
-    for (const row of (permRows as any[])) {
+    for (const row of permRows) {
       rolePermissions[row.role] = typeof row.permissions === 'string' ? JSON.parse(row.permissions) : row.permissions;
     }
     res.json({ success: true, users, rolePermissions });
@@ -414,9 +446,10 @@ app.get("/api/permissions", async (req, res) => {
 app.post("/api/permissions/roles", async (req, res) => {
   const { rolePermissions, username, role } = req.body;
   try {
+    const db = await getDb();
     for (const [r, perms] of Object.entries(rolePermissions)) {
-      await pool.query(
-        `INSERT INTO role_permissions (role, permissions) VALUES (?, ?) ON DUPLICATE KEY UPDATE permissions = VALUES(permissions)`,
+      await db.run(
+        `INSERT INTO role_permissions (role, permissions) VALUES (?, ?) ON CONFLICT(role) DO UPDATE SET permissions=excluded.permissions`,
         [r, JSON.stringify(perms)]
       );
     }
@@ -433,18 +466,19 @@ app.post("/api/permissions/users", async (req, res) => {
     return res.status(400).json({ error: "所有欄位皆為必填！" });
   }
   try {
-    const [existing] = await pool.query(
+    const db = await getDb();
+    const existing = await db.get(
       `SELECT id FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)`,
       [email, username]
-    ) as any[];
-    if ((existing as any[]).length > 0) {
+    );
+    if (existing) {
       return res.status(400).json({ error: "帳號或 E-mail 已存在！" });
     }
-    await pool.query(
+    await db.run(
       `INSERT INTO users (email, username, name, password, role) VALUES (?, ?, ?, ?, ?)`,
       [email, username, name, password, newRole]
     );
-    const [users] = await pool.query(`SELECT email, username, name, role FROM users`) as any[];
+    const users = await db.all(`SELECT email, username, name, role FROM users`);
     await addAuditLog(creatorUsername || "管理員", creatorRole || "HR_ADMIN", "新增同仁帳號", `新增帳號: ${name} (${email}), 角色: ${newRole}`);
     res.json({ success: true, users });
   } catch (err: any) {
@@ -458,11 +492,11 @@ app.post("/api/auth/change-password", async (req, res) => {
     return res.status(400).json({ error: "欄位不足！" });
   }
   try {
-    const [users] = await pool.query(`SELECT * FROM users WHERE LOWER(email) = LOWER(?)`, [email]) as any[];
-    if ((users as any[]).length === 0) return res.status(404).json({ error: "找不到該同仁帳號！" });
-    const user = (users as any[])[0];
+    const db = await getDb();
+    const user = await db.get(`SELECT * FROM users WHERE LOWER(email) = LOWER(?)`, [email]);
+    if (!user) return res.status(404).json({ error: "找不到該同仁帳號！" });
     if (user.password !== oldPassword) return res.status(400).json({ error: "舊密碼不正確！" });
-    await pool.query(`UPDATE users SET password = ? WHERE LOWER(email) = LOWER(?)`, [newPassword, email]);
+    await db.run(`UPDATE users SET password = ? WHERE LOWER(email) = LOWER(?)`, [newPassword, email]);
     await addAuditLog(username || user.name, role || user.role, "修改密碼", `同仁 ${user.name} (${email}) 成功變更登入密碼`);
     res.json({ success: true, message: "密碼修改成功！" });
   } catch (err: any) {
@@ -473,8 +507,9 @@ app.post("/api/auth/change-password", async (req, res) => {
 // Audit Logs Endpoint
 app.get("/api/audit/logs", async (req, res) => {
   try {
-    const [logs] = await pool.query(`SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 100`) as any[];
-    const mapped = (logs as any[]).map((l) => ({
+    const db = await getDb();
+    const logs = await db.all(`SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 100`);
+    const mapped = logs.map((l: any) => ({
       id: l.id, username: l.username, role: l.role,
       action: l.action, details: l.details, createdAt: l.created_at
     }));
@@ -500,9 +535,10 @@ app.post("/api/sales/config", async (req, res) => {
     return res.status(403).json({ error: "權限不足，僅限HR管理員修改 (HR Admin permission required)" });
   }
   try {
-    await pool.query(
+    const db = await getDb();
+    await db.run(
       `INSERT INTO sales_config (id, tiers, target_bonus, target_amount) VALUES (1, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE tiers=VALUES(tiers), target_bonus=VALUES(target_bonus), target_amount=VALUES(target_amount)`,
+       ON CONFLICT(id) DO UPDATE SET tiers=excluded.tiers, target_bonus=excluded.target_bonus, target_amount=excluded.target_amount`,
       [JSON.stringify(tiers), targetBonus, targetAmount]
     );
     await refreshCommissionRecords();
@@ -597,8 +633,9 @@ app.get("/auth/google/callback", (req, res) => {
 // Google Drive Sync Settings API
 app.get("/api/drive-sync/settings", async (req, res) => {
   try {
-    const [rows] = await pool.query(`SELECT * FROM drive_sync_settings WHERE id = 1`) as any[];
-    if ((rows as any[]).length === 0) {
+    const db = await getDb();
+    const r = await db.get(`SELECT * FROM drive_sync_settings WHERE id = 1`);
+    if (!r) {
       return res.json({
         folderUrl: "https://drive.google.com/drive/folders/1i8t5Q1r5-Y4RZeadGcq9QGEzLUponwQ7",
         folderId: "1i8t5Q1r5-Y4RZeadGcq9QGEzLUponwQ7",
@@ -607,7 +644,6 @@ app.get("/api/drive-sync/settings", async (req, res) => {
         authMode: "direct", googleClientId: ""
       });
     }
-    const r = (rows as any[])[0];
     res.json({
       folderUrl: r.folder_url, folderId: r.folder_id, autoSync: !!r.auto_sync,
       frequency: r.frequency, lastSyncTime: r.last_sync_time,
@@ -628,19 +664,20 @@ app.post("/api/drive-sync/settings", async (req, res) => {
     return res.status(403).json({ error: "權限不足，僅限HR管理員修改" });
   }
   try {
-    await pool.query(`
+    const db = await getDb();
+    await db.run(`
       INSERT INTO drive_sync_settings
         (id, folder_url, folder_id, auto_sync, frequency, last_sync_time, last_sync_status, last_sync_log, target_year, auth_mode, google_client_id)
       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-        folder_url=VALUES(folder_url), folder_id=VALUES(folder_id), auto_sync=VALUES(auto_sync),
-        frequency=VALUES(frequency), last_sync_time=VALUES(last_sync_time),
-        last_sync_status=VALUES(last_sync_status), last_sync_log=VALUES(last_sync_log),
-        target_year=VALUES(target_year), auth_mode=VALUES(auth_mode), google_client_id=VALUES(google_client_id)
+      ON CONFLICT(id) DO UPDATE SET
+        folder_url=excluded.folder_url, folder_id=excluded.folder_id, auto_sync=excluded.auto_sync,
+        frequency=excluded.frequency, last_sync_time=excluded.last_sync_time,
+        last_sync_status=excluded.last_sync_status, last_sync_log=excluded.last_sync_log,
+        target_year=excluded.target_year, auth_mode=excluded.auth_mode, google_client_id=excluded.google_client_id
     `, [
       folderUrl || "https://drive.google.com/drive/folders/1i8t5Q1r5-Y4RZeadGcq9QGEzLUponwQ7",
       folderId || "1i8t5Q1r5-Y4RZeadGcq9QGEzLUponwQ7",
-      !!autoSync, frequency || "manual",
+      autoSync ? 1 : 0, frequency || "manual",
       lastSyncTime !== undefined ? lastSyncTime : null,
       lastSyncStatus || "idle",
       lastSyncLog !== undefined ? lastSyncLog : "",
@@ -650,8 +687,7 @@ app.post("/api/drive-sync/settings", async (req, res) => {
     ]);
     await addAuditLog(username, role, "更新雲端同步設定",
       `更新 Google Drive 自動同步排程：${frequency}，目標夾：${folderId}，驗證模式：${authMode || "direct"}`);
-    const [rows] = await pool.query(`SELECT * FROM drive_sync_settings WHERE id = 1`) as any[];
-    const r = (rows as any[])[0];
+    const r = await db.get(`SELECT * FROM drive_sync_settings WHERE id = 1`);
     res.json({
       success: true, driveSyncSettings: {
         folderUrl: r.folder_url, folderId: r.folder_id, autoSync: !!r.auto_sync,
@@ -668,8 +704,9 @@ app.post("/api/drive-sync/settings", async (req, res) => {
 // Sales Records API
 app.get("/api/sales/records", async (req, res) => {
   try {
-    const [records] = await pool.query(`SELECT * FROM sales_records ORDER BY created_at DESC`) as any[];
-    const mapped = (records as any[]).map((r) => ({
+    const db = await getDb();
+    const records = await db.all(`SELECT * FROM sales_records ORDER BY created_at DESC`);
+    const mapped = records.map((r: any) => ({
       id: r.id, empId: r.emp_id, name: r.name, baseSalary: r.base_salary,
       salesAmount: r.sales_amount, commission: r.commission, bonus: r.bonus,
       totalPay: r.total_pay, period: r.period, status: r.status
@@ -686,10 +723,11 @@ app.post("/api/sales/records", async (req, res) => {
     return res.status(403).json({ error: "權限不足 (HR Admin permission required)" });
   }
   try {
+    const db = await getDb();
     const config = await getSalesConfig();
     const cal = calculateCommission(Number(salesAmount), config);
     const id = `sr_${Date.now()}`;
-    await pool.query(
+    await db.run(
       `INSERT INTO sales_records (id, emp_id, name, base_salary, sales_amount, commission, bonus, total_pay, period, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, empId, name, Number(baseSalary), Number(salesAmount), cal.commission, cal.bonus,
@@ -719,15 +757,15 @@ app.put("/api/sales/records/:id", async (req, res) => {
     return res.status(403).json({ error: "權限不足 (Permission required)" });
   }
   try {
-    const [rows] = await pool.query(`SELECT * FROM sales_records WHERE id = ?`, [id]) as any[];
-    if ((rows as any[]).length === 0) return res.status(404).json({ error: "找不到該筆業績記錄" });
-    const old = (rows as any[])[0];
+    const db = await getDb();
+    const old = await db.get(`SELECT * FROM sales_records WHERE id = ?`, [id]);
+    if (!old) return res.status(404).json({ error: "找不到該筆業績記錄" });
     const newSalesAmount = salesAmount !== undefined ? Number(salesAmount) : Number(old.sales_amount);
     const newBaseSalary = baseSalary !== undefined ? Number(baseSalary) : Number(old.base_salary);
     const newStatus = status !== undefined ? status : old.status;
     const config = await getSalesConfig();
     const cal = calculateCommission(newSalesAmount, config);
-    await pool.query(
+    await db.run(
       `UPDATE sales_records SET base_salary=?, sales_amount=?, commission=?, bonus=?, total_pay=?, status=? WHERE id=?`,
       [newBaseSalary, newSalesAmount, cal.commission, cal.bonus, newBaseSalary + cal.totalPay, newStatus, id]
     );
@@ -752,10 +790,10 @@ app.delete("/api/sales/records/:id", async (req, res) => {
     return res.status(403).json({ error: "權限不足 (HR Admin permission required)" });
   }
   try {
-    const [rows] = await pool.query(`SELECT * FROM sales_records WHERE id = ?`, [id]) as any[];
-    if ((rows as any[]).length === 0) return res.status(404).json({ error: "找不到該筆業績記錄" });
-    const record = (rows as any[])[0];
-    await pool.query(`DELETE FROM sales_records WHERE id = ?`, [id]);
+    const db = await getDb();
+    const record = await db.get(`SELECT * FROM sales_records WHERE id = ?`, [id]);
+    if (!record) return res.status(404).json({ error: "找不到該筆業績記錄" });
+    await db.run(`DELETE FROM sales_records WHERE id = ?`, [id]);
     await addAuditLog(String(username), String(role), "刪除業績記錄",
       `刪除了 ${record.name} (${record.period}) 的業績獎金計算明細`);
     res.json({ success: true });
@@ -771,13 +809,14 @@ app.get("/api/employees/records", async (req, res) => {
     return res.status(403).json({ error: "權限不足！此資料包含敏感薪資欄位，僅限 HR 人員或高階主管查看。" });
   }
   try {
-    const [employees] = await pool.query(`SELECT * FROM employees ORDER BY year DESC`) as any[];
-    const [members] = await pool.query(`SELECT * FROM members`) as any[];
-    const mapped = (employees as any[]).map((e) => {
-      const m = (members as any[]).find((m) => m.emp_id === e.emp_id);
+    const db = await getDb();
+    const employees = await db.all(`SELECT * FROM employees ORDER BY year DESC`);
+    const members = await db.all(`SELECT * FROM members`);
+    const mapped = employees.map((e: any) => {
+      const m = members.find((m: any) => m.emp_id === e.emp_id);
       return {
         id: e.id, empId: e.emp_id, name: e.name, title: e.title,
-        department: (m && m.department) ? m.department : e.department,
+        department: (m && (m as any).department) ? (m as any).department : e.department,
         salary: e.salary, welfare: e.welfare, year: e.year,
         months: e.months,
         originalAnnualSalary: e.original_annual_salary,
@@ -813,13 +852,14 @@ app.post("/api/employees/import", async (req, res) => {
     return res.status(400).json({ error: "無效的匯入數據" });
   }
   try {
+    const db = await getDb();
     let addedCount = 0;
     let updatedCount = 0;
     const targetYear = Number(year);
     for (const emp of employees) {
-      const [existing] = await pool.query(
+      const existing = await db.get(
         `SELECT id FROM employees WHERE emp_id = ? AND year = ?`, [emp.empId, targetYear]
-      ) as any[];
+      );
       const empValues = [
         emp.name, emp.title || "全時人員", emp.department || "研發部",
         Math.max(0, Number(emp.salary || 0)), Math.max(0, Number(emp.welfare || 70000)), targetYear,
@@ -840,8 +880,8 @@ app.post("/api/employees/import", async (req, res) => {
         emp.nonRegularSalary !== undefined ? Number(emp.nonRegularSalary) : null,
         Array.isArray(emp.monthlySalaries) ? JSON.stringify(emp.monthlySalaries) : null,
       ];
-      if ((existing as any[]).length > 0) {
-        await pool.query(`
+      if (existing) {
+        await db.run(`
           UPDATE employees SET
             name=?, title=?, department=?, salary=?, welfare=?, year=?,
             months=?, original_annual_salary=?, first_year_end_bonus=?, second_perf_bonus=?,
@@ -853,7 +893,7 @@ app.post("/api/employees/import", async (req, res) => {
         updatedCount++;
       } else {
         const id = `emp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        await pool.query(`
+        await db.run(`
           INSERT INTO employees (
             id, emp_id, name, title, department, salary, welfare, year,
             months, original_annual_salary, first_year_end_bonus, second_perf_bonus,
@@ -865,11 +905,11 @@ app.post("/api/employees/import", async (req, res) => {
         addedCount++;
       }
       // Sync with members table
-      const [existingMember] = await pool.query(`SELECT id FROM members WHERE emp_id = ?`, [emp.empId]) as any[];
-      if ((existingMember as any[]).length > 0) {
-        await pool.query(`UPDATE members SET department=? WHERE emp_id=?`, [emp.department || "研發部", emp.empId]);
+      const existingMember = await db.get(`SELECT id FROM members WHERE emp_id = ?`, [emp.empId]);
+      if (existingMember) {
+        await db.run(`UPDATE members SET department=? WHERE emp_id=?`, [emp.department || "研發部", emp.empId]);
       } else {
-        await pool.query(
+        await db.run(
           `INSERT INTO members (emp_id, name, grade, onboarding_date, department) VALUES (?, ?, ?, ?, ?)`,
           [emp.empId, emp.name, "一般", "", emp.department || "研發部"]
         );
@@ -894,8 +934,9 @@ app.post("/api/employees/records", async (req, res) => {
     return res.status(403).json({ error: "權限不足，僅限HR人員新增員工薪資 (HR Admin only)" });
   }
   try {
+    const db = await getDb();
     const id = `emp_${Date.now()}`;
-    await pool.query(`
+    await db.run(`
       INSERT INTO employees (
         id, emp_id, name, title, department, salary, welfare, year,
         months, original_annual_salary, first_year_end_bonus, second_perf_bonus,
@@ -923,11 +964,11 @@ app.post("/api/employees/records", async (req, res) => {
       Array.isArray(monthlySalaries) ? JSON.stringify(monthlySalaries) : null,
     ]);
     // Sync with members table
-    const [existingMember] = await pool.query(`SELECT id FROM members WHERE emp_id = ?`, [empId]) as any[];
-    if ((existingMember as any[]).length > 0) {
-      await pool.query(`UPDATE members SET department=? WHERE emp_id=?`, [department, empId]);
+    const existingMember = await db.get(`SELECT id FROM members WHERE emp_id = ?`, [empId]);
+    if (existingMember) {
+      await db.run(`UPDATE members SET department=? WHERE emp_id=?`, [department, empId]);
     } else {
-      await pool.query(
+      await db.run(
         `INSERT INTO members (emp_id, name, grade, onboarding_date, department) VALUES (?, ?, ?, ?, ?)`,
         [empId, name, "一般", "", department]
       );
@@ -955,10 +996,10 @@ app.put("/api/employees/records/:id", async (req, res) => {
     return res.status(403).json({ error: "權限不足，僅限HR人員修改員工薪資 (HR Admin only)" });
   }
   try {
-    const [rows] = await pool.query(`SELECT * FROM employees WHERE id = ?`, [id]) as any[];
-    if ((rows as any[]).length === 0) return res.status(404).json({ error: "找不到該員工薪資記錄" });
-    const old = (rows as any[])[0];
-    await pool.query(`
+    const db = await getDb();
+    const old = await db.get(`SELECT * FROM employees WHERE id = ?`, [id]);
+    if (!old) return res.status(404).json({ error: "找不到該員工薪資記錄" });
+    await db.run(`
       UPDATE employees SET
         name=?, title=?, department=?, salary=?, welfare=?, year=?,
         months=?, original_annual_salary=?, first_year_end_bonus=?, second_perf_bonus=?,
@@ -991,11 +1032,11 @@ app.put("/api/employees/records/:id", async (req, res) => {
     ]);
     // Sync with members table
     const updatedDept = department || old.department;
-    const [existingMember] = await pool.query(`SELECT id FROM members WHERE emp_id = ?`, [old.emp_id]) as any[];
-    if ((existingMember as any[]).length > 0) {
-      if (updatedDept) await pool.query(`UPDATE members SET department=? WHERE emp_id=?`, [updatedDept, old.emp_id]);
+    const existingMember = await db.get(`SELECT id FROM members WHERE emp_id = ?`, [old.emp_id]);
+    if (existingMember) {
+      if (updatedDept) await db.run(`UPDATE members SET department=? WHERE emp_id=?`, [updatedDept, old.emp_id]);
     } else {
-      await pool.query(
+      await db.run(
         `INSERT INTO members (emp_id, name, grade, onboarding_date, department) VALUES (?, ?, ?, ?, ?)`,
         [old.emp_id, name || old.name, "一般", "", updatedDept || "."]
       );
@@ -1015,10 +1056,10 @@ app.delete("/api/employees/records/:id", async (req, res) => {
     return res.status(403).json({ error: "權限不足，僅限HR人員刪除員工薪資 (HR Admin only)" });
   }
   try {
-    const [rows] = await pool.query(`SELECT * FROM employees WHERE id = ?`, [id]) as any[];
-    if ((rows as any[]).length === 0) return res.status(404).json({ error: "找不到該員工薪資記錄" });
-    const emp = (rows as any[])[0];
-    await pool.query(`DELETE FROM employees WHERE id = ?`, [id]);
+    const db = await getDb();
+    const emp = await db.get(`SELECT * FROM employees WHERE id = ?`, [id]);
+    if (!emp) return res.status(404).json({ error: "找不到該員工薪資記錄" });
+    await db.run(`DELETE FROM employees WHERE id = ?`, [id]);
     await addAuditLog(String(username), String(role), "刪除員工薪資記錄",
       `刪除了 ${emp.name} (${emp.year}年度) 申報資料`);
     res.json({ success: true });
@@ -1033,18 +1074,19 @@ app.delete("/api/employees/records", async (req, res) => {
     return res.status(403).json({ error: "權限不足，僅限HR人員刪除員工薪資 (HR Admin only)" });
   }
   try {
+    const db = await getDb();
     if (year) {
       const targetYear = Number(year);
-      const [result] = await pool.query(`SELECT COUNT(*) as count FROM employees WHERE year = ?`, [targetYear]) as any[];
-      const deletedCount = (result as any[])[0].count;
-      await pool.query(`DELETE FROM employees WHERE year = ?`, [targetYear]);
+      const result = await db.get(`SELECT COUNT(*) as count FROM employees WHERE year = ?`, [targetYear]);
+      const deletedCount = result.count;
+      await db.run(`DELETE FROM employees WHERE year = ?`, [targetYear]);
       await addAuditLog(String(username), String(role), "批次刪除員工薪資",
         `批次刪除了 ${targetYear} 年度所有員工申報資料，共 ${deletedCount} 筆`);
       return res.json({ success: true, deletedCount });
     } else {
-      const [result] = await pool.query(`SELECT COUNT(*) as count FROM employees`) as any[];
-      const deletedCount = (result as any[])[0].count;
-      await pool.query(`DELETE FROM employees`);
+      const result = await db.get(`SELECT COUNT(*) as count FROM employees`);
+      const deletedCount = result.count;
+      await db.run(`DELETE FROM employees`);
       await addAuditLog(String(username), String(role), "清空所有員工薪資",
         `清空了所有年度的員工申報資料，共 ${deletedCount} 筆`);
       return res.json({ success: true, deletedCount });
@@ -1057,8 +1099,9 @@ app.delete("/api/employees/records", async (req, res) => {
 // Member Management (人員管理) Endpoints
 app.get("/api/members", async (req, res) => {
   try {
-    const [members] = await pool.query(`SELECT * FROM members`) as any[];
-    const mapped = (members as any[]).map((m) => ({
+    const db = await getDb();
+    const members = await db.all(`SELECT * FROM members`);
+    const mapped = members.map((m: any) => ({
       empId: m.emp_id, name: m.name, grade: m.grade,
       onboardingDate: m.onboarding_date, department: m.department
     }));
@@ -1077,11 +1120,12 @@ app.post("/api/members/bulk", async (req, res) => {
     return res.status(400).json({ error: "資料格式錯誤" });
   }
   try {
-    await pool.query(`DELETE FROM members`);
+    const db = await getDb();
+    await db.run(`DELETE FROM members`);
     for (const m of members) {
-      await pool.query(
+      await db.run(
         `INSERT INTO members (emp_id, name, grade, onboarding_date, department) VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE name=VALUES(name), grade=VALUES(grade), onboarding_date=VALUES(onboarding_date), department=VALUES(department)`,
+         ON CONFLICT(emp_id) DO UPDATE SET name=excluded.name, grade=excluded.grade, onboarding_date=excluded.onboarding_date, department=excluded.department`,
         [m.empId || m.emp_id, m.name, m.grade || "一般", m.onboardingDate || m.onboarding_date || "", m.department || ""]
       );
     }
@@ -1098,9 +1142,10 @@ app.delete("/api/members", async (req, res) => {
     return res.status(403).json({ error: "權限不足，僅限HR人員清空人員資料" });
   }
   try {
-    const [result] = await pool.query(`SELECT COUNT(*) as count FROM members`) as any[];
-    const originalCount = (result as any[])[0].count;
-    await pool.query(`DELETE FROM members`);
+    const db = await getDb();
+    const result = await db.get(`SELECT COUNT(*) as count FROM members`);
+    const originalCount = result.count;
+    await db.run(`DELETE FROM members`);
     await addAuditLog(String(username), String(role), "清空人員名單", `清空了所有人員基本資料，共 ${originalCount} 筆`);
     res.json({ success: true, deletedCount: originalCount });
   } catch (err: any) {
@@ -1111,8 +1156,9 @@ app.delete("/api/members", async (req, res) => {
 // Insiders (內部人) Management Endpoints
 app.get("/api/insiders", async (req, res) => {
   try {
-    const [rows] = await pool.query(`SELECT emp_id FROM insiders`) as any[];
-    res.json({ success: true, insiders: (rows as any[]).map((r) => r.emp_id) });
+    const db = await getDb();
+    const rows = await db.all(`SELECT emp_id FROM insiders`);
+    res.json({ success: true, insiders: rows.map((r: any) => r.emp_id) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1122,10 +1168,11 @@ app.post("/api/insiders", async (req, res) => {
   const { empId, username, role } = req.body;
   if (!empId) return res.status(400).json({ error: "缺少員工編號 (empId)" });
   try {
-    await pool.query(`INSERT IGNORE INTO insiders (emp_id) VALUES (?)`, [empId]);
+    const db = await getDb();
+    await db.run(`INSERT OR IGNORE INTO insiders (emp_id) VALUES (?)`, [empId]);
     await addAuditLog(String(username || "系統"), String(role || "HR_ADMIN"), "設定內部人", `將員編 ${empId} 設定為內部人`);
-    const [rows] = await pool.query(`SELECT emp_id FROM insiders`) as any[];
-    res.json({ success: true, insiders: (rows as any[]).map((r) => r.emp_id) });
+    const rows = await db.all(`SELECT emp_id FROM insiders`);
+    res.json({ success: true, insiders: rows.map((r: any) => r.emp_id) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1135,10 +1182,11 @@ app.delete("/api/insiders/:empId", async (req, res) => {
   const { empId } = req.params;
   const { username, role } = req.query;
   try {
-    await pool.query(`DELETE FROM insiders WHERE emp_id = ?`, [empId]);
+    const db = await getDb();
+    await db.run(`DELETE FROM insiders WHERE emp_id = ?`, [empId]);
     await addAuditLog(String(username || "系統"), String(role || "HR_ADMIN"), "取消設定內部人", `將員編 ${empId} 取消內部人身分`);
-    const [rows] = await pool.query(`SELECT emp_id FROM insiders`) as any[];
-    res.json({ success: true, insiders: (rows as any[]).map((r) => r.emp_id) });
+    const rows = await db.all(`SELECT emp_id FROM insiders`);
+    res.json({ success: true, insiders: rows.map((r: any) => r.emp_id) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -1151,15 +1199,16 @@ app.get("/api/employees/statistics", async (req, res) => {
     return res.status(403).json({ error: "權限不足，無權存取申報統計數據！" });
   }
   try {
-    const [employees] = await pool.query(`SELECT * FROM employees`) as any[];
-    const [members] = await pool.query(`SELECT * FROM members`) as any[];
-    const [insiderRows] = await pool.query(`SELECT emp_id FROM insiders`) as any[];
-    const insidersList = (insiderRows as any[]).map((r) => r.emp_id);
-    const boardEmpIds = (members as any[]).filter((m) => m.grade === "9").map((m) => m.emp_id);
+    const db = await getDb();
+    const employees = await db.all(`SELECT * FROM employees`);
+    const members = await db.all(`SELECT * FROM members`);
+    const insiderRows = await db.all(`SELECT emp_id FROM insiders`);
+    const insidersList = insiderRows.map((r: any) => r.emp_id);
+    const boardEmpIds = members.filter((m: any) => m.grade === "9").map((m: any) => m.emp_id);
 
-    const enrichedEmployees = (employees as any[]).map((e) => {
-      const m = (members as any[]).find((m) => m.emp_id === e.emp_id);
-      return { ...e, department: (m && m.department) ? m.department : e.department };
+    const enrichedEmployees = employees.map((e: any) => {
+      const m = members.find((m: any) => m.emp_id === e.emp_id);
+      return { ...e, department: (m && (m as any).department) ? (m as any).department : e.department };
     });
 
     const isExcluded = (empId: string) => boardEmpIds.includes(empId) || insidersList.includes(empId);
@@ -1224,8 +1273,9 @@ app.get("/api/cloud/backups", async (req, res) => {
     return res.status(403).json({ error: "權限不足，無法讀取雲端存檔！" });
   }
   try {
-    const [rows] = await pool.query(`SELECT * FROM backups ORDER BY created_at DESC`) as any[];
-    const mapped = (rows as any[]).map((r) => ({
+    const db = await getDb();
+    const rows = await db.all(`SELECT * FROM backups ORDER BY created_at DESC`);
+    const mapped = rows.map((r: any) => ({
       id: r.id, filename: r.filename, fileType: r.file_type, size: r.size,
       createdBy: r.created_by, createdAt: r.created_at, url: r.url
     }));
@@ -1241,10 +1291,11 @@ app.post("/api/cloud/backups", async (req, res) => {
     return res.status(403).json({ error: "權限不足，僅限HR人員上傳或備份 (HR Admin only)" });
   }
   try {
+    const db = await getDb();
     const id = `bk_${Date.now()}`;
     const createdAt = formatTime();
     const url = `https://cloud-storage.local/hr-reports/${encodeURIComponent((filename || "").split('.')[0])}_hash${Math.floor(100 + Math.random() * 900)}.${(fileType || "").toLowerCase()}`;
-    await pool.query(
+    await db.run(
       `INSERT INTO backups (id, filename, file_type, size, created_by, created_at, url) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [id, filename, fileType, size, username, createdAt, url]
     );
@@ -1315,9 +1366,1327 @@ ${reportSummary}
 // VITE OR STATIC MIDDLEWARE (Bootstrapper)
 // ==========================================
 
+
+// === ONBOARDING PORTAL INTEGRATION: DB HELPERS ===
+// Database mock with file persistence
+const DB_FILE = path.join(process.cwd(), 'onboard_db.json');
+
+// Default HR admin accounts as specified in the requirements with custom password support
+let primaryAdminEmail = 'gordon.huang@ldchotels.com';
+
+let hrAdmins: any[] = [
+  { email: 'gordon.huang@ldchotels.com', password: 'mis' },
+  { email: 'vivian.chiang@ldchotels.com', password: 'mis' }
+];
+
+// Helper to normalize legacy string admins to objects
+function getNormalizedAdmins(): { email: string; password: string; permissions?: string[] }[] {
+  return hrAdmins.map(admin => {
+    if (typeof admin === 'string') {
+      const email = admin.toLowerCase().trim();
+      return { 
+        email, 
+        password: 'mis',
+        permissions: email === primaryAdminEmail.toLowerCase().trim()
+          ? ['admin', 'tracker', 'publish', 'ai', 'audit'] 
+          : ['tracker', 'publish', 'ai']
+      };
+    }
+    const email = (admin.email || '').toLowerCase().trim();
+    return {
+      email,
+      password: admin.password || 'mis',
+      permissions: admin.permissions || (
+        email === primaryAdminEmail.toLowerCase().trim()
+          ? ['admin', 'tracker', 'publish', 'ai', 'audit'] 
+          : ['tracker', 'publish', 'ai']
+      )
+    };
+  });
+}
+
+// Memory store for forgot password tokens
+let forgotPasswordTokens: Record<string, { email: string; expires: number }> = {};
+
+interface Employee {
+  id: string;
+  empId?: string;
+  name: string;
+  email: string;
+  authToken: string;
+  department: string;
+  title: string;
+  onboardDate: string;
+  status: 'pending' | 'completed';
+  progress: number;
+  personalData?: any;
+  careerData?: any;
+  uploadedFiles: any[];
+  rulesAgreed: boolean;
+  privacyAgreed: boolean;
+  contractSigned: boolean;
+  contractDate?: string;
+  contractWorkLocation?: string;
+  contractLeaveOption?: string;
+  contractLeavedays?: string;
+  contractSalaryType?: string;
+  contractSalaryAmount?: string;
+  contractProbationMonths?: string;
+  taxDeclaration?: any;
+  guarantorSigned?: boolean;
+  guarantorDate?: string;
+  guarantorData?: any;
+  serviceSigned?: boolean;
+  serviceDate?: string;
+  updatedAt: string;
+}
+
+let employees: Employee[] = [
+  {
+    id: 'emp_001',
+    name: 'Alex 陳',
+    email: 'alex.chen@example.com',
+    authToken: 'LDC888',
+    department: '君品酒店 - 餐飲部',
+    title: '餐飲領班',
+    onboardDate: '2026-06-15',
+    status: 'pending',
+    progress: 15,
+    uploadedFiles: [],
+    rulesAgreed: false,
+    privacyAgreed: false,
+    contractSigned: false,
+    contractWorkLocation: '君品酒店 (台北) (台北市承德路一段3號)',
+    contractLeaveOption: 'biweekly',
+    contractLeavedays: '8',
+    contractSalaryType: 'monthly',
+    contractSalaryAmount: '36,000',
+    contractProbationMonths: '三',
+    updatedAt: new Date().toISOString(),
+    personalData: {
+      name: 'Alex 陳',
+      idNumber: 'A123456789',
+      birthday: '1998-05-12',
+      gender: '男',
+      phone: '0912-345-678',
+      email: 'alex.chen@example.com',
+      legalAddress: '台北市大安區新生南路三段 10 號',
+      contactAddress: '台北市大安區新生南路三段 10 號',
+      bankName: '兆豐國際商業銀行',
+      bankAccount: '017123456789',
+      dependentsCount: '0 人',
+      emergencyName: '陳大同',
+      emergencyRelationship: '父親',
+      emergencyPhone: '0988-765-432'
+    }
+  },
+  {
+    id: 'emp_002',
+    name: 'Sophia 林',
+    email: 'sophia.lin@example.com',
+    authToken: 'LDC999',
+    department: '雲品溫泉酒店 - 客房部',
+    title: '尊榮客務接待專員',
+    onboardDate: '2026-07-01',
+    status: 'pending',
+    progress: 0,
+    uploadedFiles: [],
+    rulesAgreed: false,
+    privacyAgreed: false,
+    contractSigned: false,
+    contractWorkLocation: '雲品溫泉酒店 (日月潭) (南投縣魚池鄉中正路23號)',
+    contractLeaveOption: 'weekly',
+    contractLeavedays: '8',
+    contractSalaryType: 'monthly',
+    contractSalaryAmount: '36,000',
+    contractProbationMonths: '三',
+    updatedAt: new Date().toISOString()
+  }
+];
+
+interface ActivityLog {
+  id: string;
+  operatorEmail: string;
+  operatorName: string;
+  employeeName: string;
+  actionType: string;
+  details: string;
+  timestamp: string;
+}
+
+let activityLogs: ActivityLog[] = [];
+
+// Load from disk if exists
+function loadDatabase() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const data = fs.readFileSync(DB_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (parsed.hrAdmins) {
+        hrAdmins = parsed.hrAdmins.map((admin: any) => {
+          if (typeof admin === 'string') {
+            return { email: admin.toLowerCase().trim(), password: 'mis' };
+          }
+          return {
+            email: (admin.email || '').toLowerCase().trim(),
+            password: admin.password || 'mis',
+            permissions: admin.permissions
+          };
+        });
+      }
+      if (parsed.employees) employees = parsed.employees;
+      if (parsed.activityLogs) activityLogs = parsed.activityLogs;
+      if (parsed.primaryAdminEmail) {
+        primaryAdminEmail = parsed.primaryAdminEmail.toLowerCase().trim();
+      }
+      console.log('Database loaded successfully from disk.');
+      cleanOldLogs();
+    } else {
+      saveDatabase();
+    }
+  } catch (err) {
+    console.error('Error loading database:', err);
+  }
+}
+
+function cleanOldLogs() {
+  const fifteenDaysAgo = Date.now() - 15 * 24 * 60 * 60 * 1000;
+  const originalLength = activityLogs.length;
+  activityLogs = activityLogs.filter(log => {
+    const logTime = new Date(log.timestamp).getTime();
+    return logTime >= fifteenDaysAgo;
+  });
+  if (activityLogs.length !== originalLength) {
+    console.log(`Cleaned ${originalLength - activityLogs.length} activity logs older than 15 days.`);
+  }
+}
+
+// Firebase Firestore database initialization
+const firebaseConfigPath = path.join(process.cwd(), 'firebase-applet-config.json');
+let firebaseDb: Firestore | null = null;
+let isFirestoreAvailable = true;
+
+if (fs.existsSync(firebaseConfigPath)) {
+  try {
+    const config = JSON.parse(fs.readFileSync(firebaseConfigPath, 'utf-8'));
+    const app = initializeApp({
+      projectId: config.projectId
+    });
+    firebaseDb = getFirestore(app, config.firestoreDatabaseId || undefined);
+    console.log('Firebase Admin initialized with project ID:', config.projectId, 'database ID:', config.firestoreDatabaseId);
+  } catch (err) {
+    console.error('Failed to initialize Firebase Admin:', err);
+    isFirestoreAvailable = false;
+  }
+} else {
+  console.warn('firebase-applet-config.json not found, skipping Firebase Admin initialization');
+  isFirestoreAvailable = false;
+}
+
+// Background replication to Firestore
+async function replicateToFirestoreBg() {
+  if (!db || !isFirestoreAvailable) return;
+  try {
+    const batch = firebaseDb.batch();
+
+    // 1. Sync all admins
+    const normalizedAdmins = getNormalizedAdmins();
+    for (const adminObj of normalizedAdmins) {
+      const docRef = firebaseDb.collection('admins').doc(adminObj.email);
+      batch.set(docRef, adminObj);
+    }
+
+    // 2. Sync all employees
+    for (const emp of employees) {
+      const docRef = firebaseDb.collection('employees').doc(emp.id);
+      batch.set(docRef, emp);
+    }
+
+    // 3. Sync all activity logs (limit to last 100 for efficiency)
+    const logsToSync = activityLogs.slice(0, 100);
+    for (const log of logsToSync) {
+      const docRef = firebaseDb.collection('activity_logs').doc(log.id);
+      batch.set(docRef, log);
+    }
+
+    await batch.commit();
+    console.log('Background replication to Firestore completed successfully.');
+  } catch (err: any) {
+    const isPermissionError = err.message && (err.message.includes('PERMISSION_DENIED') || err.message.includes('insufficient permissions'));
+    if (isPermissionError) {
+      isFirestoreAvailable = false;
+      console.warn('⚠️ Firestore Sync Info: Replication encountered permission error. Switched to local JSON database mode.');
+    } else {
+      console.error('Failed background replication to Firestore:', err);
+    }
+  }
+}
+
+// Migrate local database to Firestore
+async function migrateToFirestore() {
+  if (!db || !isFirestoreAvailable) return;
+  try {
+    const batch = firebaseDb.batch();
+
+    // 1. Migrate Admins
+    const normalizedAdmins = getNormalizedAdmins();
+    for (const adminObj of normalizedAdmins) {
+      const docRef = firebaseDb.collection('admins').doc(adminObj.email);
+      batch.set(docRef, adminObj);
+    }
+
+    // 2. Migrate Employees
+    for (const emp of employees) {
+      const docRef = firebaseDb.collection('employees').doc(emp.id);
+      batch.set(docRef, emp);
+    }
+
+    // 3. Migrate Logs
+    for (const log of activityLogs) {
+      const docRef = firebaseDb.collection('activity_logs').doc(log.id);
+      batch.set(docRef, log);
+    }
+
+    await batch.commit();
+    console.log('One-time migration to Firestore completed successfully.');
+  } catch (err) {
+    console.error('Failed to migrate local database to Firestore:', err);
+  }
+}
+
+// Load database from Firestore on startup
+async function loadDatabaseFromFirestore() {
+  // First, always load from the local file as a baseline / fallback
+  loadDatabase();
+
+  if (!db) {
+    console.log('Firestore is not initialized. Using local JSON database.');
+    isFirestoreAvailable = false;
+    return;
+  }
+
+  try {
+    console.log('Syncing database with Firestore...');
+    
+    // 1. Fetch Admins
+    const adminsSnapshot = await firebaseDb.collection('admins').get();
+    let firestoreAdmins: any[] = [];
+    adminsSnapshot.forEach(doc => {
+      firestoreAdmins.push(doc.data());
+    });
+
+    // 2. Fetch Employees
+    const employeesSnapshot = await firebaseDb.collection('employees').get();
+    let firestoreEmployees: Employee[] = [];
+    employeesSnapshot.forEach(doc => {
+      firestoreEmployees.push(doc.data() as Employee);
+    });
+
+    // 3. Fetch Activity Logs
+    const logsSnapshot = await firebaseDb.collection('activity_logs').orderBy('timestamp', 'desc').limit(100).get();
+    let firestoreLogs: ActivityLog[] = [];
+    logsSnapshot.forEach(doc => {
+      firestoreLogs.push(doc.data() as ActivityLog);
+    });
+
+    if (firestoreAdmins.length > 0 || firestoreEmployees.length > 0) {
+      console.log('Firestore data found. Updating in-memory state with Firestore.');
+      if (firestoreAdmins.length > 0) {
+        hrAdmins = firestoreAdmins;
+      }
+      if (firestoreEmployees.length > 0) {
+        employees = firestoreEmployees;
+      }
+      if (firestoreLogs.length > 0) {
+        activityLogs = firestoreLogs;
+      }
+      // Keep local JSON in sync
+      try {
+        fs.writeFileSync(DB_FILE, JSON.stringify({ hrAdmins, employees, activityLogs }, null, 2), 'utf-8');
+      } catch (err) {
+        console.error('Error saving back to local DB:', err);
+      }
+    } else {
+      console.log('Firestore is empty. Migrating local database to Firestore...');
+      await migrateToFirestore();
+    }
+  } catch (err: any) {
+    isFirestoreAvailable = false;
+    const isPermissionError = err.message && (err.message.includes('PERMISSION_DENIED') || err.message.includes('insufficient permissions'));
+    if (isPermissionError) {
+      console.warn('⚠️ Firestore Sync Info: Missing or insufficient permissions. Operating in reliable local-only JSON database mode.');
+    } else {
+      console.warn('⚠️ Firestore Sync Info: Could not connect to Firestore (', err.message, '). Operating in reliable local-only JSON database mode.');
+    }
+  }
+}
+
+function saveDatabase() {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify({ hrAdmins, employees, activityLogs, primaryAdminEmail }, null, 2), 'utf-8');
+    
+    // Trigger background replication to Firestore
+    replicateToFirestoreBg();
+  } catch (err) {
+    console.error('Error saving database:', err);
+  }
+}
+
+function logActivity(req: express.Request, employeeName: string, actionType: string, details: string) {
+  const operatorEmail = (req.headers['x-operator-email'] as string) || '';
+  let operatorName = (req.headers['x-operator-name'] as string) || '';
+  
+  if (operatorName) {
+    try {
+      operatorName = decodeURIComponent(operatorName);
+    } catch (e) {
+      // ignore decoding error if it is already regular string
+    }
+  }
+
+  const newLog: ActivityLog = {
+    id: 'log_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    operatorEmail: operatorEmail.trim() || 'system@ldchotels.com',
+    operatorName: operatorName.trim() || '系統管理員',
+    employeeName: employeeName ? employeeName.trim() : '全體項目',
+    actionType,
+    details: details.trim(),
+    timestamp: new Date().toISOString()
+  };
+
+  activityLogs.unshift(newLog);
+  cleanOldLogs();
+  saveDatabase();
+}
+
+// Initialize Server-Side Gemini API
+let aiClient: GoogleGenAI | null = null;
+if (process.env.GEMINI_API_KEY) {
+  try {
+    aiClient = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    });
+    console.log('Gemini AI Client initialized successfully.');
+  } catch (err) {
+    console.error('Failed to initialize Gemini AI Client:', err);
+  }
+}
+// === ONBOARDING PORTAL INTEGRATION: API ROUTES ===
+
+// 2. HR Endpoints
+// Get all activity logs
+app.get('/api/hr/activity-logs', (req, res) => {
+  cleanOldLogs();
+  saveDatabase();
+  return res.json(activityLogs || []);
+});
+
+// Get all employees
+app.get('/api/hr/employees', (req, res) => {
+  return res.json(employees);
+});
+
+// Create single employee
+app.post('/api/hr/employees', (req, res) => {
+  const { 
+    name, 
+    email, 
+    authToken, 
+    department, 
+    title, 
+    onboardDate,
+    empId,
+    contractWorkLocation,
+    contractLeaveOption,
+    contractLeavedays,
+    contractSalaryType,
+    contractSalaryAmount,
+    contractProbationMonths
+  } = req.body;
+  
+  if (!name || !email || !authToken || !department || !title || !onboardDate) {
+    return res.status(400).json({ error: '所有欄位均為必填' });
+  }
+
+  const exists = employees.some(emp => emp.email.toLowerCase() === email.trim().toLowerCase());
+  if (exists) {
+    return res.status(400).json({ error: '此電子郵件已存在於新進同仁名單中' });
+  }
+
+  const newEmp: Employee = {
+    id: 'emp_' + Date.now(),
+    empId: empId ? empId.trim() : '',
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    authToken: authToken.trim(),
+    department: department.trim(),
+    title: title.trim(),
+    onboardDate: onboardDate,
+    status: 'pending',
+    progress: 0,
+    uploadedFiles: [],
+    rulesAgreed: false,
+    privacyAgreed: false,
+    contractSigned: false,
+    contractWorkLocation: contractWorkLocation || '君品酒店 (台北市承德路一段3號)',
+    contractLeaveOption: contractLeaveOption || 'biweekly',
+    contractLeavedays: contractLeavedays || '8',
+    contractSalaryType: contractSalaryType || 'monthly',
+    contractSalaryAmount: contractSalaryAmount || '36,000',
+    contractProbationMonths: contractProbationMonths || '三',
+    updatedAt: new Date().toISOString()
+  };
+
+  employees.push(newEmp);
+  logActivity(req, newEmp.name, 'CREATE_EMPLOYEE', `新增新進同仁: ${newEmp.name} (${newEmp.department} - ${newEmp.title})`);
+  saveDatabase();
+  return res.json({ message: '成功新增新進同仁', employee: newEmp, employees });
+});
+
+// Delete individual employee
+app.delete('/api/hr/employees/:id', (req, res) => {
+  const { id } = req.params;
+  const index = employees.findIndex(emp => emp.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: '找不到該同仁資料' });
+  }
+
+  const emp = employees[index];
+  const empName = emp.name;
+  employees.splice(index, 1);
+  
+  // Explicitly delete from Firestore to prevent orphaned documents
+  if (db && isFirestoreAvailable) {
+    firebaseDb.collection('employees').doc(id).delete().catch(err => {
+      console.error(`Failed to delete employee ${id} from Firestore:`, err);
+    });
+  }
+
+  logActivity(req, empName, 'DELETE_EMPLOYEE', `刪除同仁資料: ${empName} (${emp.department})`);
+  saveDatabase();
+  return res.json({ message: '成功刪除同仁資料', employees });
+});
+
+// Reject / Return employee onboarding to fill state (Reset signatures but keep text fields)
+app.post('/api/hr/employees/:id/reject', (req, res) => {
+  const { id } = req.params;
+  const empIndex = employees.findIndex(emp => emp.id === id);
+  if (empIndex === -1) {
+    return res.status(404).json({ error: '找不到該同仁資料' });
+  }
+
+  const emp = employees[empIndex];
+  emp.status = 'pending';
+  emp.contractSigned = false;
+  emp.rulesAgreed = false;
+  emp.privacyAgreed = false;
+  emp.guarantorSigned = false;
+  emp.serviceSigned = false;
+  if (emp.taxDeclaration) {
+    emp.taxDeclaration.signed = false;
+  }
+
+  // Recalculate progress across 8 parts:
+  let newProgress = 0;
+  if (emp.personalData && emp.personalData.name && emp.personalData.phone) {
+    newProgress += 15;
+  }
+  if (emp.careerData && (emp.careerData.experiences?.length > 0 || emp.careerData.educations?.length > 0 || emp.careerData.licenses?.length > 0)) {
+    newProgress += 15;
+  }
+  if (emp.uploadedFiles && emp.uploadedFiles.length > 0) {
+    newProgress += 15;
+  }
+  if (emp.rulesAgreed && emp.privacyAgreed) {
+    newProgress += 10;
+  }
+  if (emp.taxDeclaration && emp.taxDeclaration.signed) {
+    newProgress += 15;
+  }
+  if (emp.contractSigned) {
+    newProgress += 10;
+  }
+  if (emp.guarantorSigned) {
+    newProgress += 10;
+  }
+  if (emp.serviceSigned) {
+    newProgress += 10;
+  }
+
+  emp.progress = newProgress;
+  emp.updatedAt = new Date().toISOString();
+  
+  employees[empIndex] = emp;
+  logActivity(req, emp.name, 'REJECT_ONBOARDING', `將同仁報到退回開放修改: ${emp.name}`);
+  saveDatabase();
+  return res.json({ message: '已將同仁申請退回，開放修改', employee: emp, employees });
+});
+
+// Update employee ID (員工編號)
+app.put('/api/hr/employees/:id/empid', (req, res) => {
+  const { id } = req.params;
+  const { empId } = req.body;
+  const empIndex = employees.findIndex(emp => emp.id === id);
+  if (empIndex === -1) {
+    return res.status(404).json({ error: '找不到該同仁資料' });
+  }
+
+  const emp = employees[empIndex];
+  const oldId = emp.empId || '未設定';
+  const newId = empId ? empId.trim() : '';
+  emp.empId = newId;
+  emp.updatedAt = new Date().toISOString();
+  logActivity(req, emp.name, 'UPDATE_EMP_ID', `更新同仁編號: "${oldId}" -> "${newId || '未設定'}"`);
+  saveDatabase();
+  return res.json({ message: '員工編號更新完成', employee: emp, employees });
+});
+
+// Update employee email address (修改電子郵件地址)
+app.put('/api/hr/employees/:id/email', (req, res) => {
+  const { id } = req.params;
+  const { email } = req.body;
+  
+  if (!email || !email.trim()) {
+    return res.status(400).json({ error: '電子郵件地址不能為空' });
+  }
+
+  const empIndex = employees.findIndex(emp => emp.id === id);
+  if (empIndex === -1) {
+    return res.status(404).json({ error: '找不到該同仁資料' });
+  }
+
+  const newEmail = email.trim().toLowerCase();
+  const duplicateExists = employees.some(emp => emp.id !== id && emp.email.toLowerCase() === newEmail);
+  if (duplicateExists) {
+    return res.status(400).json({ error: '此電子郵件地址已被其他同仁使用' });
+  }
+
+  const emp = employees[empIndex];
+  const oldEmail = emp.email;
+  emp.email = newEmail;
+  emp.updatedAt = new Date().toISOString();
+  
+  logActivity(req, emp.name, 'UPDATE_EMAIL', `更新同仁電子郵件地址: "${oldEmail}" -> "${newEmail}"`);
+  saveDatabase();
+  return res.json({ message: '電子郵件地址更新完成', employee: emp, employees });
+});
+
+// Update employee contract probation months (合約試用期)
+app.put('/api/hr/employees/:id/probation', (req, res) => {
+  const { id } = req.params;
+  const { contractProbationMonths } = req.body;
+  const empIndex = employees.findIndex(emp => emp.id === id);
+  if (empIndex === -1) {
+    return res.status(404).json({ error: '找不到該同仁資料' });
+  }
+
+  const emp = employees[empIndex];
+  const oldProbation = emp.contractProbationMonths || '三';
+  const newProbation = contractProbationMonths ? contractProbationMonths.trim() : '三';
+  emp.contractProbationMonths = newProbation;
+  emp.updatedAt = new Date().toISOString();
+  logActivity(req, emp.name, 'UPDATE_PROBATION', `更新同仁試用期: "${oldProbation}" -> "${newProbation}"`);
+  saveDatabase();
+  return res.json({ message: '合約試用期更新完成', employee: emp, employees });
+});
+
+// Send onboarding notification email (simulated)
+app.post('/api/hr/employees/:id/send-onboarding-email', (req, res) => {
+  const { id } = req.params;
+  const empIndex = employees.findIndex(emp => emp.id === id);
+  if (empIndex === -1) {
+    return res.status(404).json({ error: '找不到該同仁資料' });
+  }
+
+  const emp = employees[empIndex];
+  emp.updatedAt = new Date().toISOString();
+  logActivity(
+    req, 
+    emp.name, 
+    'SEND_ONBOARDING_EMAIL', 
+    `發送入職報到通知信至: ${emp.email} (包含姓名: ${emp.name}、職稱: ${emp.title}、日期: ${emp.onboardDate}、地點: ${emp.contractWorkLocation || '君品酒店'}、薪資: ${emp.contractSalaryAmount || '36,000'}與驗證碼: ${emp.authToken})`
+  );
+  saveDatabase();
+  return res.json({ message: '報到通知信發送成功', employee: emp, employees });
+});
+
+// Update onboarding progress and checklists manually by HR
+app.put('/api/hr/employees/:id/onboarding-progress', (req, res) => {
+  const { id } = req.params;
+  const { 
+    personalDataCompleted,
+    careerDataCompleted,
+    filesCompleted,
+    rulesAgreedCompleted,
+    taxCompleted,
+    contractCompleted,
+    guarantorCompleted,
+    serviceCompleted,
+    manualStatus, // 'pending' | 'completed'
+    manualProgress // number (0 to 100)
+  } = req.body;
+
+  const empIndex = employees.findIndex(emp => emp.id === id);
+  if (empIndex === -1) {
+    return res.status(404).json({ error: '找不到該同仁資料' });
+  }
+
+  const emp = employees[empIndex];
+
+  // 1. Handle individual checkbox overrides
+  if (personalDataCompleted !== undefined) {
+    if (personalDataCompleted) {
+      if (!emp.personalData) {
+        emp.personalData = {
+          name: emp.name,
+          phone: '0900-000-000',
+          idNumber: 'A123456789',
+          birthday: '2000-01-01',
+          email: emp.email,
+          legalAddress: '由 HR 手動覆核完成',
+          contactAddress: '由 HR 手動覆核完成',
+          bankName: '手動核備',
+          bankAccount: '手動核備',
+          dependentsCount: '0 人',
+          emergencyName: '聯絡人',
+          emergencyRelationship: '其他',
+          emergencyPhone: '0900-000-000'
+        };
+      }
+    } else {
+      delete emp.personalData;
+    }
+  }
+
+  if (careerDataCompleted !== undefined) {
+    if (careerDataCompleted) {
+      if (!emp.careerData) {
+        emp.careerData = {
+          experiences: [{ companyName: '手動核備', jobTitle: '無', startDate: '', endDate: '', leaveReason: '' }],
+          licenses: [],
+          additionalNotes: '由 HR 手動覆核完成'
+        };
+      }
+    } else {
+      delete emp.careerData;
+    }
+  }
+
+  if (filesCompleted !== undefined) {
+    if (filesCompleted) {
+      if (!emp.uploadedFiles || emp.uploadedFiles.length === 0) {
+        emp.uploadedFiles = [{
+          name: 'HR_MANUAL_VERIFIED.pdf',
+          size: 1024,
+          uploadedAt: new Date().toISOString(),
+          docType: '其他應繳文件'
+        }];
+      }
+    } else {
+      emp.uploadedFiles = [];
+    }
+  }
+
+  if (rulesAgreedCompleted !== undefined) {
+    emp.rulesAgreed = rulesAgreedCompleted;
+    emp.privacyAgreed = rulesAgreedCompleted;
+  }
+
+  if (taxCompleted !== undefined) {
+    if (taxCompleted) {
+      emp.taxDeclaration = {
+        spouseName: '', spouseBirthday: '', spouseIdNumber: '',
+        dependents: [],
+        signed: true,
+        signName: emp.name,
+        signedAt: new Date().toISOString().split('T')[0]
+      };
+    } else {
+      if (emp.taxDeclaration) {
+        emp.taxDeclaration.signed = false;
+      }
+    }
+  }
+
+  if (contractCompleted !== undefined) {
+    emp.contractSigned = contractCompleted;
+    if (contractCompleted && !emp.contractDate) {
+      emp.contractDate = new Date().toISOString().split('T')[0];
+    }
+  }
+
+  if (guarantorCompleted !== undefined) {
+    emp.guarantorSigned = guarantorCompleted;
+    if (guarantorCompleted) {
+      if (!emp.guarantorDate) emp.guarantorDate = new Date().toISOString().split('T')[0];
+      if (!emp.guarantorData) {
+        emp.guarantorData = {
+          guarantorName: '手動覆核',
+          birthday: '1980-01-01',
+          idNumber: 'A123456789',
+          address: '手動覆核',
+          phone: '0900-000-000',
+          companyName: '無',
+          companyTitle: '無',
+          companyAddress: '無',
+          companyPhone: '0900-000-000',
+          relationship: '其他',
+          validUntil: new Date().toISOString().split('T')[0]
+        };
+      }
+    }
+  }
+
+  if (serviceCompleted !== undefined) {
+    emp.serviceSigned = serviceCompleted;
+    if (serviceCompleted && !emp.serviceDate) {
+      emp.serviceDate = new Date().toISOString().split('T')[0];
+    }
+  }
+
+  // 2. Recalculate progress or apply manual override
+  let calculatedProgress = 0;
+  if (emp.personalData && emp.personalData.name && emp.personalData.phone) {
+    calculatedProgress += 15;
+  }
+  if (emp.careerData && (emp.careerData.experiences?.length > 0 || emp.careerData.educations?.length > 0 || emp.careerData.licenses?.length > 0)) {
+    calculatedProgress += 15;
+  }
+  if (emp.uploadedFiles && emp.uploadedFiles.length > 0) {
+    calculatedProgress += 15;
+  }
+  if (emp.rulesAgreed && emp.privacyAgreed) {
+    calculatedProgress += 10;
+  }
+  if (emp.taxDeclaration && emp.taxDeclaration.signed) {
+    calculatedProgress += 15;
+  }
+  if (emp.contractSigned) {
+    calculatedProgress += 10;
+  }
+  if (emp.guarantorSigned) {
+    calculatedProgress += 10;
+  }
+  if (emp.serviceSigned) {
+    calculatedProgress += 10;
+  }
+
+  if (manualProgress !== undefined) {
+    emp.progress = manualProgress;
+  } else {
+    emp.progress = calculatedProgress;
+  }
+
+  if (manualStatus !== undefined) {
+    emp.status = manualStatus;
+  } else {
+    if (emp.progress === 100) {
+      emp.status = 'completed';
+    } else {
+      emp.status = 'pending';
+    }
+  }
+
+  emp.updatedAt = new Date().toISOString();
+  employees[empIndex] = emp;
+  
+  logActivity(req, emp.name, 'MANUAL_PROGRESS_UPDATE', `HR手動更新同仁「${emp.name}」的報到進度與狀態 (進度: ${emp.progress}%, 狀態: ${emp.status})`);
+  saveDatabase();
+
+  return res.json({ message: '手動更新報到進度成功', employee: emp, employees });
+});
+
+// Get HR Admins
+app.get('/api/hr/admins', (req, res) => {
+  const normalized = getNormalizedAdmins();
+  const clientAdmins = normalized.map(admin => ({
+    email: admin.email,
+    permissions: admin.permissions || [],
+    isPrimary: admin.email.toLowerCase().trim() === primaryAdminEmail.toLowerCase().trim()
+  }));
+  return res.json(clientAdmins);
+});
+
+// Add HR Admin
+app.post('/api/hr/admins', (req, res) => {
+  const operatorEmail = decodeURIComponent(req.headers['x-operator-email'] as string || '').toLowerCase().trim();
+  const normalized = getNormalizedAdmins();
+  const operatorAdmin = normalized.find(a => a.email === operatorEmail);
+  const operatorPermissions = operatorAdmin?.permissions || (
+    operatorEmail === primaryAdminEmail.toLowerCase().trim() 
+      ? ['admin', 'tracker', 'publish', 'ai', 'audit'] 
+      : ['tracker', 'publish', 'ai']
+  );
+
+  if (!operatorPermissions.includes('admin')) {
+    return res.status(403).json({ error: '⚠️ 您的管理帳號並未附加「管理權限」(admin)，無法進行管理者帳號之新增！' });
+  }
+
+  const { email, permissions } = req.body;
+  if (!email || !email.trim()) {
+    return res.status(400).json({ error: 'Email 欄位不能為空' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const exists = normalized.some(admin => admin.email === cleanEmail);
+
+  if (exists) {
+    return res.status(400).json({ error: '此 Email 已是HR管理者之一' });
+  }
+
+  const finalPermissions = Array.isArray(permissions) && permissions.length > 0
+    ? permissions
+    : ['tracker', 'publish', 'ai'];
+
+  hrAdmins.push({ 
+    email: cleanEmail, 
+    password: 'mis',
+    permissions: finalPermissions
+  });
+  logActivity(req, '人資管理系統', 'ADD_ADMIN', `新增 HR 管理者: ${cleanEmail} (權限: ${finalPermissions.join(', ')})`);
+  saveDatabase();
+
+  const freshAdmins = getNormalizedAdmins().map(admin => ({
+    email: admin.email,
+    permissions: admin.permissions || []
+  }));
+  return res.json({ message: '成功新增HR管理者', hrAdmins: freshAdmins });
+});
+
+// Delete HR Admin
+app.delete('/api/hr/admins', (req, res) => {
+  const operatorEmail = decodeURIComponent(req.headers['x-operator-email'] as string || '').toLowerCase().trim();
+  const targetEmail = (req.body.email || '').toLowerCase().trim();
+
+  if (!targetEmail) {
+    return res.status(400).json({ error: '⚠️ 請提供欲刪除的管理員信箱' });
+  }
+
+  // 1. Verify operator has 'admin' permission
+  const normalized = getNormalizedAdmins();
+  const operatorAdmin = normalized.find(a => a.email === operatorEmail);
+  const operatorPermissions = operatorAdmin?.permissions || (
+    operatorEmail === primaryAdminEmail.toLowerCase().trim() 
+      ? ['admin', 'tracker', 'publish', 'ai', 'audit'] 
+      : ['tracker', 'publish', 'ai']
+  );
+
+  if (!operatorPermissions.includes('admin')) {
+    return res.status(403).json({ error: '⚠️ 您的管理帳號並未附加「管理權限」(admin)，無法進行管理員帳號之刪除！' });
+  }
+
+  // 2. Prevent deleting Primary Admin
+  if (targetEmail === primaryAdminEmail.toLowerCase().trim()) {
+    return res.status(400).json({ error: `⚠️ 主要負責人 (${primaryAdminEmail}) 為系統核心帳戶，禁止刪除！如欲刪除請先進行主要管理者移轉。` });
+  }
+
+  // 3. Prevent deleting themselves
+  if (targetEmail === operatorEmail) {
+    return res.status(400).json({ error: '⚠️ 為避免管理權限真空，群組帳號禁止刪除目前正在登入使用的帳戶！' });
+  }
+
+  // Find target in current hrAdmins
+  const targetIdx = hrAdmins.findIndex(admin => {
+    const email = typeof admin === 'string' ? admin.toLowerCase().trim() : (admin.email || '').toLowerCase().trim();
+    return email === targetEmail;
+  });
+
+  if (targetIdx === -1) {
+    return res.status(404).json({ error: '⚠️ 找不到欲刪除的管理員帳號' });
+  }
+
+  // Remove from hrAdmins list
+  hrAdmins.splice(targetIdx, 1);
+  
+  // Explicitly delete from Firestore to prevent orphaned documents
+  if (db && isFirestoreAvailable) {
+    firebaseDb.collection('admins').doc(targetEmail).delete().catch(err => {
+      console.error(`Failed to delete admin ${targetEmail} from Firestore:`, err);
+    });
+  }
+
+  logActivity(req, '人資管理系統', 'DELETE_ADMIN', `刪除 HR 管理者: ${targetEmail}`);
+  saveDatabase();
+
+  const freshAdmins = getNormalizedAdmins().map(admin => ({
+    email: admin.email,
+    permissions: admin.permissions || []
+  }));
+  return res.json({ message: '成功刪除 HR 管理者', hrAdmins: freshAdmins });
+});
+
+// Transfer Primary Admin
+app.post('/api/hr/transfer-primary', (req, res) => {
+  const operatorEmail = decodeURIComponent(req.headers['x-operator-email'] as string || '').toLowerCase().trim();
+  const { targetEmail } = req.body;
+
+  if (!targetEmail) {
+    return res.status(400).json({ error: '⚠️ 請選擇承接的主要管理者' });
+  }
+
+  const cleanTargetEmail = targetEmail.trim().toLowerCase();
+
+  // 1. Verify operator is the current primary admin
+  if (operatorEmail !== primaryAdminEmail.toLowerCase().trim()) {
+    return res.status(403).json({ error: `⚠️ 只有當前的主要管理者 (${primaryAdminEmail}) 才可以進行權限移轉！` });
+  }
+
+  // 2. Prevent transferring to themselves
+  if (cleanTargetEmail === operatorEmail) {
+    return res.status(400).json({ error: '⚠️ 無法移轉給自己！請選擇其他 HR 帳號。' });
+  }
+
+  // 3. Verify target admin exists
+  const normalized = getNormalizedAdmins();
+  const targetAdmin = normalized.find(a => a.email === cleanTargetEmail);
+  if (!targetAdmin) {
+    return res.status(404).json({ error: '⚠️ 找不到承接的 HR 帳號，請確認該信箱已被新增為管理者。' });
+  }
+
+  // 4. Update the target admin's permissions to ensure they have all permissions
+  const targetIdx = hrAdmins.findIndex(admin => {
+    const email = typeof admin === 'string' ? admin.toLowerCase().trim() : (admin.email || '').toLowerCase().trim();
+    return email === cleanTargetEmail;
+  });
+
+  if (targetIdx !== -1) {
+    if (typeof hrAdmins[targetIdx] === 'string') {
+      hrAdmins[targetIdx] = {
+        email: cleanTargetEmail,
+        password: 'mis',
+        permissions: ['admin', 'tracker', 'publish', 'ai', 'audit']
+      };
+    } else {
+      hrAdmins[targetIdx].permissions = ['admin', 'tracker', 'publish', 'ai', 'audit'];
+    }
+  }
+
+  // Also ensure previous primary admin has 'admin' and standard permissions
+  const prevIdx = hrAdmins.findIndex(admin => {
+    const email = typeof admin === 'string' ? admin.toLowerCase().trim() : (admin.email || '').toLowerCase().trim();
+    return email === operatorEmail;
+  });
+
+  if (prevIdx !== -1) {
+    if (typeof hrAdmins[prevIdx] === 'string') {
+      hrAdmins[prevIdx] = {
+        email: operatorEmail,
+        password: 'mis',
+        permissions: ['admin', 'tracker', 'publish', 'ai', 'audit']
+      };
+    } else {
+      hrAdmins[prevIdx].permissions = hrAdmins[prevIdx].permissions || ['admin', 'tracker', 'publish', 'ai', 'audit'];
+    }
+  }
+
+  // 5. Update primaryAdminEmail
+  primaryAdminEmail = cleanTargetEmail;
+
+  logActivity(req, '人資管理系統', 'TRANSFER_PRIMARY_ADMIN', `主要管理者權限移轉：由 ${operatorEmail} 移轉至 ${cleanTargetEmail}`);
+  saveDatabase();
+
+  const freshAdmins = getNormalizedAdmins().map(admin => ({
+    email: admin.email,
+    permissions: admin.permissions || [],
+    isPrimary: admin.email.toLowerCase().trim() === primaryAdminEmail.toLowerCase().trim()
+  }));
+
+  return res.json({ 
+    message: `成功將主要管理者權限移轉給「${cleanTargetEmail}」！`, 
+    hrAdmins: freshAdmins,
+    primaryAdminEmail: primaryAdminEmail
+  });
+});
+
+// Change Password Endpoint
+app.post('/api/hr/change-password', (req, res) => {
+  const { email, oldPassword, newPassword } = req.body;
+  if (!email || !oldPassword || !newPassword) {
+    return res.status(400).json({ error: '所有欄位均為必選填' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalized = getNormalizedAdmins();
+  const adminIndex = normalized.findIndex(admin => admin.email === normalizedEmail);
+
+  if (adminIndex === -1) {
+    return res.status(404).json({ error: '找不到該管理員帳號' });
+  }
+
+  const currentPassword = normalized[adminIndex].password || 'mis';
+  if (oldPassword !== currentPassword) {
+    return res.status(400).json({ error: '目前密碼驗證不正確，變更失敗' });
+  }
+
+  if (newPassword.length < 3) {
+    return res.status(400).json({ error: '新密碼長度至少需 3 個字元' });
+  }
+
+  // Update in official array
+  hrAdmins[adminIndex] = {
+    email: normalizedEmail,
+    password: newPassword
+  };
+
+  logActivity(req, '人資管理系統', 'CHANGE_PASSWORD', `變更 HR 管理者密碼成功: ${normalizedEmail}`);
+  saveDatabase();
+
+  return res.json({ success: true, message: '密碼變更成功，請記住您的新密碼' });
+});
+
+// Request Forgot Password (Simulated Email reset link)
+app.post('/api/hr/forgot-password', (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: '請輸入電子郵件' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalized = getNormalizedAdmins();
+  const exists = normalized.some(admin => admin.email === normalizedEmail);
+
+  if (!exists) {
+    return res.status(404).json({ error: '此電子郵件非授權之 HR 管理者，請與主要負責人聯絡' });
+  }
+
+  // Generate simple token: "tok_xxxx"
+  const token = 'tok_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+  
+  // Save token in memory memory map (Expires in 30 minutes)
+  forgotPasswordTokens[token] = {
+    email: normalizedEmail,
+    expires: Date.now() + 30 * 60 * 1000
+  };
+
+  // Construct standard HTTP link pointing to port 3000 web index
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.protocol || 'http';
+  const resetLink = `${protocol}://${host}/?reset_token=${token}`;
+
+  console.log(`\n==========================================\n[模擬電子郵件通知 SMS / EMAIL SIMULATOR]\n==========================================\n收件者 (To): ${normalizedEmail}\n標題 (Subject): 雲朗集團人事系統 - HR管理者重設密碼信件\n內容 (Body):\n您好，請點選以下連結重設您的 HR 後台登入密碼（連結 30 分鐘內有效）：\n${resetLink}\n==========================================\n`);
+
+  return res.json({
+    success: true,
+    message: '重設密碼信件已成功發送 (本系統已為您模擬收信通知)！',
+    simulatedEmail: {
+      to: normalizedEmail,
+      subject: '雲朗集團人事系統 - HR管理者重設密碼信件',
+      link: resetLink,
+      token: token
+    }
+  });
+});
+
+// Confirm Password Reset with Token
+app.post('/api/hr/reset-password', (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: '請提供重設 Token 與新密碼' });
+  }
+
+  const record = forgotPasswordTokens[token];
+  if (!record) {
+    return res.status(400).json({ error: '重設連結無效、或此連結已被使用過' });
+  }
+
+  if (Date.now() > record.expires) {
+    delete forgotPasswordTokens[token];
+    return res.status(400).json({ error: '此連結已過期，請重新申請重設密碼' });
+  }
+
+  const normalizedEmail = record.email.toLowerCase().trim();
+  const normalized = getNormalizedAdmins();
+  const adminIndex = normalized.findIndex(admin => admin.email === normalizedEmail);
+
+  if (adminIndex === -1) {
+    delete forgotPasswordTokens[token];
+    return res.status(404).json({ error: '找不到該管理員帳號' });
+  }
+
+  if (newPassword.length < 3) {
+    return res.status(400).json({ error: '密碼長度至少需 3 個字元' });
+  }
+
+  // Overwrite password
+  hrAdmins[adminIndex] = {
+    email: normalizedEmail,
+    password: newPassword
+  };
+
+  // Burn token
+  delete forgotPasswordTokens[token];
+
+  logActivity(req, '人資管理系統', 'RESET_PASSWORD', `HR管理員依靠重設信完成重設密碼: ${normalizedEmail}`);
+  saveDatabase();
+
+  return res.json({ success: true, message: '密碼重設成功！請回到登入頁面並使用新密碼進行登入。' });
+});
+
+// 3. Employee Endpoints
+// Save / Update employee onboarding progress & data
+app.put('/api/employee/save', (req, res) => {
+  const { id, personalData, careerData, rulesAgreed, privacyAgreed, taxDeclaration, contractSigned, contractDate, guarantorSigned, guarantorDate, guarantorData, serviceSigned, serviceDate } = req.body;
+  
+  const empIndex = employees.findIndex(emp => emp.id === id);
+  if (empIndex === -1) {
+    return res.status(404).json({ error: '找不到新進同仁資料' });
+  }
+
+  const emp = employees[empIndex];
+
+  if (personalData !== undefined) emp.personalData = personalData;
+  if (careerData !== undefined) emp.careerData = careerData;
+  if (rulesAgreed !== undefined) emp.rulesAgreed = rulesAgreed;
+  if (privacyAgreed !== undefined) emp.privacyAgreed = privacyAgreed;
+  if (taxDeclaration !== undefined) emp.taxDeclaration = taxDeclaration;
+  if (contractSigned !== undefined) emp.contractSigned = contractSigned;
+  if (contractDate !== undefined) emp.contractDate = contractDate;
+  if (guarantorSigned !== undefined) emp.guarantorSigned = guarantorSigned;
+  if (guarantorDate !== undefined) emp.guarantorDate = guarantorDate;
+  if (guarantorData !== undefined) emp.guarantorData = guarantorData;
+  if (serviceSigned !== undefined) emp.serviceSigned = serviceSigned;
+  if (serviceDate !== undefined) emp.serviceDate = serviceDate;
+
+  // Recalculate progress across 8 parts summing to exactly 100%:
+  // 1. PersonalData: 15%
+  // 2. CareerData: 15%
+  // 3. uploadedFiles length > 0: 15%
+  // 4. rulesAgreed & privacyAgreed: 10%
+  // 5. taxDeclaration signed: 15%
+  // 6. contractSigned: 10%
+  // 7. guarantorSigned: 10%
+  // 8. serviceSigned: 10%
+  let newProgress = 0;
+  
+  if (emp.personalData && emp.personalData.name && emp.personalData.phone) {
+    newProgress += 15;
+  }
+  if (emp.careerData && (emp.careerData.experiences?.length > 0 || emp.careerData.educations?.length > 0 || emp.careerData.licenses?.length > 0)) {
+    newProgress += 15;
+  }
+  if (emp.uploadedFiles && emp.uploadedFiles.length > 0) {
+    newProgress += 15;
+  }
+  if (emp.rulesAgreed && emp.privacyAgreed) {
+    newProgress += 10;
+  }
+  if (emp.taxDeclaration && emp.taxDeclaration.signed) {
+    newProgress += 15;
+  }
+  if (emp.contractSigned) {
+    newProgress += 10;
+  }
+  if (emp.guarantorSigned) {
+    newProgress += 10;
+  }
+  if (emp.serviceSigned) {
+    newProgress += 10;
+  }
+
+  emp.progress = newProgress;
+  if (newProgress === 100) {
+    emp.status = 'completed';
+  } else {
+    emp.status = 'pending';
+  }
+
+  emp.updatedAt = new Date().toISOString();
+  employees[empIndex] = emp;
+  saveDatabase();
+
+  return res.json({ message: '草稿儲存成功', employee: emp });
+});
+
+// Upload verification documents (PDF file representation)
+app.post('/api/employee/upload', (req, res) => {
+  const { id, fileName, fileSize, base64Data, docType } = req.body;
+  if (!id || !fileName || !fileSize) {
+    return res.status(400).json({ error: '缺少上傳資訊' });
+  }
+
+  const empIndex = employees.findIndex(emp => emp.id === id);
+  if (empIndex === -1) {
+    return res.status(404).json({ error: '找不到該同仁資料' });
+  }
+
+  const emp = employees[empIndex];
+  
+  // Clean file representation
+  const newFile = {
+    name: fileName,
+    size: fileSize,
+    uploadedAt: new Date().toLocaleDateString('zh-TW', { hour12: false }),
+    base64Data: base64Data || '',
+    docType: docType || ''
+  };
+
+  // If we receive a docType, make sure we only keep one file for that docType
+  if (docType) {
+    emp.uploadedFiles = (emp.uploadedFiles || []).filter(f => f.docType !== docType);
+  } else {
+    emp.uploadedFiles = emp.uploadedFiles || [];
+  }
+  emp.uploadedFiles.push(newFile);
+  
+  // Recalculate progress across 8 parts:
+  let newProgress = 0;
+  if (emp.personalData && emp.personalData.name && emp.personalData.phone) newProgress += 15;
+  if (emp.careerData && (emp.careerData.experiences?.length > 0 || emp.careerData.educations?.length > 0 || emp.careerData.licenses?.length > 0)) newProgress += 15;
+  if (emp.uploadedFiles && emp.uploadedFiles.length > 0) newProgress += 15;
+  if (emp.rulesAgreed && emp.privacyAgreed) newProgress += 10;
+  if (emp.taxDeclaration && emp.taxDeclaration.signed) newProgress += 15;
+  if (emp.contractSigned) newProgress += 10;
+  if (emp.guarantorSigned) newProgress += 10;
+  if (emp.serviceSigned) newProgress += 10;
+
+  emp.progress = newProgress;
+  if (newProgress === 100) emp.status = 'completed';
+  
+  emp.updatedAt = new Date().toISOString();
+  saveDatabase();
+  
+  return res.json({ message: '文件上傳成功', employee: emp });
+});
+
+// Delete uploaded verification documents
+app.delete('/api/employee/upload', (req, res) => {
+  const { id, fileName } = req.body;
+  const empIndex = employees.findIndex(emp => emp.id === id);
+  if (empIndex === -1) {
+    return res.status(404).json({ error: '找不到該同仁資料' });
+  }
+
+  const emp = employees[empIndex];
+  emp.uploadedFiles = emp.uploadedFiles.filter(f => f.name !== fileName);
+
+  // Recalculate progress across 8 parts:
+  let newProgress = 0;
+  if (emp.personalData && emp.personalData.name && emp.personalData.phone) newProgress += 15;
+  if (emp.careerData && (emp.careerData.experiences?.length > 0 || emp.careerData.educations?.length > 0 || emp.careerData.licenses?.length > 0)) newProgress += 15;
+  if (emp.uploadedFiles && emp.uploadedFiles.length > 0) newProgress += 15;
+  if (emp.rulesAgreed && emp.privacyAgreed) newProgress += 10;
+  if (emp.taxDeclaration && emp.taxDeclaration.signed) newProgress += 15;
+  if (emp.contractSigned) newProgress += 10;
+  if (emp.guarantorSigned) newProgress += 10;
+  if (emp.serviceSigned) newProgress += 10;
+
+  emp.progress = newProgress;
+  emp.status = newProgress === 100 ? 'completed' : 'pending';
+  emp.updatedAt = new Date().toISOString();
+  saveDatabase();
+
+  return res.json({ message: '文件已移除', employee: emp });
+});
+
 async function bootstrap() {
-  // Initialize MySQL tables and seed data
-  await initMySQL();
+  // Initialize SQLite tables and seed data
+  await initSQLite();
+  loadDatabase();
 
   // Recalculate all commission records on startup
   await refreshCommissionRecords();

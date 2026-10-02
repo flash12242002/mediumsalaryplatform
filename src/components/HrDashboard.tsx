@@ -1,0 +1,4627 @@
+﻿import React, { useState, useEffect } from 'react';
+import { 
+  Users, 
+  UserPlus, 
+  Settings, 
+  FileCheck, 
+  Building2, 
+  Mail, 
+  Calendar, 
+  CheckCircle, 
+  Search, 
+  Trash2, 
+  Plus, 
+  Eye, 
+  Sparkles, 
+  Send, 
+  LogOut, 
+  ArrowRight,
+  ShieldAlert,
+  KeyRound,
+  Download,
+  AlertCircle,
+  Printer,
+  RotateCcw,
+  History,
+  ArrowRightLeft,
+  UserCog
+} from 'lucide-react';
+import { OnboardEmployee } from '../types';
+import LdcLogo from './LdcLogo';
+import { getCompanyDetails } from './EmployeeDashboard';
+import { TaxDeclarationPrintModal, ContractPrintModal, ConsentPrintModal, GuarantorPrintModal, ServicePrintModal } from './PrintModals';
+import * as XLSX from 'xlsx';
+import { 
+  initGoogleAuth, 
+  googleSignIn, 
+  logoutGoogle, 
+  sendGmailEmail 
+} from '../lib/googleAuth';
+
+
+interface HrDashboardProps {
+  currentUser: { email: string; name: string };
+  initialEmployees: OnboardEmployee[];
+  onLogout: () => void;
+}
+
+const BRANCHES = [
+  { name: '蝮賢??, address: '?啣?撣葉撅勗?銝剖控?楝鈭挾96??璅? },
+];
+
+const PERMISSION_OPTIONS = [
+  {
+    id: 'admin',
+    label: '蝞∠?甈?',
+    desc: 'HR 撣唾?蝞∠??恣???憓?閮駁?R ?典??賢??刻身摰?
+  },
+  {
+    id: 'tracker',
+    label: '??餈質馱',
+    desc: '瑼ａ???啜?箸?脣?隞????飛蝬風????蝝?PDF'
+  },
+  {
+    id: 'publish',
+    label: '鈭箏?潔?',
+    desc: '撱箇??雿?脖犖?～摰?亥擗典?圈???蝝鞈???
+  },
+  {
+    id: 'ai',
+    label: '?箄?拍?',
+    desc: '???擃?LDC AI ?箄???拍?璈?隢株岷??????
+  },
+  {
+    id: 'audit',
+    label: '鞈?蝔賣',
+    desc: '摰瑼ａ??箇頂蝯望?雿?頝⊥風蝔?/ 蝔賣?亥? (Audit Log)'
+  }
+];
+
+export default function HrDashboard({ currentUser, initialEmployees, onLogout }: HrDashboardProps) {
+  const [employees, setEmployees] = useState<OnboardEmployee[]>(initialEmployees);
+  const [adminEmails, setAdminEmails] = useState<any[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(['tracker', 'publish', 'ai']);
+  const [submitting, setSubmitting] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<'tracker' | 'add' | 'admins' | 'ai' | 'logs'>('tracker');
+  const [adminsSubMenu, setAdminsSubMenu] = useState<'members' | 'add' | 'password'>('members');
+  const [addSubMenu, setAddSubMenu] = useState<'basic' | 'contract' | 'send_email'>('basic');
+  const [expandedAdminEmails, setExpandedAdminEmails] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Google Gmail OAuth states
+  const [googleUser, setGoogleUser] = useState<any>(null);
+  const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [isGoogleConnecting, setIsGoogleConnecting] = useState(false);
+  
+  // Track selected branch index for the dropdown
+  const [selectedBranchIdx, setSelectedBranchIdx] = useState(0);
+
+  // New OnboardEmployee form
+  const [newEmp, setNewEmp] = useState({
+    name: '',
+    empId: '',
+    email: '',
+    authToken: '',
+    department: '?脫?閫?隞賣????,
+    title: '',
+    onboardDate: new Date().toISOString().split('T')[0],
+    contractWorkLocation: '蝮賢??(?啣?撣葉撅勗?銝剖控?楝鈭挾96??璅?',
+    contractLeaveOption: 'biweekly',
+    contractLeavedays: '8',
+    contractSalaryType: 'monthly',
+    contractSalaryAmount: '36,000',
+    contractProbationMonths: '銝?
+  });
+  
+  // New Admin email
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+
+  // Password change states
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPasswordValue, setNewPasswordValue] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [pwSubmitting, setPwSubmitting] = useState(false);
+
+  // Transfer primary admin states
+  const [transferTargetEmail, setTransferTargetEmail] = useState('');
+  const [transferConfirmCheckbox, setTransferConfirmCheckbox] = useState(false);
+  const [transferSubmitting, setTransferSubmitting] = useState(false);
+  
+  // Selected OnboardEmployee detail panel
+  const [selectedEmp, setSelectedEmp] = useState<OnboardEmployee | null>(null);
+
+  // States for deleting administrator safely (Custom confirmation dialog)
+  const [adminToDelete, setAdminToDelete] = useState<string | null>(null);
+  const [isDeletingAdmin, setIsDeletingAdmin] = useState(false);
+
+  // States for deleting OnboardEmployee safely (Custom confirmation dialog)
+  const [employeeToDelete, setEmployeeToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // States for returning/rejecting OnboardEmployee onboarding to fill/draft state safely
+  const [employeeToReject, setEmployeeToReject] = useState<OnboardEmployee | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
+
+  // State for email preview modal
+  const [emailPreviewEmp, setEmailPreviewEmp] = useState<OnboardEmployee | null>(null);
+
+  // States for printing custom OnboardEmployee cards (Compiled personnel record card)
+  const [printingEmp, setPrintingEmp] = useState<OnboardEmployee | null>(null);
+  const [printFields, setPrintFields] = useState<any>(null);
+  const [printTaxEmp, setPrintTaxEmp] = useState<OnboardEmployee | null>(null);
+  const [printContractEmp, setPrintContractEmp] = useState<OnboardEmployee | null>(null);
+  const [printConsentEmp, setPrintConsentEmp] = useState<OnboardEmployee | null>(null);
+  const [printGuarantorEmp, setPrintGuarantorEmp] = useState<OnboardEmployee | null>(null);
+  const [printServiceEmp, setPrintServiceEmp] = useState<OnboardEmployee | null>(null);
+
+  // Status logs
+  const [infoMsg, setInfoMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Find dynamic primary admin email
+  const primaryAdminObj = adminEmails.find(a => a.isPrimary);
+  const primaryAdminEmail = (primaryAdminObj?.email || 'gordon.huang@ldchotels.com').toLowerCase().trim();
+
+  // Find current user's permissions
+  const currentAdminObj = adminEmails.find(
+    admin => {
+      const email = typeof admin === 'string' ? admin : (admin.email || '');
+      return email.toLowerCase().trim() === currentUser.email.toLowerCase().trim();
+    }
+  );
+  const currentUserPermissions = currentAdminObj?.permissions || (
+    currentUser.email.toLowerCase().trim() === primaryAdminEmail
+      ? ['admin', 'tracker', 'publish', 'ai', 'audit'] 
+      : ['tracker', 'publish', 'ai']
+  );
+  const hasAdminPermission = currentUserPermissions.includes('admin');
+
+  // Activity logs states
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  // AI states
+  const [aiHistory, setAiHistory] = useState<any[]>([
+    {
+      role: 'assistant',
+      content: `?典末嚗?*鈭箄?憭乩撈**嚗??舀?I蝘 ???? 
+??憭抵??剁?
+- ?啣神?砍?圈脣?隞??亥甇∟?靽∩縑隞嗥??研?- 閫????????⊥??瑟皜?瘜批?憿?- 鈭箄?憒??啣??嗡???????蝞∠?敺?,
+      timestamp: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [editingEmailValue, setEditingEmailValue] = useState('');
+
+  const handleSendOnboardingEmail = async (emp: any) => {
+    setSendingEmailId(emp.id);
+    try {
+      if (googleToken) {
+        const companyName = getCompanyDetails(emp).name;
+        const subject = `??{companyName}?迭餈???伐??圈脖犖?∪?瑕?啁頂蝯梁?亙?撠;
+        const htmlBody = `
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff; color: #333333;">
+            <div style="text-align: center; border-bottom: 2px solid #D4AF37; padding-bottom: 20px; margin-bottom: 25px;">
+              <h1 style="color: #8D1B1B; margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 1px;">${companyName}</h1>
+              <p style="color: #666666; margin: 5px 0 0 0; font-size: 13px;">LDC Hotels & Resorts</p>
+            </div>
+            
+            <p style="font-size: 15px; line-height: 1.6; margin-top: 0;">閬芣???<strong style="color: #111111; text-decoration: underline;">${emp.name}</strong> ?? ?典末嚗?/p>
+            
+            <p style="font-size: 14px; line-height: 1.6; color: #555555;">
+              ?剖??券???砍嚗鈭??箸颲衣??亥??靽?蝥?隢暺?銝撟喳???嚗蒂雿輻?函??餃??萎辣??撅祆?甈Ⅳ?餃嚗‵憒亙?唳???犖??蝝?祈???
+            </p>
+            
+            <div style="background-color: #FAF9F6; border: 1px solid #D4AF37; border-left: 5px solid #D4AF37; border-radius: 8px; padding: 20px; margin: 25px 0; font-size: 13px; line-height: 1.8;">
+              <div style="margin-bottom: 8px;">? <strong style="color: #666666;">?勗?瑞迂嚗?/strong><span style="color: #111111; font-weight: bold;">${emp.title}</span></div>
+              <div style="margin-bottom: 8px;">?? <strong style="color: #666666;">?勗?交?嚗?/strong><span style="color: #8D1B1B; font-weight: bold;">${emp.onboardDate}</span></div>
+              <div style="margin-bottom: 8px;">?? <strong style="color: #666666;">?勗?圈?嚗?/strong><span style="color: #111111;">${emp.contractWorkLocation || '?脫?閫??(?啣?撣葉撅勗?銝剖控?楝鈭挾96??璅?'}</span></div>
+              <div style="margin-bottom: 8px;">? <strong style="color: #666666;">??芾?嚗?/strong>${emp.contractSalaryType === 'daily' ? '?亥' : emp.contractSalaryType === 'hourly' ? '?' : '?'} <strong style="color: #8D1B1B; font-weight: bold;">NT$ ${emp.contractSalaryAmount || '36,000'}</strong> ??/div>
+              <div style="margin-bottom: 15px; padding-top: 8px; border-top: 1px dashed #e0e0e0;">?? <strong style="color: #666666;">撠惇??蝣潘?</strong><span style="background-color: #8D1B1B; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; font-size: 14px; letter-spacing: 0.5px;">${emp.authToken}</span></div>
+              
+              <div style="padding-top: 10px; border-top: 1px solid #e5e5e5;">
+                <strong style="color: #666666; display: block; margin-bottom: 5px;">?? 撟喳???嚗?/strong>
+                <a href="https://ldc-onboarding-portal-554356081371.asia-east1.run.app" target="_blank" style="color: #0066cc; text-decoration: underline; font-family: monospace; word-break: break-all; font-weight: bold;">https://ldc-onboarding-portal-554356081371.asia-east1.run.app</a>
+              </div>
+            </div>
+            
+            <p style="font-size: 12px; color: #888888; line-height: 1.5; margin-bottom: 0; border-top: 1px solid #eeeeee; padding-top: 15px;">
+              ???砌縑隞嗥蝟餌絞???砍靽∠拳?芸??潮?冽?隞颱???嚗??湔?犖??皞?舐鼠嚗??輻?亙?閬縑隞塚?雓???br />
+            </p>
+          </div>
+        `;
+
+        await sendGmailEmail(googleToken, emp.email, subject, htmlBody);
+
+        // Also notify backend to log activity
+        await fetch(`/api/hr/employees/${emp.id}/send-onboarding-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+            'x-operator-name': encodeURIComponent(currentUser?.name || currentUser?.email || '')
+          }
+        });
+
+        setInfoMsg(`? ?????函? Gmail 撣唾??潮?圈靽∟ ${emp.name} ?縑蝞?(${emp.email})嚗);
+      } else {
+        const res = await fetch(`/api/hr/employees/${emp.id}/send-onboarding-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+            'x-operator-name': encodeURIComponent(currentUser?.name || currentUser?.email || '')
+          }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setInfoMsg(`? [璅⊥?潮 ???潮?圈靽∟ ${emp.name} ?縑蝞?(${emp.email})嚗閬?隞塚?隢?????函? Google 撣唾??);
+        } else {
+          setErrorMsg(data.error || '?潮?圈靽∪仃??);
+        }
+      }
+      
+      // Refresh activity logs in background
+      fetch('/api/hr/activity-logs')
+        .then(r => r.json())
+        .then(logs => setActivityLogs(logs))
+        .catch(() => {});
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`?潮隞嗅仃??${err.message || '?芰?航炊'}`);
+    } finally {
+      setSendingEmailId(null);
+      setEmailPreviewEmp(null);
+    }
+  };
+
+  const fetchActivityLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const res = await fetch('/api/hr/activity-logs');
+      const data = await res.json();
+      if (res.ok) setActivityLogs(data);
+    } catch (e) {
+      console.error('Error fetching activity logs', e);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const downloadLogsExcel = () => {
+    if (activityLogs.length === 0) {
+      alert('?桀?撠?啣?蝝?靘?頛?');
+      return;
+    }
+
+    // 頧??澆?雿?Excel ??雿摰寞??梯?
+    const dataToExport = activityLogs.map(log => {
+      const displayDate = new Date(log.timestamp).toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+
+      let actionText = log.actionType;
+      if (log.actionType === 'CREATE_EMPLOYEE') {
+        actionText = '撱箇??勗撌乩?';
+      } else if (log.actionType === 'DELETE_EMPLOYEE') {
+        actionText = '?芷??鞈?';
+      } else if (log.actionType === 'REJECT_ONBOARDING') {
+        actionText = '???唬耨??;
+      } else if (log.actionType === 'UPDATE_EMP_ID') {
+        actionText = '霈?∪極蝺刻?';
+      } else if (log.actionType === 'ADD_ADMIN') {
+        actionText = '?啣?蝞∠?鈭箏';
+      }
+
+      return {
+        '?交?????: displayDate,
+        '??蝞∠???(HR) ?餃??萎辣': log.operatorEmail || '',
+        '??蝞∠???(HR) 憪?': log.operatorName || '蝟餌絞蝞∠???,
+        '鈭箏': log.employeeName || '蝮賡??',
+        '?啣??': actionText,
+        '閰喟敦?啣?蝝??: log.details || ''
+      };
+    });
+
+    // 撱箇?撌乩?銵?    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    // 閮剖?甈祝
+    const colWidths = [
+      { wch: 22 }, // ?交?????      { wch: 28 }, // HR Email
+      { wch: 20 }, // HR 憪?
+      { wch: 15 }, // ????
+      { wch: 18 }, // ?啣??
+      { wch: 55 }  // 閰喟敦?啣?蝝??    ];
+    worksheet['!cols'] = colWidths;
+
+    // 撱箇?瘣駁?蝪?    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '?啣?蝝?蕭頩?);
+
+    // 銝?瑼?
+    const filename = `LDC_HR_Activity_Logs_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+  };
+
+  // Initialize Google Auth on mount
+  useEffect(() => {
+    const unsubscribe = initGoogleAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setGoogleToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setGoogleToken(null);
+      }
+    );
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleConnecting(true);
+    setErrorMsg('');
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setGoogleUser(result.user);
+        setGoogleToken(result.accessToken);
+        setInfoMsg('? ????? Google 撣唾?嚗?曉?臭誑?潮?Gmail ?勗?靽～?);
+      }
+    } catch (err: any) {
+      console.warn('Google sign-in cancelled or failed:', err);
+      if (err?.code === 'auth/popup-closed-by-user' || err?.message?.includes('popup-closed-by-user')) {
+        setErrorMsg('?? ?券??? Google ?餃閬?嚗歇??????甈脩??Gmail ?靽∴?隢??圈??蒂摰?????);
+      } else if (err?.code === 'auth/cancelled-popup-request' || err?.message?.includes('cancelled-popup-request')) {
+        setErrorMsg('?? ?餃閬?撌脣?瘨?隢??圈??蒂?脰? Google 撣唾??????);
+      } else {
+        setErrorMsg(`??? Google 撣唾?憭望?嚗?{err.message || '?芰?航炊'}`);
+      }
+    } finally {
+      setIsGoogleConnecting(false);
+    }
+  };
+
+  const handleGoogleSignOut = async () => {
+    try {
+      await logoutGoogle();
+      setGoogleUser(null);
+      setGoogleToken(null);
+      setInfoMsg('撌脩??Google 撣唾???);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`?餃 Google 撣唾?憭望?嚗?{err.message || '?芰?航炊'}`);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+    fetchAdmins();
+    fetchActivityLogs();
+  }, []);
+
+  useEffect(() => {
+    setIsEditingEmail(false);
+    setEditingEmailValue(selectedEmp?.email || '');
+  }, [selectedEmp?.id]);
+
+  // Map OnboardEmployee details to print structures when printing selected OnboardEmployee
+  useEffect(() => {
+    if (printingEmp) {
+      const p = printingEmp.personalData || {};
+      const c = printingEmp.careerData || {};
+      
+      const experiencesArray = c.experiences || [];
+      const educationsArray = c.educations || [];
+      const licensesArray = c.licenses || [];
+      
+      const langLevels = {
+        english: 'none', // Default mid
+        japanese: 'none',
+        korean: 'none',
+        otherName: '',
+        otherLevel: 'none'
+      };
+
+      if (c.languages && c.languages.length > 0) {
+        c.languages.forEach((lang: any) => {
+          const lMapped = lang.level === '蝎暸? ? 'expert' 
+                         : lang.level === '?芾' ? 'good' 
+                         : lang.level === '銝剔?' ? 'medium' 
+                         : lang.level === '?交?' ? 'fluent' 
+                         : 'none';
+          
+          if (lang.language === '?望?') {
+            langLevels.english = lMapped;
+          } else if (lang.language === '?交?') {
+            langLevels.japanese = lMapped;
+          } else if (lang.language === '??') {
+            langLevels.korean = lMapped;
+          } else if (lang.language === '?嗡?') {
+            langLevels.otherLevel = lMapped;
+            langLevels.otherName = lang.customName || '';
+          }
+        });
+      }
+
+      const allDeps = [
+        ...(p.dependents || []),
+        ...(printingEmp.taxDeclaration?.dependents || [])
+      ];
+      
+      const father = allDeps.find(d => d.relationship === '?? || d.relationship === '?嗉扛') || { name: '', birthday: '' };
+      const mother = allDeps.find(d => d.relationship === '瘥? || d.relationship === '瘥扛') || { name: '', birthday: '' };
+      
+      const spouseName = printingEmp.taxDeclaration?.spouseName || '';
+      const spouseBirthday = printingEmp.taxDeclaration?.spouseBirthday || '';
+      const spouse = (spouseName || spouseBirthday) 
+        ? { name: spouseName, birthday: spouseBirthday } 
+        : allDeps.find(d => d.relationship === '?' || d.relationship === '憒? || d.relationship === '憭?) || { name: '', birthday: '' };
+
+      setPrintFields({
+        empId: printingEmp.empId || '',
+        branchName: printingEmp.contractWorkLocation ? printingEmp.contractWorkLocation.split(' (')[0] : (printingEmp.department ? printingEmp.department : ''),
+        onboardDate: printingEmp.onboardDate || '',
+        name: p.name || printingEmp.name || '',
+        gender: p.gender || '',
+        birthday: p.birthday || '',
+        phone: p.phone || '',
+        bloodType: p.bloodType || '',
+        idNumber: p.idNumber || '',
+        legalAddress: p.legalAddress || '',
+        contactAddress: p.contactAddress || '',
+        guarantorName: p.emergencyName || '',
+        guarantorAddress: p.legalAddress || '',
+        guarantorPhone: p.emergencyPhone || '',
+        
+        experiences: [
+          { period: experiencesArray[0] ? `${experiencesArray[0].startDate} ~ ${experiencesArray[0].endDate}` : '', company: experiencesArray[0]?.companyName || '', title: experiencesArray[0]?.jobTitle || '' },
+          { period: experiencesArray[1] ? `${experiencesArray[1].startDate} ~ ${experiencesArray[1].endDate}` : '', company: experiencesArray[1]?.companyName || '', title: experiencesArray[1]?.jobTitle || '' },
+          { period: experiencesArray[2] ? `${experiencesArray[2].startDate} ~ ${experiencesArray[2].endDate}` : '', company: experiencesArray[2]?.companyName || '', title: experiencesArray[2]?.jobTitle || '' },
+        ],
+        
+        licenses: [
+          { time: licensesArray[0]?.issueDate || '', cate: licensesArray[0]?.licenseName || '', level: licensesArray[0]?.badgeLevel || '' },
+          { time: licensesArray[1]?.issueDate || '', cate: licensesArray[1]?.licenseName || '', level: licensesArray[1]?.badgeLevel || '' },
+          { time: licensesArray[2]?.issueDate || '', cate: licensesArray[2]?.licenseName || '', level: licensesArray[2]?.badgeLevel || '' },
+        ],
+
+        educations: [
+          { school: educationsArray[0]?.schoolName || '', major: educationsArray[0]?.major || '', period: educationsArray[0]?.period || '', status: educationsArray[0]?.status || '' },
+          { school: educationsArray[1]?.schoolName || '', major: educationsArray[1]?.major || '', period: educationsArray[1]?.period || '', status: educationsArray[1]?.status || '' },
+          { school: educationsArray[2]?.schoolName || '', major: educationsArray[2]?.major || '', period: educationsArray[2]?.period || '', status: educationsArray[2]?.status || '' },
+        ],
+        
+        langLevels,
+        
+        family: [
+          { relation: '??, name: father.name || '', birthday: father.birthday || '', edu: '', company: '', coLive: '', note: '' },
+          { relation: '瘥?, name: mother.name || '', birthday: mother.birthday || '', edu: '', company: '', coLive: '', note: '' },
+          { relation: '?', name: spouse.name || '', birthday: spouse.birthday || '', edu: '', company: '', coLive: '', note: '' }
+        ]
+      });
+    } else {
+      setPrintFields(null);
+    }
+  }, [printingEmp]);
+
+  const fetchEmployees = async () => {
+    try {
+      const res = await fetch('/api/hr/employees');
+      const data = await res.json();
+      if (res.ok) setEmployees(data);
+    } catch {
+      console.log('Error catching latest list');
+    }
+  };
+
+  const handleUpdateEmpId = async (id: string, empId: string) => {
+    try {
+      const res = await fetch(`/api/hr/employees/${id}/empid`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify({ empId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmployees(data.employees);
+        if (selectedEmp && selectedEmp.id === id) {
+          setSelectedEmp(data.OnboardEmployee);
+        }
+        fetchActivityLogs();
+      }
+    } catch (e) {
+      console.error('Failed to update OnboardEmployee ID', e);
+    }
+  };
+
+  const handleUpdateEmail = async (id: string, emailValue: string) => {
+    try {
+      setErrorMsg('');
+      setInfoMsg('');
+      const res = await fetch(`/api/hr/employees/${id}/email`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify({ email: emailValue })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmployees(data.employees);
+        if (selectedEmp && selectedEmp.id === id) {
+          setSelectedEmp(data.OnboardEmployee);
+        }
+        fetchActivityLogs();
+        setInfoMsg(`? ??靽格???餃??萎辣?啣??? ${emailValue}`);
+      } else {
+        setErrorMsg(data.error || '?湔?餃??萎辣憭望?');
+      }
+    } catch (e) {
+      console.error('Failed to update OnboardEmployee email', e);
+      setErrorMsg('???隡箸??典仃??隢?敺?閰?);
+    }
+  };
+
+  const handleUpdateProbation = async (id: string, probationValue: string) => {
+    try {
+      const res = await fetch(`/api/hr/employees/${id}/probation`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify({ contractProbationMonths: probationValue })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmployees(data.employees);
+        if (selectedEmp && selectedEmp.id === id) {
+          setSelectedEmp(data.OnboardEmployee);
+        }
+        fetchActivityLogs();
+      }
+    } catch (e) {
+      console.error('Failed to update contract probation months', e);
+    }
+  };
+
+  const handleUpdateOnboardingProgress = async (id: string, payload: any) => {
+    try {
+      setErrorMsg('');
+      setInfoMsg('');
+      const res = await fetch(`/api/hr/employees/${id}/onboarding-progress`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmployees(data.employees);
+        if (selectedEmp && selectedEmp.id === id) {
+          setSelectedEmp(data.OnboardEmployee);
+        }
+        fetchActivityLogs();
+        setInfoMsg(`撌脫?????啜?{data.OnboardEmployee.name}???勗??脣漲????`);
+      } else {
+        setErrorMsg(data.error || '?湔憭望?');
+      }
+    } catch (e: any) {
+      console.error('Failed to update onboarding progress', e);
+      setErrorMsg('???隡箸??典仃??隢?敺?閰?);
+    }
+  };
+
+  const fetchAdmins = async () => {
+    try {
+      const res = await fetch('/api/hr/admins');
+      const data = await res.json();
+      if (res.ok) setAdminEmails(data);
+    } catch {
+      console.log('Error fetching admins');
+    }
+  };
+
+  const handleCreateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setInfoMsg('');
+    
+    if (!newEmp.name || !newEmp.email || !newEmp.authToken || !newEmp.title) {
+      setErrorMsg('?? 隢Ⅱ靽‵皛踵???憛急???雿?);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/hr/employees', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify(newEmp)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '?啣?憭望?');
+
+      setEmployees(data.employees);
+      fetchActivityLogs();
+      setInfoMsg(`?? ???啣??圈脣?隞?{newEmp.name}?歇?Ｙ??勗?⊥?獢???蝣潘?${newEmp.authToken}`);
+      
+      // Clear
+      setNewEmp({
+        name: '',
+        empId: '',
+        email: '',
+        authToken: '',
+        department: '?脫?閫?隞賣????,
+        title: '',
+        onboardDate: new Date().toISOString().split('T')[0],
+        contractWorkLocation: '蝮賢??(?啣?撣葉撅勗?銝剖控?楝鈭挾96??璅?',
+        contractLeaveOption: 'biweekly',
+        contractLeavedays: '8',
+        contractSalaryType: 'monthly',
+        contractSalaryAmount: '36,000',
+        contractProbationMonths: '銝?
+      });
+      setSelectedBranchIdx(0);
+      setAddSubMenu('basic');
+      setActiveMenu('tracker');
+    } catch (err: any) {
+      setErrorMsg(err.message || '?啣?憭望?');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCreateAndSendEmail = async () => {
+    setErrorMsg('');
+    setInfoMsg('');
+
+    if (!newEmp.name || !newEmp.email || !newEmp.authToken || !newEmp.title) {
+      setErrorMsg('?? 甈??芸‵撖怠??湛?隢撠郊撽??郊撽?');
+      return;
+    }
+
+    if (!googleToken) {
+      setErrorMsg('?? ?典??芷?? Google 撣唾????銝??? Google 撣唾? (? Gmail 撖縑)?脰???嚗?暺??撱箇??勗??(銝??靽???亙??遣蝡?);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Step 1: Create OnboardEmployee
+      const res = await fetch('/api/hr/employees', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify(newEmp)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '撱箇??勗?∪仃??);
+
+      // Update employees state
+      setEmployees(data.employees);
+      const createdId = data.OnboardEmployee?.id;
+
+      if (!createdId) {
+        throw new Error('撱箇??勗?⊥???雿?賢?敺?隞頂蝯梯??亦Ⅳ');
+      }
+
+      // Step 2: Send onboarding email via real Gmail API
+      const companyName = getCompanyDetails(newEmp).name;
+      const subject = `??{companyName}?迭餈???伐??圈脖犖?∪?瑕?啁頂蝯梁?亙?撠;
+      const htmlBody = `
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff; color: #333333;">
+          <div style="text-align: center; border-bottom: 2px solid #D4AF37; padding-bottom: 20px; margin-bottom: 25px;">
+            <h1 style="color: #8D1B1B; margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 1px;">${companyName}</h1>
+            <p style="color: #666666; margin: 5px 0 0 0; font-size: 13px;">LDC Hotels & Resorts</p>
+          </div>
+          
+          <p style="font-size: 15px; line-height: 1.6; margin-top: 0;">閬芣???<strong style="color: #111111; text-decoration: underline;">${newEmp.name}</strong> ?? ?典末嚗?/p>
+          
+          <p style="font-size: 14px; line-height: 1.6; color: #555555;">
+            ?剖??券???砍嚗鈭??箸颲衣??亥??靽?蝥?隢暺?銝撟喳???嚗蒂雿輻?函??餃??萎辣??撅祆?甈Ⅳ?餃嚗‵憒亙?唳???犖??蝝?祈???
+          </p>
+          
+          <div style="background-color: #FAF9F6; border: 1px solid #D4AF37; border-left: 5px solid #D4AF37; border-radius: 8px; padding: 20px; margin: 25px 0; font-size: 13px; line-height: 1.8;">
+            <div style="margin-bottom: 8px;">? <strong style="color: #666666;">?勗?瑞迂嚗?/strong><span style="color: #111111; font-weight: bold;">${newEmp.title}</span></div>
+            <div style="margin-bottom: 8px;">?? <strong style="color: #666666;">?勗?交?嚗?/strong><span style="color: #8D1B1B; font-weight: bold;">${newEmp.onboardDate}</span></div>
+            <div style="margin-bottom: 8px;">?? <strong style="color: #666666;">?勗?圈?嚗?/strong><span style="color: #111111;">${newEmp.contractWorkLocation || '蝮賢??(?啣?撣葉撅勗?銝剖控?楝鈭挾96??璅?'}</span></div>
+            <div style="margin-bottom: 8px;">? <strong style="color: #666666;">??芾?嚗?/strong>${newEmp.contractSalaryType === 'daily' ? '?亥' : newEmp.contractSalaryType === 'hourly' ? '?' : '?'} <strong style="color: #8D1B1B; font-weight: bold;">NT$ ${newEmp.contractSalaryAmount || '36,000'}</strong> ??/div>
+            <div style="margin-bottom: 15px; padding-top: 8px; border-top: 1px dashed #e0e0e0;">?? <strong style="color: #666666;">撠惇??蝣潘?</strong><span style="background-color: #8D1B1B; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; font-size: 14px; letter-spacing: 0.5px;">${newEmp.authToken}</span></div>
+            
+            <div style="padding-top: 10px; border-top: 1px solid #e5e5e5;">
+              <strong style="color: #666666; display: block; margin-bottom: 5px;">?? 撟喳???嚗?/strong>
+              <a href="https://ldc-onboarding-portal-554356081371.asia-east1.run.app" target="_blank" style="color: #0066cc; text-decoration: underline; font-family: monospace; word-break: break-all; font-weight: bold;">https://ldc-onboarding-portal-554356081371.asia-east1.run.app</a>
+            </div>
+          </div>
+          
+          <p style="font-size: 12px; color: #888888; line-height: 1.5; margin-bottom: 0; border-top: 1px solid #eeeeee; padding-top: 15px;">
+            ???砌縑隞嗥蝟餌絞???砍靽∠拳?芸??潮?冽?隞颱???嚗??湔?犖??皞?舐鼠嚗??輻?亙?閬縑隞塚?雓???br />
+          </p>
+        </div>
+      `;
+
+      try {
+        await sendGmailEmail(googleToken, newEmp.email, subject, htmlBody);
+        
+        // Notify backend to log activity
+        await fetch(`/api/hr/employees/${createdId}/send-onboarding-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+            'x-operator-name': encodeURIComponent(currentUser?.name || currentUser?.email || '')
+          }
+        });
+
+        setInfoMsg(`?? ??撱箇?????{newEmp.name}???勗撌乩?嚗蒂撌脫????函?亦? Gmail 撣單 (${googleUser?.email || currentUser?.email}) ?潮?瑕?圈靽∴?`);
+      } catch (emailErr: any) {
+        console.error('Real Gmail failed', emailErr);
+        setInfoMsg(`?? ??撱箇?????{newEmp.name}???勗撌乩?嚗? Gmail ?潮縑隞嗆??潛??啣虜嚗?{emailErr.message || '?芰?航炊'}??臭誑蝔??刻蕭頩斗??桐葉??潮);
+      }
+
+      // Refresh activity logs in background
+      fetchActivityLogs();
+
+      // Clear newEmp form
+      setNewEmp({
+        name: '',
+        empId: '',
+        email: '',
+        authToken: '',
+        department: '?脫?閫?隞賣????,
+        title: '',
+        onboardDate: new Date().toISOString().split('T')[0],
+        contractWorkLocation: '蝮賢??(?啣?撣葉撅勗?銝剖控?楝鈭挾96??璅?',
+        contractLeaveOption: 'biweekly',
+        contractLeavedays: '8',
+        contractSalaryType: 'monthly',
+        contractSalaryAmount: '36,000',
+        contractProbationMonths: '銝?
+      });
+      setSelectedBranchIdx(0);
+      setAddSubMenu('basic');
+      setActiveMenu('tracker');
+    } catch (err: any) {
+      setErrorMsg(err.message || '????啣虜嚗瘜??遣蝡??潮?);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteEmployee = async (id: string, name: string) => {
+    setEmployeeToDelete({ id, name });
+  };
+
+  const handleExportToExcel = (emp: OnboardEmployee) => {
+    if (!emp) return;
+
+    const fileName = `${emp.name}_?圈脣?隞犖鈭?勗鞈?.xls`;
+    
+    // Extract and format data
+    const p = (emp.personalData || {}) as any;
+    const career = (emp.careerData || {}) as any;
+    const experiences = career.experiences || [];
+    const educations = career.educations || [];
+    const licenses = career.licenses || [];
+    const tax = (emp.taxDeclaration || {}) as any;
+    
+    // Parse family information identical to printed card logic
+    const allDeps = [
+      ...(p.dependents || []),
+      ...(tax.dependents || [])
+    ];
+    const father = allDeps.find(d => d.relationship === '?? || d.relationship === '?嗉扛') || { name: '', birthday: '' };
+    const mother = allDeps.find(d => d.relationship === '瘥? || d.relationship === '瘥扛') || { name: '', birthday: '' };
+    const spouseName = tax.spouseName || '';
+    const spouseBirthday = tax.spouseBirthday || '';
+    const spouse = (spouseName || spouseBirthday) 
+      ? { name: spouseName, birthday: spouseBirthday } 
+      : allDeps.find(d => d.relationship === '?' || d.relationship === '憒? || d.relationship === '憭?) || { name: '', birthday: '' };
+
+    const familyList = [
+      { relation: '??, name: father.name || '', birthday: father.birthday || '' },
+      { relation: '瘥?, name: mother.name || '', birthday: mother.birthday || '' },
+      { relation: '?', name: spouse.name || '', birthday: spouse.birthday || '' }
+    ];
+    
+    // Build Excel structured HTML Table String (Office HTML Spreadsheet format)
+    let html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+        <style>
+          table { border-collapse: collapse; width: 100%; font-family: "Microsoft JhengHei", "PMingLiU", "Segoe UI", Arial, sans-serif; }
+          td, th { border: 1px solid #b3b3b3; padding: 8px; font-size: 12px; }
+          .main-title { font-size: 16px; font-weight: bold; text-align: center; background-color: #8D1B1B; color: #D4AF37; padding: 12px; border: 1px solid #8D1B1B; }
+          .section-title { font-size: 13px; font-weight: bold; background-color: #FAF6F0; color: #8D1B1B; border-bottom: 2px solid #8D1B1B; padding: 8px 12px; }
+          .label { background-color: #FAF9F6; font-weight: bold; width: 130px; color: #1c1917; }
+          .value { color: #2e2a24; }
+          .sub-header { font-weight: bold; background-color: #FAF6F0; color: #1c1917; text-align: center; }
+          .text-center { text-align: center; }
+          .badge-completed { background-color: #d1fae5; color: #065f46; font-weight: bold; }
+          .badge-pending { background-color: #fef3c7; color: #92400e; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <tr>
+            <td colspan="4" class="main-title">${getCompanyDetails(emp).name} ? ?圈脣撌亙?唬犖鈭??</td>
+          </tr>
+          <tr>
+            <td colspan="4" class="section-title">銝?撌亙?圈脣漲????/td>
+          </tr>
+          <tr>
+            <td class="label">銝剜?憪?嚗?/td>
+            <td class="value">${emp.name}</td>
+            <td class="label">憛怎????</td>
+            <td class="value text-center ${emp.status === 'completed' ? 'badge-completed' : 'badge-pending'}">${emp.status === 'completed' ? '撌脣???100%' : '憛怠神銝?(' + emp.progress + '%)'}</td>
+          </tr>
+          <tr>
+            <td class="label">?撅祇?嚗?/td>
+            <td class="value">${emp.department || '??}</td>
+            <td class="label">?瑕??瑞迂嚗?/td>
+            <td class="value">${emp.title || '??}</td>
+          </tr>
+          <tr>
+            <td class="label">???亥?伐?</td>
+            <td class="value">${emp.onboardDate || '??}</td>
+            <td class="label">?敺?唳嚗?/td>
+            <td class="value">${emp.updatedAt ? new Date(emp.updatedAt).toLocaleString('zh-TW') : '??}</td>
+          </tr>
+          
+          <tr>
+            <td colspan="4" class="section-title">鈭犖?箸鞈? (憛怠?)</td>
+          </tr>
+          <tr>
+            <td class="label">頨怠?霅???</td>
+            <td class="value font-mono" style="mso-number-format:'\\@';">${p.idNumber || '??}</td>
+            <td class="label">?望?憪?嚗?/td>
+            <td class="value">${p.englishName || '??}</td>
+          </tr>
+          <tr>
+            <td class="label">?批嚗?/td>
+            <td class="value">${p.gender || '??}</td>
+            <td class="label">?箇??交?嚗?/td>
+            <td class="value font-mono">${p.birthday || '??}</td>
+          </tr>
+          <tr>
+            <td class="label">?舐窗?餉店嚗?/td>
+            <td class="value font-mono" style="mso-number-format:'\\@';">${p.phone || '??}</td>
+            <td class="label">?餃??萎辣嚗?/td>
+            <td class="value">${p.email || emp.email || '??}</td>
+          </tr>
+          <tr>
+            <td class="label">?嗥??啣?嚗?/td>
+            <td colspan="3" class="value">${p.legalAddress || '??}</td>
+          </tr>
+          <tr>
+            <td class="label">???啣?嚗?/td>
+            <td colspan="3" class="value">${p.contactAddress || '??}</td>
+          </tr>
+          
+          <tr>
+            <td colspan="4" class="section-title">銝鞈?暹頧董??/td>
+          </tr>
+          <tr>
+            <td class="label">?亙董?銵?</td>
+            <td class="value">${p.bankName || '??}</td>
+            <td class="label">?亥?撣唾?嚗?/td>
+            <td class="value font-mono" style="mso-number-format:'\\@';">${p.bankAccount || '??}</td>
+          </tr>
+          <tr>
+            <td class="label">?園?閬芸惇鈭箸嚗?/td>
+            <td colspan="3" class="value">${p.dependentsCount || '0 鈭?}</td>
+          </tr>
+          
+          <tr>
+            <td colspan="4" class="section-title">???亥蝯∩犖鞈?</td>
+          </tr>
+          <tr>
+            <td class="label">?舐窗鈭箏???</td>
+            <td class="value">${p.emergencyName || '??}</td>
+            <td class="label">??隞?靽?</td>
+            <td class="value">${p.emergencyRelationship || '??}</td>
+          </tr>
+          <tr>
+            <td class="label">?舐窗鈭粹閰梧?</td>
+            <td colspan="3" class="value font-mono" style="mso-number-format:'\\@';">${p.emergencyPhone || '??}</td>
+          </tr>
+    `;
+
+    // Add Educations Section
+    html += `
+          <tr>
+            <td colspan="4" class="section-title">鈭??脩?摨?(?擃???摮豢風)</td>
+          </tr>
+    `;
+    if (educations.length === 0) {
+      html += `<tr><td colspan="4" class="text-center value">嚗憛怠神摮豢風鞈?嚗?/td></tr>`;
+    } else {
+      html += `
+        <tr>
+          <td colspan="4">
+            <table style="width:100%; border-collapse: collapse;">
+              <tr class="sub-header">
+                <td>摮豢?迂</td>
+                <td>蝘頂?迂</td>
+                <td>靽格平韏瑁???</td>
+                <td>靽格平???/td>
+              </tr>
+      `;
+      educations.forEach((edu: any) => {
+        html += `
+              <tr>
+                <td class="value">${edu.schoolName || ''}</td>
+                <td class="value">${edu.major || '??}</td>
+                <td class="value text-center font-mono">${edu.period || ''}</td>
+                <td class="value text-center">${edu.status || ''}</td>
+              </tr>
+        `;
+      });
+      html += `
+            </table>
+          </td>
+        </tr>
+      `;
+    }
+
+    // Add Experiences Section
+    html += `
+          <tr>
+            <td colspan="4" class="section-title">?准?敺??蝬風</td>
+          </tr>
+    `;
+    if (experiences.length === 0) {
+      html += `<tr><td colspan="4" class="text-center value">嚗???瑕極蝬風鞈?嚗?/td></tr>`;
+    } else {
+      html += `
+        <tr>
+          <td colspan="4">
+            <table style="width:100%; border-collapse: collapse;">
+              <tr class="sub-header">
+                <td>?瑟雄??</td>
+                <td>???桐?(?砍?迂)</td>
+                <td>?曆遙?瑞迂???/td>
+              </tr>
+      `;
+      experiences.forEach((exp: any) => {
+        html += `
+              <tr>
+                <td class="value text-center font-mono">${exp.startDate || ''} ~ ${exp.endDate || '?喃?'}</td>
+                <td class="value">${exp.companyName || ''}</td>
+                <td class="value">${exp.jobTitle || ''}</td>
+              </tr>
+        `;
+      });
+      html += `
+            </table>
+          </td>
+        </tr>
+      `;
+    }
+
+    // Add Licenses Section
+    html += `
+          <tr>
+            <td colspan="4" class="section-title">銝璆剛??扯???質?蝺?/td>
+          </tr>
+    `;
+    if (licenses.length === 0) {
+      html += `<tr><td colspan="4" class="text-center value">嚗??銋?璆剛??扳?閮毀鞈嚗?/td></tr>`;
+    } else {
+      html += `
+        <tr>
+          <td colspan="4">
+            <table style="width:100%; border-collapse: collapse;">
+              <tr class="sub-header">
+                <td>?脰??潛??</td>
+                <td>撠平霅???賢?蝔?/td>
+                <td>霅蝑? / 蝝</td>
+              </tr>
+      `;
+      licenses.forEach((lic: any) => {
+        html += `
+              <tr>
+                <td class="value text-center font-mono">${lic.issueDate || ''}</td>
+                <td class="value">${lic.licenseName || ''}</td>
+                <td class="value text-center">${lic.badgeLevel || '??}</td>
+              </tr>
+        `;
+      });
+      html += `
+            </table>
+          </td>
+        </tr>
+      `;
+    }
+
+    // Add Family Section
+    html += `
+          <tr>
+            <td colspan="4" class="section-title">?怒振摨剛扛撅祉?瘜?(銝餉?摰嗅惇鞈?)</td>
+          </tr>
+          <tr>
+            <td colspan="4">
+              <table style="width:100%; border-collapse: collapse;">
+                <tr class="sub-header">
+                  <td style="width:20%;">閬芰?蝔梯?</td>
+                  <td style="width:40%;">摰嗅惇憪?</td>
+                  <td style="width:40%;">?箇?撟湔???/td>
+                </tr>
+    `;
+    familyList.forEach((fam: any) => {
+      html += `
+                <tr>
+                  <td class="value text-center">${fam.relation}</td>
+                  <td class="value">${fam.name || '嚗憛恬?'}</td>
+                  <td class="value text-center font-mono">${fam.birthday || '嚗憛恬?'}</td>
+                </tr>
+      `;
+    });
+    html += `
+              </table>
+            </td>
+          </tr>
+    `;
+
+    // Onboarding status checks
+    html += `
+          <tr>
+            <td colspan="4" class="section-title">銋?蝔摰??脫????勗?蝝Ⅱ隤???/td>
+          </tr>
+          <tr>
+            <td class="label">?萄??砍撌乩?閬?嚗?/td>
+            <td class="value">${emp.rulesAgreed ? '??撌脩Ⅱ撖衣閫?蒂?輯姥?萄?' : '???芸?詨???}</td>
+            <td class="label">???????拍嚗?/td>
+            <td class="value">${emp.privacyAgreed ? '??撌脩Ⅱ撖衣閫?蒂蝪賜蔡???? : '???芸?詨???}</td>
+          </tr>
+          <tr>
+            <td class="label">?園??喳銵刻??</td>
+            <td class="value">${tax.signed ? '??撌脰扛?芰偷蝡?勗???(' + (tax.date || '') + ')' : '???芸???憿?斤??}</td>
+            <td class="label">??????賂?</td>
+            <td class="value">${emp.contractSigned ? '??撌脩Ⅱ隤偷隤?蝝?(' + (emp.contractDate || '') + ')' : '?????詨?蝣箄?銝?}</td>
+          </tr>
+          <tr>
+            <td class="label">???璇辣嚗?/td>
+            <td class="value">?啣撟?${emp.contractSalaryAmount || '36,000'} ??/ ${emp.contractSalaryType === 'daily' ? '?亥' : emp.contractSalaryType === 'hourly' ? '?' : '?'}</td>
+            <td class="label">?隡??嗅漲嚗?/td>
+            <td class="value">${emp.contractLeaveOption === 'monthly' ? `??隡?${emp.contractLeavedays || '8-10'} 憭奈 : '?曹?鈭??}</td>
+          </tr>
+          <tr>
+            <td class="label">鈭箔?撱箸???嚗?/td>
+            <td colspan="3" class="value font-mono">${new Date().toLocaleString('zh-TW')}</td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    // Trigger download of XLS file
+    const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setInfoMsg('');
+    const emailStr = newAdminEmail.trim().toLowerCase();
+    if (!emailStr) return;
+
+    try {
+      const res = await fetch('/api/hr/admins', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify({ email: emailStr, permissions: selectedPermissions })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '?啣?憭望?');
+
+      setAdminEmails(data.hrAdmins);
+      setInfoMsg(`?? ??????{emailStr}?恣??餃鈭箄?敺嚗);
+      setNewAdminEmail('');
+      setSelectedPermissions(['tracker', 'publish', 'ai']);
+      fetchActivityLogs();
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    }
+  };
+
+  const handleDeleteAdmin = async (targetEmail: string) => {
+    setErrorMsg('');
+    setInfoMsg('');
+    setIsDeletingAdmin(true);
+
+    try {
+      const res = await fetch('/api/hr/admins', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify({ email: targetEmail })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '閮駁憭望?');
+
+      setAdminEmails(data.hrAdmins);
+      setInfoMsg(`??儭?撌脫??酉?瑯?{targetEmail}??蝞∠??董?);
+      fetchActivityLogs();
+    } catch (err: any) {
+      setErrorMsg(err.message || '閮駁憭望?');
+    } finally {
+      setIsDeletingAdmin(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setInfoMsg('');
+
+    if (newPasswordValue !== confirmNewPassword) {
+      setErrorMsg('?? ?啣?蝣潸?蝣箄?撖Ⅳ銝??湛?');
+      return;
+    }
+
+    if (newPasswordValue.length < 3) {
+      setErrorMsg('?? ?啣?蝣潮摨西撠? 3 ????');
+      return;
+    }
+
+    setPwSubmitting(true);
+    try {
+      const res = await fetch('/api/hr/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify({
+          email: currentUser?.email,
+          oldPassword,
+          newPassword: newPasswordValue
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || '撖Ⅳ霈憭望?');
+      }
+
+      setInfoMsg('?? ?函??餃撖Ⅳ霈??嚗??Ｚ??刻身摰??啣?蝣潦?);
+      setOldPassword('');
+      setNewPasswordValue('');
+      setConfirmNewPassword('');
+      fetchActivityLogs();
+    } catch (err: any) {
+      setErrorMsg(err.message || '霈憭望?');
+    } finally {
+      setPwSubmitting(false);
+    }
+  };
+
+  const handleTransferPrimary = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setInfoMsg('');
+
+    if (!transferTargetEmail) {
+      setErrorMsg('?? 隢?炬蝘餉??蜓閬恣??亥?');
+      return;
+    }
+
+    if (!transferConfirmCheckbox) {
+      setErrorMsg('?? 隢??暸銝???函宏頧Ⅱ隤?憛?');
+      return;
+    }
+
+    setTransferSubmitting(true);
+    try {
+      const res = await fetch('/api/hr/transfer-primary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || '')
+        },
+        body: JSON.stringify({
+          targetEmail: transferTargetEmail
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || '蝘餉?銝餉?蝞∠??仃??);
+      }
+
+      setInfoMsg(data.message || '銝餉?蝞∠????歇??蝘餉?嚗?);
+      
+      // Update local admin list
+      if (data.hrAdmins) {
+        setAdminEmails(data.hrAdmins);
+      }
+      
+      // Reset input state
+      setTransferTargetEmail('');
+      setTransferConfirmCheckbox(false);
+      
+      fetchActivityLogs();
+    } catch (err: any) {
+      setErrorMsg(err.message || '蝘餉?憭望?');
+    } finally {
+      setTransferSubmitting(false);
+    }
+  };
+
+  const handleSendAi = async () => {
+    if (!aiPrompt.trim() || aiLoading) return;
+    const userMsg = {
+      role: 'user',
+      content: aiPrompt.trim(),
+      timestamp: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+    };
+    setAiHistory(prev => [...prev, userMsg]);
+    setAiPrompt('');
+    setAiLoading(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: userMsg.content,
+          history: aiHistory.map(h => ({ role: h.role, content: h.content })),
+          roleContext: 'hr'
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAiHistory(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: data.response,
+            timestamp: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+      } else {
+        throw new Error();
+      }
+    } catch {
+      setAiHistory(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: '銝末??AI蝘?桀????delayed銝准??臭誑???剁??啣??圈脣撌交?嚗?敹蝟餌絞閮剖?銝蝯?????6 雿?望??蝣潘?霈?脣?隞?雿輻 e-mail ?剝???蝣潛?亙嚗?,
+          timestamp: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const generateRandomToken = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let token = 'LDC';
+    for (let i = 0; i < 4; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNewEmp(prev => ({ ...prev, authToken: token }));
+  };
+
+  const filteredEmployees = employees.filter(emp => {
+    const query = searchQuery.toLowerCase();
+    return (
+      emp.name.toLowerCase().includes(query) ||
+      emp.email.toLowerCase().includes(query) ||
+      emp.department.toLowerCase().includes(query) ||
+      emp.title.toLowerCase().includes(query)
+    );
+  });
+
+  const totalEmps = employees.length;
+  const completedEmps = employees.filter(e => e.status === 'completed').length;
+  const pendingEmps = totalEmps - completedEmps;
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-stone-800">
+      
+      {/* 1. HR Header (Elegant burgundy bar) */}
+      <nav className="bg-[#343131] text-[#D4AF37] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-20 shadow-md border-b border-[#D4AF37]/20 select-none">
+        
+        <div className="flex items-center gap-4">
+          <LdcLogo size="header" color="nav-gold" className="bg-white/5 p-1 px-2 rounded-lg border border-[#D4AF37]/15 shadow-inner" />
+          <div>
+            <h1 className="text-base font-semibold text-white tracking-wide flex items-center gap-2">
+              ?圈脣?隞?瑕?啣???              <span className="text-[10px] bg-[#D4AF37]/20 border border-[#D4AF37]/40 px-2 py-0.5 rounded text-[#FAF6F0] font-normal uppercase tracking-widest leading-none">
+                HR Admin Panel
+              </span>
+            </h1>
+            <p className="text-xs text-stone-300">
+              ?嗅??餃??<span className="font-semibold text-[#D4AF37] underline">{currentUser.email}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Navigation options */}
+        <div className="flex items-center flex-wrap gap-1 md:self-center">
+          <button
+            onClick={() => setActiveMenu('tracker')}
+            className={`px-4 py-2 text-xs font-medium tracking-wide rounded-lg flex items-center gap-1.5 transition-all text-stone-100 ${
+              activeMenu === 'tracker'
+                ? 'bg-white/10 text-[#D4AF37] border-b-2 border-[#D4AF37] font-semibold'
+                : 'hover:bg-white/5'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            ?圈脣?隞??‵撖怨蕭頩?({totalEmps})
+          </button>
+          <button
+            onClick={() => setActiveMenu('add')}
+            className={`px-4 py-2 text-xs font-medium tracking-wide rounded-lg flex items-center gap-1.5 transition-all text-stone-100 ${
+              activeMenu === 'add'
+                ? 'bg-white/10 text-[#D4AF37] border-b-2 border-[#D4AF37] font-semibold'
+                : 'hover:bg-white/5'
+            }`}
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            撱箇??勗撌乩?
+          </button>
+          <button
+            onClick={() => setActiveMenu('admins')}
+            className={`px-4 py-2 text-xs font-medium tracking-wide rounded-lg flex items-center gap-1.5 transition-all text-stone-100 ${
+              activeMenu === 'admins'
+                ? 'bg-white/10 text-[#D4AF37] border-b-2 border-[#D4AF37] font-semibold'
+                : 'hover:bg-white/5'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            撣唾?蝞∠?
+          </button>
+          
+          <button
+            onClick={() => {
+              setActiveMenu('logs');
+              fetchActivityLogs();
+            }}
+            className={`px-4 py-2 text-xs font-medium tracking-wide rounded-lg flex items-center gap-1.5 transition-all text-stone-100 ${
+              activeMenu === 'logs'
+                ? 'bg-white/10 text-[#D4AF37] border-b-2 border-[#D4AF37] font-semibold'
+                : 'hover:bg-white/5'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            ?啣?蝝?蕭頩?          </button>
+
+          <div className="h-4 w-px bg-white/20 mx-1.5"></div>
+
+          <button
+            onClick={onLogout}
+            className="px-3.5 py-1.5 hover:bg-stone-50/10 text-stone-100 hover:text-[#D4AF37] text-xs font-medium flex items-center gap-1.5 rounded-lg border border-transparent hover:border-[#D4AF37]/30 transition-all cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            ?餃
+          </button>
+        </div>
+      </nav>
+
+      {/* 2. Bento Stats cards (Only shown for tracker dashboard inside office) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6">
+        
+        {infoMsg && (
+          <div className="bg-emerald-50 border border-emerald-100 text-[#075041] px-5 py-4 rounded-xl text-xs flex justify-between items-center shadow-sm">
+            <span>??{infoMsg}</span>
+            <button onClick={() => setInfoMsg('')} className="text-stone-400 hover:text-stone-600 font-semibold px-2">??/button>
+          </div>
+        )}
+
+        {errorMsg && (
+          <div className="bg-rose-50 border border-rose-150 text-rose-800 px-5 py-4 rounded-xl text-xs flex justify-between items-center shadow-sm">
+            <span>{errorMsg}</span>
+            <button onClick={() => setErrorMsg('')} className="text-stone-400 hover:text-stone-600 font-semibold px-2">??/button>
+          </div>
+        )}
+
+        {/* Metric Aggregates */}
+        {activeMenu === 'tracker' && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 select-none">
+            <div className="bg-white border border-[#E9E1D6] p-5 rounded-2xl flex items-center justify-between hover:shadow-md transition-all">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">?勗鈭箸蝮質汗</span>
+                <strong className="text-2xl text-[#8D1B1B]">{totalEmps}</strong>
+              </div>
+              <Users className="w-8 h-8 text-stone-300" />
+            </div>
+            <div className="bg-white border border-[#E9E1D6] p-5 rounded-2xl flex items-center justify-between hover:shadow-md transition-all">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">撌脣???/span>
+                <strong className="text-2xl text-emerald-800">{completedEmps}</strong>
+              </div>
+              <CheckCircle className="w-8 h-8 text-emerald-100" />
+            </div>
+            <div className="bg-white border border-[#E9E1D6] p-5 rounded-2xl flex items-center justify-between hover:shadow-md transition-all">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">?芸???/span>
+                <strong className="text-2xl text-amber-700">{pendingEmps}</strong>
+              </div>
+              <FileCheck className="w-8 h-8 text-amber-100" />
+            </div>
+            <div className="bg-white border border-[#E9E1D6] p-5 rounded-2xl flex items-center justify-between hover:shadow-md transition-all">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block">??蝞∠???/span>
+                <strong className="text-2xl text-[#8D1B1B] font-mono">{adminEmails.length} 鈭?/strong>
+              </div>
+              <Mail className="w-8 h-8 text-stone-300" />
+            </div>
+          </div>
+        )}
+
+        {/* Tracker View */}
+        {activeMenu === 'tracker' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            
+            {/* Table side (Takes 2 columns in large screens) */}
+            <div className="lg:col-span-2 bg-white border border-[#E9E1D6] rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-5 border-b border-stone-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-stone-900">?圈脣?隞??蕭頩?/h3>
+                  <p className="text-[11px] text-stone-400">?詨??圈脣?隞?頨怠?鞈???甇瑁?銝??辣</p>
+                </div>
+                
+                {/* Search Bar */}
+                <div className="relative w-full md:w-64">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-stone-400" />
+                  <input
+                    type="text"
+                    placeholder="??憪??mail??..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full text-stone-900 pl-8 pr-3 py-1.5 text-xs bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B]"
+                  />
+                </div>
+              </div>
+
+              {filteredEmployees.length === 0 ? (
+                <div className="p-12 text-center text-stone-400 italic text-xs">
+                  ?? ?曆??啁蝚衣??圈脣?隞???                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left font-sans text-xs">
+                    <thead>
+                      <tr className="bg-stone-50/50 border-b border-stone-150 text-[10px] font-semibold text-stone-400 tracking-wider">
+                        <th className="p-4">銝剜?憪?</th>
+                        <th className="p-4">隞餉擗典?雿?/th>
+                        <th className="p-4">??窗 Email</th>
+                        <th className="p-4">??撽?蝣?/th>
+                        <th className="p-4">憛怎??脣漲</th>
+                        <th className="p-4 text-center">??</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {filteredEmployees.map((emp) => (
+                        <tr key={emp.id} className="hover:bg-[#FAF9F6] transition-colors">
+                          <td className="p-4">
+                            <span className="font-semibold text-stone-900 block">{emp.name}</span>
+                            <div className="mt-1.5 flex items-center gap-1.5 no-print">
+                              <span className="text-[10px] text-stone-500 font-medium shrink-0">?∠楊:</span>
+                              <span className="px-1.5 py-0.5 text-[10px] text-stone-800 bg-stone-50 border border-stone-250 font-mono font-semibold rounded select-all cursor-default">
+                                {emp.empId || '?芾身摰?}
+                              </span>
+                            </div>
+                            <span className="text-[9px] text-stone-400 font-mono block mt-0.5">蝟餌絞獢?: {emp.id.substring(0, 8)}</span>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-medium text-[#8D1B1B] block">{emp.department}</span>
+                            <span className="text-[10px] text-stone-400">{emp.title}</span>
+                          </td>
+                          <td className="p-4 font-mono text-stone-500">{emp.email}</td>
+                          <td className="p-4 font-mono font-semibold text-stone-600">{emp.authToken}</td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-semibold ${emp.progress === 100 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                {emp.progress}%
+                              </span>
+                              <div className="w-16 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full ${emp.progress === 100 ? 'bg-emerald-600' : 'bg-amber-600'}`}
+                                  style={{ width: `${emp.progress}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] text-stone-400 block mt-0.5">
+                              {emp.status === 'completed' ? '撌脣??? : '憛怠神銝?}
+                            </span>
+                          </td>
+                          <td className="p-4 text-center space-x-1.5">
+                            <button
+                              onClick={() => setSelectedEmp(emp)}
+                              className="p-1.5 bg-[#8D1B1B]/10 hover:bg-[#8D1B1B]/20 text-[#8D1B1B] rounded transition-all cursor-pointer"
+                              title="撅?鞈?"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setEmailPreviewEmp(emp)}
+                              className="p-1.5 bg-amber-50 hover:bg-amber-100 text-[#8D1B1B] rounded transition-all cursor-pointer"
+                              title="?潮?圈靽?
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded transition-all cursor-pointer"
+                              title="?甇斤??"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Selected detail inspection (Expanded right card) */}
+            <div className="lg:col-span-1">
+              {selectedEmp ? (
+                <div className="bg-white border border-[#E9E1D6] rounded-2xl p-6 space-y-6 shadow-md">
+                  <div className="flex justify-between items-start pb-4 border-b border-stone-100">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {selectedEmp.personalData?.avatarUrl && (
+                        <img 
+                          src={selectedEmp.personalData.avatarUrl} 
+                          alt="憭折?? 
+                          className="w-10 h-10 rounded-lg object-cover border border-stone-200 shadow-sm flex-shrink-0"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-semibold text-[#8D1B1B] flex items-center gap-1.5 flex-wrap">
+                          <span>瑼ａ閰喟敦鞈?嚗selectedEmp.name}</span>
+                          {selectedEmp.personalData?.englishName && (
+                            <span className="text-stone-400 font-normal text-xs">({selectedEmp.personalData.englishName})</span>
+                          )}
+                        </h4>
+                        <p className="text-[10px] text-stone-400 truncate">?桀?憛怠神???{selectedEmp.status === 'completed' ? '撌脣??? : '憛怠神銝?}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedEmp(null)}
+                      className="text-stone-400 hover:text-stone-600 text-[10px] px-2 py-0.5 border border-stone-200 rounded flex-shrink-0"
+                    >
+                      ??鞈?
+                    </button>
+                  </div>
+
+                  {/* Contract config of the OnboardEmployee */}
+                  <div className="bg-[#FAF6F0] p-4 rounded-xl border border-[#8D1B1B]/15 space-y-2.5 text-xs">
+                    <span className="block text-[10px] font-bold text-[#8D1B1B] uppercase tracking-wider">
+                      ?? ????鞈?
+                    </span>
+                    <div className="space-y-1.5 text-stone-700">
+                      <div>? <strong className="text-stone-600">隞餉擗典?雿?</strong>{selectedEmp.department} ?? {selectedEmp.title}</div>
+                      <div>?? <strong className="text-stone-600">撌乩??圈?嚗?/strong><span className="text-stone-900 font-medium">{selectedEmp.contractWorkLocation || '???? (?啣?) (?啣?撣敺瑁楝銝畾???'}</span></div>
+                      <div>? <strong className="text-stone-600">?芾?嚗?/strong>{selectedEmp.contractSalaryType === 'daily' ? '?亥' : selectedEmp.contractSalaryType === 'hourly' ? '?' : '?'} ?啣撟?<strong className="font-mono text-[#8D1B1B] font-bold">{selectedEmp.contractSalaryAmount || '36,000'}</strong> ??/div>
+                      <div>?? <strong className="text-stone-600">隡?嚗?/strong>{selectedEmp.contractLeaveOption === 'monthly' ? `??隡?${selectedEmp.contractLeavedays || '8-10'} 憭奈 : '?曹?鈭??}</div>
+                      <div>?梧? <strong className="text-stone-600">閰衣??</strong>
+                        <span className="inline-block px-2 py-0.5 text-xs font-bold text-[#8D1B1B] bg-white border border-stone-300 rounded shadow-sm leading-none align-middle select-all">
+                          {selectedEmp.contractProbationMonths || '銝?}
+                        </span> ??
+                      </div>
+                      <div>?? <strong className="text-stone-600">?∪極蝺刻?嚗?/strong>
+                        <span className="inline-block px-2 py-0.5 text-xs font-mono font-bold text-[#8D1B1B] bg-white border border-stone-300 rounded shadow-sm leading-none align-middle select-all">
+                          {selectedEmp.empId || '?芾身摰?}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        ?? <strong className="text-stone-600">?勗 Email嚗?/strong>
+                        {isEditingEmail ? (
+                          <div className="flex items-center gap-1.5 mt-0.5 w-full sm:w-auto">
+                            <input
+                              type="email"
+                              value={editingEmailValue}
+                              onChange={(e) => setEditingEmailValue(e.target.value)}
+                              className="px-2 py-0.5 text-xs bg-white border border-stone-300 rounded font-mono text-stone-850 focus:outline-none focus:border-[#8D1B1B] w-full max-w-[200px]"
+                            />
+                            <button
+                              onClick={() => {
+                                handleUpdateEmail(selectedEmp.id, editingEmailValue);
+                                setIsEditingEmail(false);
+                              }}
+                              className="px-1.5 py-0.5 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold cursor-pointer"
+                            >
+                              ?脣?
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsEditingEmail(false);
+                                setEditingEmailValue(selectedEmp.email);
+                              }}
+                              className="px-1.5 py-0.5 text-[10px] bg-stone-200 hover:bg-stone-300 text-stone-700 rounded font-semibold cursor-pointer"
+                            >
+                              ??
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-stone-900 bg-stone-100 px-1.5 py-0.5 rounded text-[11px] font-medium select-all">
+                              {selectedEmp.email}
+                            </span>
+                            <button
+                              onClick={() => {
+                                setEditingEmailValue(selectedEmp.email);
+                                setIsEditingEmail(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 text-[10px] flex items-center gap-0.5 cursor-pointer font-semibold underline"
+                              title="靽格?餃??萎辣"
+                            >
+                              ?? 靽格
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div>?? <strong className="text-stone-600">撽?蝣潘?</strong><code className="font-mono bg-stone-200/50 px-1 py-0.5 rounded font-bold text-[#8D1B1B] text-[10px]">{selectedEmp.authToken}</code></div>
+                    </div>
+                  </div>
+
+
+
+                  {/* Onboarding progress tracking & manual review panel */}
+                  <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-3.5 text-xs no-print">
+                    <div className="flex justify-between items-center pb-2 border-b border-stone-200">
+                      <span className="text-[10px] font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1">
+                        ?? ?勗??脣漲??????                      </span>
+                      <span className="text-[10px] bg-[#8D1B1B]/10 text-[#8D1B1B] px-1.5 py-0.5 rounded font-bold">
+                        ?脣漲: {selectedEmp.progress}%
+                      </span>
+                    </div>
+
+                    {/* Master Actions */}
+                    <div className="flex gap-2 pb-1.5 border-b border-stone-150">
+                      <button
+                        onClick={() => handleUpdateOnboardingProgress(selectedEmp.id, {
+                          personalDataCompleted: true,
+                          careerDataCompleted: true,
+                          filesCompleted: true,
+                          rulesAgreedCompleted: true,
+                          taxCompleted: true,
+                          contractCompleted: true,
+                          guarantorCompleted: true,
+                          serviceCompleted: true,
+                          manualStatus: 'completed',
+                          manualProgress: 100
+                        })}
+                        className="flex-1 py-1 px-2 bg-[#343131] text-white hover:bg-stone-900 text-white-500 border border-[#D4AF37] rounded text-[10px] font-semibold transition-colors cursor-pointer text-center"
+                      >
+                       ??銝?萄???                      </button>
+                      <button
+                        onClick={() => handleUpdateOnboardingProgress(selectedEmp.id, {
+                          personalDataCompleted: false,
+                          careerDataCompleted: false,
+                          filesCompleted: false,
+                          rulesAgreedCompleted: false,
+                          taxCompleted: false,
+                          contractCompleted: false,
+                          guarantorCompleted: false,
+                          serviceCompleted: false,
+                          manualStatus: 'pending',
+                          manualProgress: 0
+                        })}
+                        className="flex-1 py-1 px-2 bg-[#8D1B1B] text-[#D4AF37] hover:bg-[#721515] border border-[#721515] rounded text-[10px] font-semibold transition-colors cursor-pointer text-center"
+                      >
+                        ?? ?身??0%
+                      </button>
+                    </div>
+
+                    {/* Individual sections */}
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {[
+                        {
+                          id: 'personalDataCompleted',
+                          label: '?箸鞈?銵?(15%)',
+                          completed: !!(selectedEmp.personalData && selectedEmp.personalData.name && selectedEmp.personalData.phone),
+                          toggleValue: !(selectedEmp.personalData && selectedEmp.personalData.name && selectedEmp.personalData.phone)
+                        },
+                        {
+                          id: 'careerDataCompleted',
+                          label: '撅交風?飛蝬風 (15%)',
+                          completed: !!(selectedEmp.careerData && (selectedEmp.careerData.experiences?.length > 0 || selectedEmp.careerData.educations?.length > 0 || selectedEmp.careerData.licenses?.length > 0)),
+                          toggleValue: !(selectedEmp.careerData && (selectedEmp.careerData.experiences?.length > 0 || selectedEmp.careerData.educations?.length > 0 || selectedEmp.careerData.licenses?.length > 0))
+                        },
+                        {
+                          id: 'filesCompleted',
+                          label: '?賊??辣銝 (15%)',
+                          completed: !!(selectedEmp.uploadedFiles && selectedEmp.uploadedFiles.length > 0),
+                          toggleValue: !(selectedEmp.uploadedFiles && selectedEmp.uploadedFiles.length > 0)
+                        },
+                        {
+                          id: 'rulesAgreedCompleted',
+                          label: '撌乩?閬????? (10%)',
+                          completed: !!(selectedEmp.rulesAgreed && selectedEmp.privacyAgreed),
+                          toggleValue: !(selectedEmp.rulesAgreed && selectedEmp.privacyAgreed)
+                        },
+                        {
+                          id: 'taxCompleted',
+                          label: '?敺????喳 (15%)',
+                          completed: !!(selectedEmp.taxDeclaration && selectedEmp.taxDeclaration.signed),
+                          toggleValue: !(selectedEmp.taxDeclaration && selectedEmp.taxDeclaration.signed)
+                        },
+                        {
+                          id: 'contractCompleted',
+                          label: '????貊偷蝵?(10%)',
+                          completed: !!selectedEmp.contractSigned,
+                          toggleValue: !selectedEmp.contractSigned
+                        },
+                        {
+                          id: 'guarantorCompleted',
+                          label: '?瑕靽??貊偷蝵?(10%)',
+                          completed: !!selectedEmp.guarantorSigned,
+                          toggleValue: !selectedEmp.guarantorSigned
+                        },
+                        {
+                          id: 'serviceCompleted',
+                          label: '?瑕極??摰?蝝? (10%)',
+                          completed: !!selectedEmp.serviceSigned,
+                          toggleValue: !selectedEmp.serviceSigned
+                        }
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-1.5 bg-white rounded border border-stone-150 hover:bg-stone-50/50 transition-colors">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${item.completed ? 'bg-emerald-500 shadow-xs' : 'bg-amber-400'}`}></span>
+                            <span className={`font-medium truncate ${item.completed ? 'text-stone-850 font-semibold' : 'text-stone-500'}`}>
+                              {item.label}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleUpdateOnboardingProgress(selectedEmp.id, { [item.id]: item.toggleValue })}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors border select-none shrink-0 ${
+                              item.completed
+                                ? 'text-rose-600 bg-rose-50/55 hover:bg-rose-50 border-rose-200'
+                                : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200'
+                            }`}
+                          >
+                            {item.completed ? '?日' : '閬摰?'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Manual Overall Status & Manual Progress Overrides */}
+                    <div className="pt-2 border-t border-stone-200 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-stone-500 font-semibold">??靽格?勗???</span>
+                        <div className="flex bg-stone-100 p-0.5 rounded border border-stone-200">
+                          <button
+                            onClick={() => handleUpdateOnboardingProgress(selectedEmp.id, { manualStatus: 'pending' })}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer ${selectedEmp.status === 'pending' ? 'bg-[#8D1B1B] text-white shadow-xs' : 'text-stone-600 hover:bg-stone-200'}`}
+                          >
+                            敺Ⅱ隤?                          </button>
+                          <button
+                            onClick={() => handleUpdateOnboardingProgress(selectedEmp.id, { manualStatus: 'completed' })}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer ${selectedEmp.status === 'completed' ? 'bg-emerald-600 text-white shadow-xs' : 'text-stone-600 hover:bg-stone-200'}`}
+                          >
+                            撌脣???                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-stone-500 font-semibold">??閬神?脣漲?曉?瘥?</span>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            placeholder={String(selectedEmp.progress)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const val = parseInt((e.target as HTMLInputElement).value);
+                                if (!isNaN(val) && val >= 0 && val <= 100) {
+                                  handleUpdateOnboardingProgress(selectedEmp.id, { manualProgress: val });
+                                }
+                              }
+                            }}
+                            className="w-12 text-center py-0.5 px-1 bg-white border border-stone-300 rounded text-xs font-mono font-bold text-[#8D1B1B]"
+                          />
+                          <span className="text-stone-500 text-[10px] font-mono">%</span>
+                          <span className="text-[9px] text-stone-400 font-sans italic">(??Enter ?脣?)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Export buttons block */}
+                  <div className="flex flex-col gap-2">
+                    {/* Export personnel data card as PDF */}
+                    <button
+                      onClick={() => setPrintingEmp(selectedEmp)}
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#8D1B1B] text-[#D4AF37] hover:bg-[#781717] hover:text-white transition-all text-[11px] font-bold rounded-xl shadow border border-[#D4AF37]/25 cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      ???箔犖鈭??
+                    </button>
+
+                    {/* Export Tax declaration printable sheet as PDF */}
+                    {selectedEmp.taxDeclaration?.signed ? (
+                      <button
+                        onClick={() => setPrintTaxEmp(selectedEmp)}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 text-white hover:bg-indigo-700 transition-all text-[11px] font-bold rounded-xl shadow border border-indigo-750/20 cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        ???箏?蝔?梯”
+                      </button>
+                    ) : (
+                      <div className="text-[10px] text-center text-stone-500 bg-stone-100 py-1.5 rounded-lg border border-stone-200">
+                        ?? 撠摰?蝪賜蔡???喳銵?                      </div>
+                    )}
+
+                    {/* Export Employment Contract printable sheet as PDF */}
+                    {selectedEmp.contractSigned ? (
+                      <button
+                        onClick={() => setPrintContractEmp(selectedEmp)}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-600 text-white hover:bg-blue-700 transition-all text-[11px] font-bold rounded-xl shadow border border-blue-750/20 cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        ???箄??勗?蝝
+                      </button>
+                    ) : (
+                      <div className="text-[10px] text-center text-stone-500 bg-stone-100 py-1.5 rounded-lg border border-stone-200">
+                        ?? 撠摰?蝪賜蔡?????                      </div>
+                    )}
+
+                    {/* Export Personal Data Consent Form as PDF */}
+                    {selectedEmp.privacyAgreed ? (
+                      <button
+                        onClick={() => setPrintConsentEmp(selectedEmp)}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-teal-600 text-white hover:bg-teal-700 transition-all text-[11px] font-bold rounded-xl shadow border border-teal-750/20 cursor-pointer animate-pulse"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        ???箏?????                      </button>
+                    ) : (
+                      <div className="text-[10px] text-center text-stone-500 bg-stone-100 py-1.5 rounded-lg border border-stone-200">
+                        ?? 撠摰?蝪賜蔡?????拍??????                      </div>
+                    )}
+
+                    {/* Export Guarantor Agreement as PDF */}
+                    {selectedEmp.guarantorSigned ? (
+                      <button
+                        onClick={() => setPrintGuarantorEmp(selectedEmp)}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-purple-600 text-white hover:bg-purple-700 transition-all text-[11px] font-bold rounded-xl shadow border border-purple-750/20 cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        ???箄?∩?霅
+                      </button>
+                    ) : (
+                      <div className="text-[10px] text-center text-stone-500 bg-stone-100 py-1.5 rounded-lg border border-stone-200">
+                        ?? 撠摰?蝪賜蔡?瑕靽???                      </div>
+                    )}
+
+                    {/* Export Service Agreement as PDF */}
+                    {selectedEmp.serviceSigned ? (
+                      <button
+                        onClick={() => setPrintServiceEmp(selectedEmp)}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-amber-755 text-black hover:bg-amber-855 transition-all text-[11px] font-bold rounded-xl shadow border border-amber-800/20 cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        ???箄撌交???摰?                      </button>
+                    ) : (
+                      <div className="text-[10px] text-center text-stone-500 bg-stone-100 py-1.5 rounded-lg border border-stone-200">
+                        ?? 撠摰?蝪賜蔡?瑕極??蝝?
+                      </div>
+                    )}
+
+                    {/* Export to Excel */}
+                    <button
+                      onClick={() => handleExportToExcel(selectedEmp)}
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-800 text-[#FAF6F0] hover:bg-emerald-900 transition-all text-[11px] font-bold rounded-xl shadow border border-emerald-700/25 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      銝?萄??Excel 鈭箔?鞈?銵?                    </button>
+                  </div>
+
+                  {/* 1. Personal details check */}
+                  {selectedEmp.personalData ? (
+                    <div className="space-y-4 text-xs">
+                      <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                        銝??祈??”
+                      </span>
+                      <div className="grid grid-cols-2 gap-2 text-stone-600">
+                        <div><strong className="text-stone-400 font-normal">頨怠?霅?嚗?/strong> {selectedEmp.personalData.idNumber}</div>
+                        <div><strong className="text-stone-400 font-normal">?批嚗?/strong> {selectedEmp.personalData.gender || '?∪‵'}</div>
+                        <div><strong className="text-stone-400 font-normal">?舐窗?餉店嚗?/strong> {selectedEmp.personalData.phone}</div>
+                        <div><strong className="text-stone-400 font-normal">?箇?撟湔?嚗?/strong> {selectedEmp.personalData.birthday || '?∪‵'}</div>
+                      </div>
+                      <div className="text-[11px] space-y-1 text-stone-600">
+                        <p><strong className="text-stone-400 font-normal">?嗥??啣?嚗?/strong> {selectedEmp.personalData.legalAddress}</p>
+                        <p><strong className="text-stone-400 font-normal">??雿?嚗?/strong> {selectedEmp.personalData.contactAddress}</p>
+                      </div>
+
+                      <div className="bg-stone-50 p-3 rounded-lg space-y-1 border border-stone-150">
+                        <p className="font-semibold text-stone-800 text-[11px]">? ?芾??亥?撣單</p>
+                        <p>{selectedEmp.personalData.bankName} - {selectedEmp.personalData.bankAccount}</p>
+                      </div>
+
+                      <div className="bg-stone-50 p-3 rounded-lg space-y-1 border border-stone-150">
+                        <p className="font-semibold text-stone-800 text-[11px]">? 蝺亥蝯∩犖</p>
+                        <p>{selectedEmp.personalData.emergencyName} - {selectedEmp.personalData.emergencyRelationship} ({selectedEmp.personalData.emergencyPhone})</p>
+                      </div>
+
+                      <div className="bg-stone-50 p-3 rounded-lg space-y-1.5 border border-stone-150">
+                        <p className="font-semibold text-stone-800 text-[11px] flex justify-between items-center">
+                          <span>???抽?把???喳?靽擗扛撅?/span>
+                          <span className="text-[10px] text-stone-400 font-normal">?敺蝜單擗? {selectedEmp.personalData.dependentsCount || '0 鈭?}</span>
+                        </p>
+                        <p className="text-stone-700">?乩??瑕惇??鈭箸: <strong>{selectedEmp.personalData.healthDependentsCount || '0 鈭?}</strong></p>
+                        {selectedEmp.personalData.healthDependents && selectedEmp.personalData.healthDependents.length > 0 && (
+                          <div className="mt-2 border-t border-stone-200/60 pt-2 space-y-1.5 bg-white p-2 rounded border border-stone-100">
+                            {selectedEmp.personalData.healthDependents.map((dep: any, idx: number) => (
+                              <div key={idx} className="text-[11px] text-stone-600 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 border-b border-stone-50 last:border-0 pb-1.5 last:pb-0">
+                                <span className="font-semibold text-stone-700">{idx + 1}. {dep.name} ({dep.relationship})</span>
+                                <span className="font-mono text-[10px] text-stone-500">{dep.idNumber} / {dep.birthday}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-stone-400 italic">
+                      ?? ?砌犖撠摰?憛怠神鞈???                    </div>
+                  )}
+
+                  {/* 2. Experience inspection */}
+                  {selectedEmp.careerData && (
+                    <div className="space-y-3 pt-4 border-t border-stone-100 text-xs">
+                      <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                        鈭飛蝬風????                      </span>
+                      {selectedEmp.careerData.experiences?.length > 0 && (
+                        <div className="space-y-1 px-1">
+                          <p className="font-semibold text-stone-700 text-[11px] mb-1">? ??撌乩??瑟雄甇瑞?嚗?/p>
+                          {selectedEmp.careerData.experiences.map((exp: any, i: number) => (
+                            <p key={i} className="text-stone-600 leading-relaxed pl-2 border-l-2 border-stone-200">
+                              ??<strong>{exp.companyName}</strong> ?? {exp.jobTitle} ({exp.startDate} ~ {exp.endDate || '?喃?'})
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                      {selectedEmp.careerData.educations && selectedEmp.careerData.educations.length > 0 && (
+                        <div className="space-y-1 px-1 mt-2">
+                          <p className="font-semibold text-stone-700 text-[11px] mb-1">?? 摮豢風?霅?嚗?/p>
+                          {selectedEmp.careerData.educations.map((edu: any, i: number) => (
+                            <p key={i} className="text-stone-600 leading-relaxed pl-2 border-l-2 border-indigo-200">
+                              ??<strong>{edu.schoolName}</strong> ?? {edu.major ? `${edu.major} ` : ''}({edu.degree || '摮訾??∪‵'}) ?? {edu.period || '???∪‵'} ?edu.status || '?芷??}??                            </p>
+                          ))}
+                        </div>
+                      )}
+                      {selectedEmp.careerData.licenses?.length > 0 && (
+                        <div className="space-y-1 bg-[#8D1B1B]/5 p-2.5 rounded-lg border border-[#8D1B1B]/10">
+                          <p className="font-medium text-[#8D1B1B]">??儭?撠平霅</p>
+                          {selectedEmp.careerData.licenses.map((lic: any, i: number) => (
+                            <p key={i} className="text-[11px] text-stone-600">
+                              - {lic.licenseName} {(lic.badgeLevel ? `(${lic.badgeLevel})` : '')}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 3. Files Uploaded checking */}
+                  <div className="space-y-3 pt-4 border-t border-stone-100 text-xs">
+                    <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                      銝?望撽?隞?(?? PDF)
+                    </span>
+                    
+                    <div className="space-y-2">
+                      {[
+                        { id: 'idCard', label: '1. 頨怠?霅迤?敶望', required: true },
+                        { id: 'degree', label: '2. ?擃飛甇瑁??蔣??, required: true },
+                        { id: 'military', label: '3. ?隡誘', required: false, femaleExempt: true },
+                        { id: 'healthReport', label: '4. 擃炎?勗?', required: true },
+                        { id: 'healthIns', label: '5. ??靽雿靽??箏', required: false },
+                        { id: 'bankCover', label: '6. 銝剖?靽∟??銵董?嗅??Ｗ蔣??, required: true }
+                      ].map((slot) => {
+                        const file = selectedEmp.uploadedFiles?.find(f => f.docType === slot.id);
+                        return (
+                          <div key={slot.id} className="bg-stone-50 p-2.5 border border-stone-100 rounded flex flex-col gap-1 text-[11px]">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-stone-700 flex items-center gap-1.5 flex-wrap">
+                                <span>{slot.label}</span>
+                                {slot.required ? (
+                                  <span className="text-[9px] text-red-600 bg-red-50 px-1 py-0.2 rounded border border-red-100">敹?</span>
+                                ) : (
+                                  <span className="text-[9px] text-stone-500 bg-stone-100 px-1 py-0.2 rounded border border-stone-150">?賊?</span>
+                                )}
+                              </span>
+                              
+                              {file ? (
+                                <span className="text-[9px] text-[#0D9488] font-bold">撌脩像</span>
+                              ) : (
+                                <span className="text-[9px] text-stone-400">?芰像</span>
+                              )}
+                            </div>
+                            
+                            {file ? (
+                              <div className="flex justify-between items-center bg-white border border-stone-100 p-1.5 rounded mt-1">
+                                <span className="truncate text-stone-500 font-mono text-[10px] max-w-[155px]" title={file.name}>{file.name}</span>
+                                {file.base64Data ? (
+                                  <a
+                                    href={file.base64Data}
+                                    download={file.name}
+                                    className="text-[#8D1B1B] font-semibold flex items-center gap-0.5 hover:underline text-[10px]"
+                                  >
+                                    <Download className="w-3 h-3" />
+                                    銝?
+                                  </a>
+                                ) : (
+                                  <span className="text-stone-400 text-[9px]">?⊿?閬?/span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-stone-400 italic text-[10px] mt-0.5">撠瑼ａ?瑼?</span>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {/* ???芣飛憿??嗡??撘?隞?*/}
+                      {selectedEmp.uploadedFiles?.filter(f => !f.docType).map((file, i) => (
+                        <div key={i} className="bg-stone-50 p-2.5 border border-stone-100 rounded flex justify-between items-center text-[11px]">
+                          <span className="truncate max-w-[170px] font-medium text-stone-700">{file.name} (?芸?憿?</span>
+                          {file.base64Data ? (
+                            <a
+                              href={file.base64Data}
+                              download={file.name}
+                              className="text-[#8D1B1B] font-semibold flex items-center gap-1 hover:underline text-[10px]"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              銝?
+                            </a>
+                          ) : (
+                            <span className="text-stone-400">?⊥??汗</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 4. Signed Status */}
+                  <div className="space-y-2 pt-4 border-t border-stone-100 text-xs select-none">
+                    <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                      ?極雿?????蝣箄?
+                    </span>
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2 text-stone-600">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${selectedEmp.rulesAgreed ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-400'}`}>??/div>
+                        <span>撌脩偷蝵脣極雿????</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-stone-600">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${selectedEmp.privacyAgreed ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-400'}`}>??/div>
+                        <span>撌脩偷蝵脣??拍????????/span>
+                      </div>
+                      <div className="flex items-center gap-2 text-stone-600">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${selectedEmp.contractSigned ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-400'}`}>??/div>
+                        <span>
+                          {selectedEmp.contractSigned ? (
+                            <span>撌脩偷蝵脰??勗?蝝</span>
+                          ) : (
+                            <span className="text-stone-400 italic">???蝪賜蔡銝?/span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-stone-600">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${selectedEmp.guarantorSigned ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-400'}`}>??/div>
+                        <span>
+                          {selectedEmp.guarantorSigned ? (
+                            <span>撌脩偷蝵脰?∩?霅</span>
+                          ) : (
+                            <span className="text-stone-400 italic">?瑕靽??貊偷蝵脖葉</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-stone-600">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${selectedEmp.serviceSigned ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-400'}`}>??/div>
+                        <span>
+                          {selectedEmp.serviceSigned ? (
+                            <span>撌脩偷蝵脰撌交???摰?/span>
+                          ) : (
+                            <span className="text-stone-400 italic">?瑕極??蝝?蝪賜蔡銝?/span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              ) : (
+                <div className="bg-white border border-[#E9E1D6] rounded-2xl p-8 hover:shadow text-center space-y-3 text-stone-400 select-none">
+                  <AlertCircle className="w-8 h-8 text-stone-300 mx-auto" />
+                  <p className="text-xs">隢撌血?銝剝?????底??????嚗迨?銝?菜??隞???亦??箸鞈?嚗?/p>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* Create OnboardEmployee Form Module */}
+        {activeMenu === 'add' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start max-w-7xl mx-auto">
+            {/* Left Sidebar Menu Component */}
+            <div className="lg:col-span-3 bg-white border border-[#E9E1D6] rounded-2xl p-5 space-y-4 shadow-sm select-none">
+              <div className="pb-3.5 border-b border-stone-150">
+                <span className="block text-xs font-bold text-[#8D1B1B] uppercase tracking-widest leading-none">
+                  撱箇??勗撌乩?
+                </span>
+                <p className="text-[10px] text-stone-400 mt-1.5 leading-relaxed">
+                  ?函雿?隞?啣?嚗?蝣箏祕?詨?銝血‵憒乩??孵?祈???璇辣甈???                </p>
+              </div>
+              
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={() => setAddSubMenu('basic')}
+                  type="button"
+                  className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left text-xs font-medium cursor-pointer transition-all ${
+                    addSubMenu === 'basic'
+                      ? 'bg-[#8D1B1B] text-[#D4AF37] shadow-sm font-semibold'
+                      : 'text-stone-600 hover:bg-[#FAF9F6] hover:text-[#8D1B1B]'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>1. ?箸鞈?</span>
+                </button>
+                
+                <button
+                  onClick={() => setAddSubMenu('contract')}
+                  type="button"
+                  className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left text-xs font-medium cursor-pointer transition-all ${
+                    addSubMenu === 'contract'
+                      ? 'bg-[#8D1B1B] text-[#D4AF37] shadow-sm font-semibold'
+                      : 'text-stone-600 hover:bg-[#FAF9F6] hover:text-[#8D1B1B]'
+                  }`}
+                >
+                  <FileCheck className="w-4 h-4" />
+                  <span>2. ??鞈?</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!newEmp.name || !newEmp.email || !newEmp.authToken || !newEmp.title) {
+                      setErrorMsg('?? 隢?憛怠神甇仿?銝??祈??葉???敹‵甈? (憪????Email?蝔梯???蝣?');
+                      setAddSubMenu('basic');
+                      return;
+                    }
+                    setErrorMsg('');
+                    setAddSubMenu('send_email');
+                  }}
+                  type="button"
+                  className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left text-xs font-medium cursor-pointer transition-all ${
+                    addSubMenu === 'send_email'
+                      ? 'bg-[#8D1B1B] text-[#D4AF37] shadow-sm font-semibold'
+                      : 'text-stone-600 hover:bg-[#FAF9F6] hover:text-[#8D1B1B]'
+                  }`}
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>3. ?潮?圈靽∩辣</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Right Form Content Area */}
+            <div className="lg:col-span-9">
+              <form onSubmit={handleCreateEmployee} className="space-y-6">
+                <div className="bg-white border border-[#E9E1D6] rounded-2xl p-6 md:p-8 space-y-6 shadow-sm">
+                  {addSubMenu === 'basic' && (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 pb-4 border-b border-stone-100 select-none">
+                        <div className="w-9 h-9 rounded-xl bg-[#8D1B1B]/10 flex items-center justify-center text-[#8D1B1B]">
+                          <Users className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-semibold text-stone-900">1. ?圈脣?隞?祈??‵撖?/h3>
+                          <p className="text-xs text-stone-500">頛詨??憪??楊???舐窗鞈?嚗迨?挾鞈?撠?摮蝟餌絞???潔??</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ?圈脣?隞???<span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="靘?嚗?撠?"
+                            value={newEmp.name}
+                            onChange={e => setNewEmp({...newEmp, name: e.target.value})}
+                            className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-stone-50/30 focus:bg-white transition-all shadow-inner font-semibold"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ?∪極蝺刻? (?圈脣?隞蝺?
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="靘?嚗DC9999"
+                            value={newEmp.empId}
+                            onChange={e => setNewEmp({...newEmp, empId: e.target.value})}
+                            className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-stone-50/30 focus:bg-white transition-all shadow-inner font-mono font-bold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ?勗?餃??萎辣 <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="靘?嚗mployee@ldchotels.com"
+                            value={newEmp.email}
+                            onChange={e => setNewEmp({...newEmp, email: e.target.value})}
+                            className="w-full text-[#8D1B1B] font-mono px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-stone-50/30 focus:bg-white transition-all shadow-inner font-semibold"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            隞餉?砍 <span className="text-rose-500">*</span>
+                          </label>
+                          <select
+                            value={newEmp.department}
+                            onChange={e => setNewEmp({...newEmp, department: e.target.value})}
+                            className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-white font-semibold cursor-pointer shadow-inner"
+                          >
+                            <option>?脫?閫?隞賣????/option>
+                            <option>?脣??????∩遢???砍</option>
+                            <option>?游???蝞∠?憿批??∩遢???砍</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ?券??迂 <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="靘?嚗??瑕??"
+                            value={(newEmp.title || '').split(' - ')[0] || ''}
+                            onChange={e => {
+                              const parts = (newEmp.title || '').split(' - ');
+                              const jobTitle = parts.slice(1).join(' - ') || parts[1] || '';
+                              const safeDept = e.target.value.replace(' - ', ' ');
+                              setNewEmp({...newEmp, title: safeDept + (jobTitle ? ` - ${jobTitle}` : '')});
+                            }}
+                            className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-stone-50/30 focus:bg-white transition-all shadow-inner font-semibold"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ?瑞迂 <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="靘?嚗?????
+                            value={(newEmp.title || '').split(' - ')[1] || ((newEmp.title || '').includes(' - ') ? '' : (newEmp.title || ''))}
+                            onChange={e => {
+                              const parts = (newEmp.title || '').split(' - ');
+                              const dept = parts[0] || '';
+                              const safeTitle = e.target.value.replace(' - ', ' ');
+                              setNewEmp({...newEmp, title: (dept ? `${dept} - ` : '') + safeTitle});
+                            }}
+                            className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-stone-50/30 focus:bg-white transition-all shadow-inner font-semibold"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ???啗??<span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={newEmp.onboardDate}
+                            onChange={e => setNewEmp({...newEmp, onboardDate: e.target.value})}
+                            className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-stone-50/30 focus:bg-white transition-all shadow-inner"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <label className="block text-xs font-semibold text-stone-700 font-sans">
+                              ??撽?蝣?<span className="text-rose-500">*</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={generateRandomToken}
+                              className="text-[10px] text-[#8D1B1B] font-bold hover:underline"
+                            >
+                              ? ?冽??Ｙ? 4 蝣?                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="靘? LDC888"
+                            value={newEmp.authToken}
+                            onChange={e => setNewEmp({...newEmp, authToken: e.target.value})}
+                            className="w-full text-stone-900 font-mono font-bold tracking-widest px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-stone-50/30 focus:bg-white transition-all shadow-inner"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="border-t border-stone-100 pt-6 flex justify-end gap-3 select-none">
+                        <button
+                          type="button"
+                          onClick={() => setActiveMenu('tracker')}
+                          className="px-4 py-2.5 text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg cursor-pointer"
+                        >
+                          ??餈?
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAddSubMenu('contract')}
+                          className="px-5 py-2.5 bg-[#8D1B1B] text-[#D4AF37] hover:bg-[#721515] font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          銝?甇伐?憛怠神??鞈?
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {addSubMenu === 'contract' && (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 pb-4 border-b border-stone-100 select-none">
+                        <div className="w-9 h-9 rounded-xl bg-[#8D1B1B]/10 flex items-center justify-center text-[#8D1B1B]">
+                          <FileCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-semibold text-stone-900">2. ?圈脣?隞???蝝?祈?閮?/h3>
+                          <p className="text-xs text-stone-500">憛怠戎?亥擗典?極雿暺?芣撘????嚗?隞偷蝵脣?蝝?撠?亙霈憟</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-stone-50/50 p-4.5 rounded-xl border border-stone-150">
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ?亥擗典嚗??詨??芸?憟閰脤尹?圈?頝?嚗?<span className="text-rose-500">*</span>
+                          </label>
+                          <select
+                            value={selectedBranchIdx}
+                            onChange={e => {
+                              const idx = parseInt(e.target.value, 10);
+                              setSelectedBranchIdx(idx);
+                              const b = BRANCHES[idx];
+                              setNewEmp({
+                                ...newEmp,
+                                contractWorkLocation: `${b.name} (${b.address})`
+                              });
+                            }}
+                            className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-white font-semibold cursor-pointer shadow-inner"
+                          >
+                            {BRANCHES.map((b, idx) => (
+                              <option key={idx} value={idx}>
+                                {b.name} ? {b.address}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            蝝?撌乩??圈???嚗?蝝洵???芸?撣嗅嚗?                          </label>
+                          <div className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg bg-stone-50/70 font-mono font-semibold shadow-inner min-h-[38px] flex items-center select-all">
+                            {newEmp.contractWorkLocation || '隢??詨椰?游?琿尹?亥?葆??}
+                          </div>
+                        </div>
+
+                        <div className="border-t border-stone-200/60 pt-4 md:col-span-2"></div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ?圈脣?隞??撘???蝚砌?璇? <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="flex gap-6 p-2.5 bg-white border border-stone-200 rounded-lg shadow-inner">
+                            <label className="flex items-center gap-1.5 text-xs text-stone-800 cursor-pointer font-medium select-none">
+                              <input
+                                type="radio"
+                                name="contractLeaveOption"
+                                checked={newEmp.contractLeaveOption === 'monthly'}
+                                onChange={() => setNewEmp({...newEmp, contractLeaveOption: 'monthly', contractLeavedays: '8-10'})}
+                                className="rounded text-[#8D1B1B] focus:ring-[#8D1B1B] cursor-pointer"
+                              />
+                              ??隡
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs text-stone-800 cursor-pointer font-medium select-none">
+                              <input
+                                type="radio"
+                                name="contractLeaveOption"
+                                checked={newEmp.contractLeaveOption === 'biweekly'}
+                                onChange={() => setNewEmp({...newEmp, contractLeaveOption: 'biweekly', contractLeavedays: '蝚血?瘜??嚗?曹?鈭'})}
+                                className="rounded text-[#8D1B1B] focus:ring-[#8D1B1B] cursor-pointer"
+                              />
+                              ?曹?鈭??                            </label>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            隡?憭拇閮剖?嚗??隡??芾?頛詨憭拇嚗?                          </label>
+                          {newEmp.contractLeaveOption === 'monthly' ? (
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-stone-400">??隡?/span>
+                              <input
+                                type="text"
+                                value={newEmp.contractLeavedays || ''}
+                                onChange={e => setNewEmp({...newEmp, contractLeavedays: e.target.value})}
+                                placeholder="8-10"
+                                className="w-full text-stone-900 font-mono font-bold pl-14 pr-24 py-2 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-white transition-all shadow-inner"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">憭?(靘?豢??剛?摰?</span>
+                            </div>
+                          ) : (
+                            <div className="w-full text-stone-400 px-3.5 py-2 text-xs border border-stone-200 rounded-lg bg-stone-50/70 font-sans font-medium shadow-inner min-h-[38px] flex items-center select-none">
+                              蝚血?瘜?撌乩??嚗?曹?鈭??                            </div>
+                          )}
+                        </div>
+
+                        <div className="border-t border-stone-200/60 pt-4 md:col-span-2"></div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ?圈脣?隞鞈??芣撘???蝚砍璇? <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="flex gap-6 p-2.5 bg-white border border-stone-200 rounded-lg shadow-inner">
+                            <label className="flex items-center gap-1.5 text-xs text-stone-800 cursor-pointer font-medium select-none">
+                              <input
+                                type="radio"
+                                name="contractSalaryType"
+                                checked={newEmp.contractSalaryType === 'monthly'}
+                                onChange={() => setNewEmp({...newEmp, contractSalaryType: 'monthly', contractSalaryAmount: '36,000'})}
+                                className="rounded text-[#8D1B1B] focus:ring-[#8D1B1B] cursor-pointer"
+                              />
+                              ?
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs text-stone-800 cursor-pointer font-medium select-none">
+                              <input
+                                type="radio"
+                                name="contractSalaryType"
+                                checked={newEmp.contractSalaryType === 'daily'}
+                                onChange={() => setNewEmp({...newEmp, contractSalaryType: 'daily', contractSalaryAmount: '1,800'})}
+                                className="rounded text-[#8D1B1B] focus:ring-[#8D1B1B] cursor-pointer"
+                              />
+                              ?亥
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs text-stone-800 cursor-pointer font-medium select-none">
+                              <input
+                                type="radio"
+                                name="contractSalaryType"
+                                checked={newEmp.contractSalaryType === 'hourly'}
+                                onChange={() => setNewEmp({...newEmp, contractSalaryType: 'hourly', contractSalaryAmount: '190'})}
+                                className="rounded text-[#8D1B1B] focus:ring-[#8D1B1B] cursor-pointer"
+                              />
+                              ?
+                            </label>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ?芾???嚗?蝝洵?急?嚗?芾?頛詨隤踵嚗?<span className="text-rose-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400">NT$</span>
+                            <input
+                              type="text"
+                              value={newEmp.contractSalaryAmount || ''}
+                              onChange={e => setNewEmp({...newEmp, contractSalaryAmount: e.target.value})}
+                              placeholder="隢撓?亥鞈?憿?靘? 36,000"
+                              className="w-full text-[#8D1B1B] font-mono font-bold pl-11 pr-10 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-white transition-all shadow-inner"
+                              required
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">??/span>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-stone-200/60 pt-4 md:col-span-2"></div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5 font-sans">
+                            ??閰衣??嚗?蝝洵銝璇?
+                          </label>
+                          <select
+                            value={newEmp.contractProbationMonths}
+                            onChange={e => setNewEmp({...newEmp, contractProbationMonths: e.target.value})}
+                            className="w-full max-w-xs text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-white font-semibold cursor-pointer shadow-inner font-sans"
+                          >
+                            <option value="銝?>銝?/option>
+                            <option value="??>??</option>
+                          </select>
+                          <p className="text-[10px] text-stone-400 mt-1.5 font-sans select-none">
+                            ??蝺?憛怠神?偷蝵脣?蝝?嚗迨閰衣???芸?撣嗅??                          </p>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-stone-100 pt-6 flex justify-end gap-3 select-none">
+                        <button
+                          type="button"
+                          onClick={() => setAddSubMenu('basic')}
+                          className="px-4 py-2.5 text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg cursor-pointer"
+                        >
+                          銝?甇伐??箸鞈?
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newEmp.name || !newEmp.email || !newEmp.authToken || !newEmp.title) {
+                              setErrorMsg('?? 隢?憛怠神甇仿?銝??祈??葉???敹‵甈? (憪????Email?蝔梯???蝣?');
+                              setAddSubMenu('basic');
+                              return;
+                            }
+                            setErrorMsg('');
+                            setAddSubMenu('send_email');
+                          }}
+                          className="px-5 py-2.5 bg-[#8D1B1B] text-[#D4AF37] hover:bg-[#721515] font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          銝?甇伐??汗銝衣?靽?                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {addSubMenu === 'send_email' && (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 pb-4 border-b border-stone-100 select-none">
+                        <div className="w-9 h-9 rounded-xl bg-[#8D1B1B]/10 flex items-center justify-center text-[#8D1B1B]">
+                          <Mail className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-semibold text-stone-900">3. ?汗???圈靽∩辣</h3>
+                          <p className="text-xs text-stone-500">?詨?銝靽∩辣蝭?摰對?蝣箄??∟炊敺??訾??寞????蝟餌絞撠?箏?圈?隢縑</p>
+                        </div>
+                      </div>
+
+                      {/* Google / Gmail Auth Connector Box */}
+                      <div className="bg-stone-50 border border-stone-200/60 rounded-2xl p-5 space-y-4 shadow-sm">
+                        <div className="flex items-center justify-between select-none">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-3 h-3 rounded-full ${googleToken ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                            <div>
+                              <h4 className="text-xs font-bold text-stone-850">
+                                {googleToken ? '? Google Gmail ?喲??賢歇撠梁?' : '? Google Gmail ?喲??賣?'}
+                              </h4>
+                              <p className="text-[11px] text-stone-500">
+                                {googleToken 
+                                  ? `蝟餌絞撠誑?函?蝞∠??隞嗅董?嗥??瑕?撘` 
+                                  : '?祉頂蝯望?湧? Google Auth 隞交?恣?靽∠拳?潮縑隞塚?隢?摰??????'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {googleToken ? (
+                            <button
+                              type="button"
+                              onClick={handleGoogleSignOut}
+                              className="text-[10px] text-stone-500 hover:text-[#8D1B1B] hover:underline font-medium cursor-pointer"
+                            >
+                              銝剜 Google ???
+                            </button>
+                          ) : null}
+                        </div>
+
+                        {!googleToken ? (
+                          <div className="pt-1 flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={handleGoogleSignIn}
+                              disabled={isGoogleConnecting}
+                              className="flex items-center gap-2.5 px-4 py-2 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 active:bg-stone-100 shadow-sm text-xs font-semibold text-stone-700 cursor-pointer transition-all"
+                            >
+                              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                                <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.59 5.59 0 0 1 8.4 12.915a5.59 5.59 0 0 1 5.591-5.6a5.54 5.54 0 0 1 3.844 1.5l3.24-3.24A10.12 10.12 0 0 0 14.001 2a10.08 10.08 0 0 0-10.08 10.08A10.08 10.08 0 0 0 14.001 22.16c5.736 0 10.16-4.032 10.16-10.16 0-.615-.054-1.2-.16-1.715H12.24z"/>
+                              </svg>
+                              <span>{isGoogleConnecting ? '甇???? Google...' : '??? Google 撣唾? (? Gmail 撖縑)'}</span>
+                            </button>
+                            <span className="text-[10px] text-stone-400 select-none">?餃敺????祉頂蝯勗??唬縑隞?/span>
+                          </div>
+                        ) : (
+                          <div className="bg-white border border-stone-150 rounded-xl px-4 py-3 flex items-center gap-3 text-xs text-stone-700">
+                            <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center font-bold text-[#8D1B1B] text-sm shadow-xs select-none">
+                              {googleUser?.displayName ? googleUser.displayName[0] : 'HR'}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-stone-850">{googleUser?.displayName || '蝞∠???}</div>
+                              <div className="text-[11px] font-mono text-stone-500">{googleUser?.email}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Onboarding Notification Email Box */}
+                      <div className="bg-[#FAF9F6] p-5 rounded-2xl border border-stone-200/80 space-y-4 shadow-sm">
+                        <div className="flex items-center gap-2 pb-2 border-b border-stone-200 select-none">
+                          <Mail className="w-4 h-4 text-[#8D1B1B]" />
+                          <span className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                            撖靽∩辣?汗
+                          </span>
+                        </div>
+                        
+                        <div className="bg-white border border-stone-150 rounded-xl p-4.5 space-y-3 text-xs text-stone-600 font-sans leading-relaxed shadow-inner">
+                          <div className="grid grid-cols-1 gap-2 border-b border-stone-100 pb-3">
+                            <div>
+                              <strong className="text-stone-600 font-medium">撖辣??</strong>
+                              <span className="font-mono text-stone-850 bg-stone-100 px-2 py-0.5 rounded font-semibold text-[11px] border border-stone-200/60 shadow-xs">
+                                {googleUser ? `${googleUser.displayName || '蝞∠???} <${googleUser.email}>` : `${currentUser?.name || '蝞∠???} <${currentUser?.email}> (璅⊥?潮?`}
+                              </span>
+                            </div>
+                            <div>
+                              <strong className="text-stone-600 font-medium">?嗡辣??</strong>
+                              <span className="font-mono text-stone-850 bg-stone-100 px-2 py-0.5 rounded font-semibold text-[11px] border border-stone-200/60 shadow-xs">
+                                {newEmp.name || '(憪?)'} &lt;{newEmp.email || '(?餃??萎辣)'}&gt;
+                              </span>
+                            </div>
+                            <div>
+                              <strong className="text-stone-600 font-medium">靽∩辣銝餅嚗?/strong>
+                              <span className="font-semibold text-stone-900 text-[12px]">
+                                ?getCompanyDetails(newEmp).name}?迭餈???伐??圈脖犖?∪?瑕?啁頂蝯梁?亙?撠?                              </span>
+                            </div>
+                          </div>
+                          
+                          <p className="text-stone-800">閬芣???<span className="font-semibold text-stone-900 underline">{newEmp.name || '??'}</span> ?典末嚗?/p>
+                          <p className="text-xs text-stone-600 leading-relaxed">
+                            ?剖??券???砍嚗鈭??箸颲衣??亥??靽?蝥?隢暺?銝撟喳???嚗蒂雿輻?函??餃??萎辣??撅祆?甈Ⅳ?餃嚗‵憒亙?唳???犖??蝝?祈???
+                          </p>
+                          
+                          <div className="bg-[#FAF6F0] p-4 rounded-xl border border-[#D4AF37]/10 space-y-2 font-sans text-xs text-stone-700">
+                            <div>? <strong className="text-stone-600">?勗?瑞迂嚗?/strong><span className="text-stone-900 font-semibold">{newEmp.title || '(?芾身摰?'}</span></div>
+                            <div>?? <strong className="text-stone-600">?勗?交?嚗?/strong><span className="text-[#8D1B1B] font-bold font-mono">{newEmp.onboardDate || '(?芾身摰?'}</span></div>
+                            <div>?? <strong className="text-stone-600">?勗?圈?嚗?/strong><span className="text-stone-900 font-medium">{newEmp.contractWorkLocation || '???? (?啣?撣敺瑁楝銝畾???'}</span></div>
+                            <div>? <strong className="text-stone-600">??芾?嚗?/strong>{newEmp.contractSalaryType === 'daily' ? '?亥' : newEmp.contractSalaryType === 'hourly' ? '?' : '?'} <strong className="font-mono text-[#8D1B1B] font-bold">NT$ {newEmp.contractSalaryAmount || '36,000'}</strong> ??/div>
+                            <div>?? <strong className="text-stone-600">撠惇??蝣潘?</strong><span className="text-white font-bold bg-[#8D1B1B] px-2.5 py-1 rounded-md font-mono text-xs shadow-xs tracking-wider select-all">{newEmp.authToken || '(?芾身摰?'}</span></div>
+                            <div className="pt-2 border-t border-stone-200/60 flex items-start gap-1">
+                              <span>??</span>
+                              <div>
+                                <strong className="text-stone-600 block">撟喳???嚗?/strong>
+                                <a href="https://ldc-onboarding-portal-554356081371.asia-east1.run.app" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all font-mono font-medium text-[11px]">https://ldc-onboarding-portal-554356081371.asia-east1.run.app</a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-stone-100 pt-6 flex justify-between items-center gap-3 select-none">
+                        <button
+                          type="button"
+                          onClick={() => setAddSubMenu('contract')}
+                          className="px-4 py-2.5 text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg cursor-pointer"
+                        >
+                          銝?甇伐???鞈?
+                        </button>
+                        <div className="flex gap-2.5">
+                          <button
+                            type="button"
+                            onClick={handleCreateEmployee}
+                            disabled={submitting}
+                            className="px-5 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                          >
+                            ?遣蝡?啣 (銝??靽?
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCreateAndSendEmail}
+                            disabled={submitting}
+                            className="px-6 py-2.5 bg-[#8D1B1B] text-[#D4AF37] hover:bg-[#721515] font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            {submitting ? '撱箇?銝血??葉...' : '蝣箄?撱箇??勗?∩蒂?潮靽?}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 3. HR Admin management (No limits) - Sidebar Interior Layout */}
+        {activeMenu === 'admins' && (() => {
+          const gordonEmail = primaryAdminEmail;
+          
+          const normalizedAdmins = adminEmails.map((admin: any) => {
+            if (typeof admin === 'string') {
+              const email = admin.toLowerCase().trim();
+              return { 
+                email, 
+                permissions: email === gordonEmail 
+                  ? ['admin', 'tracker', 'publish', 'ai', 'audit'] 
+                  : ['tracker', 'publish', 'ai'] 
+              };
+            }
+            const email = (admin.email || '').toLowerCase().trim();
+            return {
+              email,
+              permissions: admin.permissions || (email === gordonEmail 
+                ? ['admin', 'tracker', 'publish', 'ai', 'audit'] 
+                : ['tracker', 'publish', 'ai'])
+            };
+          });
+
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start max-w-7xl mx-auto">
+              
+              {/* Left Sidebar Menu Component */}
+              <div className="lg:col-span-3 bg-white border border-[#E9E1D6] rounded-2xl p-5 space-y-4 shadow-sm select-none">
+                <div className="pb-3.5 border-b border-stone-150">
+                  <span className="block text-xs font-bold text-[#8D1B1B] uppercase tracking-widest leading-none">
+                    撣唾?蝞∠?
+                  </span>
+                  <p className="text-[10px] text-stone-400 mt-1 leading-relaxed">
+                    蝬剛風HR蝞∠??董撖??刻?敺銵蝙甈?撅斤???                  </p>
+                </div>
+                
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    onClick={() => setAdminsSubMenu('members')}
+                    type="button"
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left text-xs font-medium cursor-pointer transition-all ${
+                      adminsSubMenu === 'members'
+                        ? 'bg-[#8D1B1B] text-[#D4AF37] shadow-sm font-semibold'
+                        : 'text-stone-600 hover:bg-stone-50 hover:text-stone-800'
+                    }`}
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>蝞∠??</span>
+                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                      adminsSubMenu === 'members' ? 'bg-black/20 text-[#FAF6F0]' : 'bg-stone-100 text-stone-500'
+                    }`}>
+                      {normalizedAdmins.length}
+                    </span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setAdminsSubMenu('add')}
+                    type="button"
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left text-xs font-medium cursor-pointer transition-all ${
+                      adminsSubMenu === 'add'
+                        ? 'bg-[#8D1B1B] text-[#D4AF37] shadow-sm font-semibold'
+                        : 'text-stone-600 hover:bg-stone-50 hover:text-stone-800'
+                    }`}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>?啣?蝞∠??∪董??/span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setAdminsSubMenu('password')}
+                    type="button"
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left text-xs font-medium cursor-pointer transition-all ${
+                      adminsSubMenu === 'password'
+                        ? 'bg-[#8D1B1B] text-[#D4AF37] shadow-sm font-semibold'
+                        : 'text-stone-600 hover:bg-stone-50 hover:text-stone-800'
+                    }`}
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    <span>霈撖Ⅳ</span>
+                  </button>
+
+                  <button
+                    onClick={() => setAdminsSubMenu('transfer')}
+                    type="button"
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-left text-xs font-medium cursor-pointer transition-all ${
+                      adminsSubMenu === 'transfer'
+                        ? 'bg-[#8D1B1B] text-[#D4AF37] shadow-sm font-semibold'
+                        : 'text-stone-600 hover:bg-stone-50 hover:text-stone-800'
+                    }`}
+                  >
+                    <ArrowRightLeft className="w-4 h-4" />
+                    <span>蝘餉?銝餉?蝞∠???/span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Content Column */}
+              <div className="lg:col-span-9">
+                
+                {/* SUBMENU 1: MANAGE MEMBERS */}
+                {adminsSubMenu === 'members' && (
+                  <div className="space-y-6">
+                    <div className="bg-white border border-[#E9E1D6] rounded-2xl p-6 md:p-8 space-y-5 shadow-sm">
+                      {!hasAdminPermission && (
+                        <div className="bg-amber-50 border border-amber-200/70 p-4 rounded-xl flex items-start gap-3 select-none">
+                          <ShieldAlert className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                          <div className="text-xs text-amber-800 space-y-1">
+                            <h4 className="font-bold">?? ?函??蝞∠?撣唾?甈???</h4>
+                            <p className="leading-relaxed text-stone-600">
+                              ?函??亦?撣唾?銝行?<strong>?恣????admin)</strong>???汗?嗅? HR ??脰??犖撖Ⅳ霈嚗瘜憓?閮駁?撣唾???隤踵隞犖甈???                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-1 select-none">
+                        <span className="block text-xs font-bold text-stone-500 uppercase tracking-widest leading-none">
+                          ?桀???銋R?皜
+                        </span>
+                        <p className="text-xs text-stone-400">暺?喳??嚗????撅?閰脫??⊥???閮?蝟餌絞?啣?蝝??/p>
+                      </div>
+
+                      <div className="border-t border-stone-200/60 my-2"></div>
+
+                      <div className="space-y-4">
+                        {normalizedAdmins.map((admin, idx) => {
+                          const isGordon = admin.email.toLowerCase() === gordonEmail;
+                          const isExpanded = expandedAdminEmails.includes(admin.email);
+                          
+                          // Look up real system action logs associated with this administrator
+                          const userLogs = activityLogs.filter(
+                            log => (log.operatorEmail || '').toLowerCase().trim() === admin.email
+                          );
+                          
+                          return (
+                            <div 
+                              key={idx} 
+                              className="bg-white border border-[#E9E1D6] rounded-xl overflow-hidden shadow-sm hover:shadow transition-all duration-250"
+                            >
+                              {/* Summary Strip Row */}
+                              <div className="p-4 md:p-5 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                  {/* Color circular initials badge */}
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold font-mono text-white select-none shadow-sm ${
+                                    isGordon ? 'bg-gradient-to-tr from-[#8D1B1B] to-[#b08e4c]' : 'bg-stone-500'
+                                  }`}>
+                                    {admin.email.substring(0, 2).toUpperCase()}
+                                  </div>
+                                  
+                                  <div>
+                                    <div className="flex items-center flex-wrap gap-2">
+                                      <span className="text-xs font-bold text-stone-850 font-mono tracking-tight">{admin.email}</span>
+                                      {isGordon ? (
+                                        <span className="text-[10px] text-[#FAF6F0] bg-[#8D1B1B] border border-[#8D1B1B]/40 px-2 py-0.5 rounded-md flex items-center font-semibold tracking-wide leading-none select-none">
+                                          ?? 銝餉?蝞∠???                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] text-stone-600 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded-md flex items-center font-medium tracking-wide leading-none select-none">
+                                          ?? ?勗?蝞∠???                                        </span>
+                                      )}
+                                      <span className="text-[10px] text-[#075041] bg-emerald-50 border border-emerald-150/60 px-2 py-0.5 rounded-md font-semibold tracking-wide leading-none select-none">
+                                        ? 甇?虜??
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-stone-400 mt-1">
+                                      {isGordon ? '銝餉?蝟餌絞蝔賣?????瑟?撣單蝞∠???甈?' : '??蝞∠?????靘蜓蝞⊥?摰??賣?甈??銵遙??}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                {/* Right side controls */}
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right hidden sm:block select-none">
+                                    <span className="block text-[9px] text-stone-400 tracking-wider font-semibold uppercase">???擃???/span>
+                                    <span className="text-xs font-bold text-[#8D1B1B] font-mono">{admin.permissions?.length} ??/span>
+                                  </div>
+
+                                  {/* Delete Administrator button */}
+                                  {hasAdminPermission && !isGordon && admin.email.toLowerCase() !== currentUser.email.toLowerCase() && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setAdminToDelete(admin.email);
+                                      }}
+                                      type="button"
+                                      className="px-2.5 py-1.5 text-[11px] font-bold text-[#D4AF37] bg-[#8D1B1B] hover:bg-[#721515] hover:text-[#D4AF37] rounded-lg border border-rose-200 transition-all cursor-pointer flex items-center gap-1 active:scale-95 select-none shrink-0"
+                                      title="閮駁甇斤恣?董??甈?"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                      <span>閮駁撣唾?</span>
+                                    </button>
+                                  )}
+                                  
+                                  {/* Expansion indicator button */}
+                                  <button
+                                    onClick={() => {
+                                      const email = admin.email;
+                                      setExpandedAdminEmails(prev => 
+                                        prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email]
+                                      );
+                                    }}
+                                    type="button"
+                                    className="w-8 h-8 rounded-full border border-stone-200 hover:border-[#8D1B1B] hover:bg-stone-50 hover:text-[#8D1B1B] text-stone-500 font-bold text-base flex items-center justify-center transition-all active:scale-95 cursor-pointer select-none"
+                                    title={isExpanded ? "?嗅?閰喟敦鞈? (-)" : "撅?閰喟敦鞈? (+)"}
+                                  >
+                                    {isExpanded ? '?? : '嚗?}
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {/* Collapsible Details Drawer Panel */}
+                              {isExpanded && (
+                                <div className="border-t border-stone-100 bg-stone-50/50 p-5 md:p-6 space-y-6">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    
+                                    {/* Left Sub-Card: Authorization Detail */}
+                                    <div className="bg-white border border-[#E9E1D6]/70 rounded-xl p-4.5 space-y-3 shadow-inner">
+                                      <div className="flex items-center gap-1.5 pb-2 border-b border-stone-100">
+                                        <span className="text-xs">??</span>
+                                        <h4 className="text-[11px] font-bold text-stone-600 uppercase tracking-wider">
+                                          鈭箄?敺???甈???                                        </h4>
+                                      </div>
+                                      
+                                      <div className="space-y-2 text-[11px] text-stone-600">
+                                        {PERMISSION_OPTIONS.map(opt => {
+                                          const hasPerm = admin.permissions?.includes(opt.id);
+                                          return (
+                                            <div key={opt.id} className="flex items-start gap-2.5 py-1.5 border-b border-dashed border-stone-100 last:border-0">
+                                              {hasPerm ? (
+                                                <span className="text-emerald-600 font-bold text-xs select-none">??/span>
+                                              ) : (
+                                                <span className="text-stone-300 font-bold text-xs select-none">??/span>
+                                              )}
+                                              <div className="flex-1">
+                                                <span className={`font-semibold block ${hasPerm ? 'text-stone-800 font-bold' : 'text-stone-400 line-through'}`}>
+                                                  {opt.label}
+                                                </span>
+                                                <span className="text-[10px] text-stone-400 font-sans block leading-relaxed mt-0.5">{opt.desc}</span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Right Sub-Card: Logs Auditing Timeline */}
+                                    <div className="bg-white border border-[#E9E1D6]/70 rounded-xl p-4.5 space-y-4 shadow-inner">
+                                      <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-xs">??</span>
+                                          <h4 className="text-[11px] font-bold text-stone-600 uppercase tracking-wider">
+                                            ???????                                          </h4>
+                                        </div>
+                                        <span className="text-[9px] text-[#8D1B1B] font-bold bg-[#8D1B1B]/10 px-2 py-0.5 rounded-full uppercase tracking-wide select-none">
+                                          蝮賣?雿?{userLogs.length} 甈?                                        </span>
+                                      </div>
+                                      
+                                      {userLogs.length === 0 ? (
+                                        <div className="text-stone-400 italic text-[11px] py-10 text-center flex flex-col items-center justify-center gap-1.5">
+                                          <span>? 閰脩恣????∩遙雿????/span>
+                                          <span className="text-[10px] text-stone-300 not-italic">?典??唳憓耨?嫘雿??芷???????啣?蝝??/span>
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-4">
+                                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
+                                            ?餈?3 甈∠??啣?蝝??
+                                          </span>
+                                          <div className="space-y-3.5 relative pl-3.5 border-l border-stone-200">
+                                            {userLogs.slice(0, 3).map((log, index) => {
+                                              const displayLogDate = new Date(log.timestamp).toLocaleString('zh-TW', {
+                                                month: '2-digit',
+                                                day: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                second: '2-digit'
+                                              });
+                                              
+                                              return (
+                                                <div key={log.id || index} className="relative text-[11px] leading-normal font-sans">
+                                                  <div className="-left-[19.5px] top-1 absolute w-2 h-2 rounded-full bg-[#8D1B1B] border border-white"></div>
+                                                  <div className="text-stone-400 text-[9px] font-mono flex items-center justify-between gap-2.5">
+                                                    <span className="font-semibold text-stone-500">{displayLogDate}</span>
+                                                    <span className="text-[8px] bg-stone-100 px-1 py-0.2 rounded border border-stone-150 text-stone-500 uppercase tracking-tight select-none">
+                                                      {log.actionType}
+                                                    </span>
+                                                  </div>
+                                                  <div className="text-stone-700 font-semibold mt-0.5">
+                                                    ??撠情嚗?span className="text-[#8D1B1B] font-bold">{log.targetEmployee || '?函頂蝯?/ HR'}</span>
+                                                  </div>
+                                                  <p className="text-stone-500 mt-0.5 leading-tight font-sans text-[10.5px]">
+                                                    {log.details}
+                                                  </p>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      <div className="pt-2 border-t border-stone-100 text-[10px] text-stone-400 flex justify-between select-none">
+                                        <span>?????嚗??典?撖?SSL</span>
+                                        <span>摰?寞?嚗迤撣豢?甈?/span>
+                                      </div>
+                                    </div>
+                                    
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBMENU 2: ADD NEW ADMIN ACCOUNT */}
+                {adminsSubMenu === 'add' && (
+                  <div className="bg-white border border-[#E9E1D6] rounded-2xl p-6 md:p-8 space-y-6 shadow-sm">
+                    {!hasAdminPermission && (
+                      <div className="bg-amber-50 border border-amber-200/70 p-4 rounded-xl flex items-start gap-3 select-none">
+                        <ShieldAlert className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                        <div className="text-xs text-amber-800 space-y-1">
+                          <h4 className="font-bold">?? 甈???嚗瘜憓恣?董??/h4>
+                          <p className="leading-relaxed text-stone-600">
+                            ?函??亦?撣唾?銝行?<strong>?恣????admin)</strong>?鈭??頂蝯梯?摰?撣單蝞∠?摰?改????脫?甈恣????擃? HR 撣單?寡?啣??楊頛舀??芷蝞∠???                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-2.5 select-none">
+                      <div className="w-9 h-9 rounded-xl bg-[#8D1B1B]/10 flex items-center justify-center text-[#8D1B1B]">
+                        <ShieldAlert className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-stone-900">?啣???蝞∠?鈭箏撣唾? </h3>
+                        <p className="text-xs text-stone-400">?嗆憓隞R蝞∠??縑蝞勗?嚗HR蝞∠??噶?臬?典靽∠拳??憪身摰?蝣潛?交迨敺?脰??勗雿平??/p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-stone-200/60 my-1"></div>
+
+                    <form onSubmit={handleAddAdmin} className={`space-y-5 ${!hasAdminPermission ? 'opacity-65' : ''}`}>
+                      <div>
+                        <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                          ?啣? HR 蝞∠??縑蝞?(Email) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="靘?嚗r_assistant@ldchotels.com"
+                          value={newAdminEmail}
+                          onChange={e => setNewAdminEmail(e.target.value)}
+                          disabled={!hasAdminPermission}
+                          className="w-full text-[#8D1B1B] font-mono px-3.5 py-2 text-xs border border-stone-200 rounded-lg focus:outline-none focus:border-[#8D1B1B] bg-stone-50/50 focus:bg-white transition-all shadow-inner"
+                          required
+                        />
+                        <div className="text-[10px] text-stone-400 mt-1.5 select-none">
+                          ? ?酉嚗??憓?嚗HR蝞∠???憪?閮剔?亙?蝣潛??綽?<span className="font-mono font-bold text-stone-700 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-250/20">mis</span>??亙??舀?董?恣????霈撖Ⅳ?葉?湔??                        </div>
+                      </div>
+
+                      {/* Admin Role Category Selector */}
+                      <div className="space-y-2.5">
+                        <label className="block text-xs font-bold text-stone-700 select-none">
+                          蝞∠????脰?蝝 <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* Primary Admin */}
+                          <label
+                            className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all duration-200 select-none ${
+                              !hasAdminPermission ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
+                            } ${
+                              selectedPermissions.includes('admin')
+                                ? 'bg-white border-[#8D1B1B] text-stone-900 shadow-sm ring-1 ring-[#8D1B1B]'
+                                : 'bg-stone-50/50 border-stone-200 text-stone-500 hover:bg-stone-100 hover:text-stone-700'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="adminRole"
+                              checked={selectedPermissions.includes('admin')}
+                              disabled={!hasAdminPermission}
+                              onChange={() => {
+                                if (!hasAdminPermission) return;
+                                if (!selectedPermissions.includes('admin')) {
+                                  setSelectedPermissions([...selectedPermissions, 'admin']);
+                                }
+                              }}
+                              className="mt-1 h-4 w-4 text-[#8D1B1B] focus:ring-[#8D1B1B] cursor-pointer"
+                            />
+                            <div className="text-xs leading-normal flex-1">
+                              <span className={`font-bold block ${selectedPermissions.includes('admin') ? 'text-[#8D1B1B]' : 'text-stone-700'}`}>
+                                ?? 蝮賣蝞∠???(Primary Admin)
+                              </span>
+                              <span className="text-stone-400 font-sans block text-[10px] mt-1 leading-normal">
+                                ??擃頂蝯望????臬遣蝡酉?瑕隞恣?董??隤踵隞犖????                              </span>
+                            </div>
+                          </label>
+
+                          {/* Collaborative Admin */}
+                          <label
+                            className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all duration-200 select-none ${
+                              !hasAdminPermission ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
+                            } ${
+                              !selectedPermissions.includes('admin')
+                                ? 'bg-white border-[#8D1B1B] text-stone-900 shadow-sm ring-1 ring-[#8D1B1B]'
+                                : 'bg-stone-50/50 border-stone-200 text-stone-500 hover:bg-stone-100 hover:text-stone-700'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="adminRole"
+                              checked={!selectedPermissions.includes('admin')}
+                              disabled={!hasAdminPermission}
+                              onChange={() => {
+                                if (!hasAdminPermission) return;
+                                if (selectedPermissions.includes('admin')) {
+                                  const filtered = selectedPermissions.filter(p => p !== 'admin');
+                                  setSelectedPermissions(filtered.length > 0 ? filtered : ['tracker']);
+                                }
+                              }}
+                              className="mt-1 h-4 w-4 text-[#8D1B1B] focus:ring-[#8D1B1B] cursor-pointer"
+                            />
+                            <div className="text-xs leading-normal flex-1">
+                              <span className={`font-bold block ${!selectedPermissions.includes('admin') ? 'text-[#8D1B1B]' : 'text-stone-700'}`}>
+                                ?? ??蝞∠???(Collaborative Admin)
+                              </span>
+                              <span className="text-stone-400 font-sans block text-[10px] mt-1 leading-normal">
+                                ?亙虜??/?瑁?甈?嚗??瑕??啣??酉?瑕隞恣?董???賢???                              </span>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Permissions select checklist */}
+                      <div className="space-y-2.5">
+                        <label className="block text-xs font-bold text-stone-700 select-none">
+                          ??銝餌恣?丰隡游???炎?曹??甈?嚗?<span className="text-stone-400 font-normal font-sans">(?撠???摰???</span>
+                        </label>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-stone-50 p-4 rounded-xl border border-stone-200 shadow-inner">
+                          {PERMISSION_OPTIONS.filter(opt => opt.id !== 'admin').map(opt => {
+                            const checked = selectedPermissions.includes(opt.id);
+                            return (
+                              <label 
+                                key={opt.id} 
+                                className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition select-none ${
+                                  !hasAdminPermission ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
+                                } ${
+                                  checked 
+                                    ? 'bg-white border-[#8D1B1B]/20 text-stone-800 font-medium shadow-sm' 
+                                    : 'bg-stone-50/50 border-transparent text-stone-500 hover:bg-stone-100 hover:text-stone-700'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={!hasAdminPermission}
+                                  onChange={() => {
+                                    if (!hasAdminPermission) return;
+                                    if (checked) {
+                                      const nonAdminSelected = selectedPermissions.filter(p => p !== 'admin');
+                                      if (nonAdminSelected.length > 1) {
+                                        setSelectedPermissions(selectedPermissions.filter(p => p !== opt.id));
+                                      }
+                                    } else {
+                                      setSelectedPermissions([...selectedPermissions, opt.id]);
+                                    }
+                                  }}
+                                  className="mt-1 h-4 w-4 rounded border-stone-305 text-[#8D1B1B] focus:ring-[#8D1B1B] cursor-pointer"
+                                />
+                                <div className="text-[11px] leading-normal flex-1">
+                                  <span className={`font-bold block ${checked ? 'text-[#8D1B1B]' : 'text-stone-700'}`}>
+                                    {opt.label}
+                                  </span>
+                                  <span className="text-stone-400 font-sans block text-[10px] mt-0.5 leading-tight">
+                                    {opt.desc}
+                                  </span>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {hasAdminPermission ? (
+                        <button
+                          type="submit"
+                          className="w-full py-3 bg-[#343131] hover:bg-stone-900 text-[#D4AF37] font-bold text-xs rounded-xl shadow border border-[#D4AF37]/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.99]"
+                        >
+                          <Plus className="w-4 h-4" />
+                          蝣箄??啣?
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="w-full py-3 bg-stone-100 text-stone-400 border border-stone-200 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-not-allowed select-none"
+                          disabled
+                        >
+                          ?? 蝞∠?甈?撌脤?摰??恣?撣唾??舀憓?                        </button>
+                      )}
+                    </form>
+                  </div>
+                )}
+
+                {/* SUBMENU 3: CHANGE PASSWORD */}
+                {adminsSubMenu === 'password' && (
+                  <div className="bg-white border border-[#E9E1D6] rounded-2xl p-6 md:p-8 space-y-6 shadow-sm">
+                    <div className="flex items-start gap-2.5 select-none">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-150 flex items-center justify-center text-indigo-600">
+                        <KeyRound className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-stone-900">蝞∠???蝣澆??函恣??/h3>
+                        <p className="text-xs text-stone-400">霈?函? LDC 鈭箄?敺?餃撖Ⅳ嚗誑蝬剜?????摰??/p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-stone-200/60 my-1"></div>
+
+                    <form onSubmit={handleChangePassword} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-stone-600 mb-1">
+                          ?桀??餃銋恣?董??(Your Email)
+                        </label>
+                        <input
+                          type="text"
+                          value={currentUser?.email || ''}
+                          disabled
+                          className="w-full text-stone-500 font-mono px-3.5 py-2.5 text-xs border border-stone-200 rounded-lg bg-stone-100 cursor-not-allowed select-none font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1">
+                          隢撓?亙??蝙?其?撖Ⅳ <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          placeholder="隢撓?交??雿輻??撖Ⅳ"
+                          value={oldPassword}
+                          onChange={e => setOldPassword(e.target.value)}
+                          className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 bg-stone-50/50 focus:bg-white rounded-lg focus:outline-none focus:border-[#8D1B1B] shadow-inner font-mono"
+                          required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1">
+                            撱箇??啁?蝞∠???蝣?<span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="password"
+                            placeholder="?瑕漲隢撠???3 ????
+                            value={newPasswordValue}
+                            onChange={e => setNewPasswordValue(e.target.value)}
+                            className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 bg-stone-50/50 focus:bg-white rounded-lg focus:outline-none focus:border-[#8D1B1B] shadow-inner font-mono"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1">
+                            隢?甈∠Ⅱ隤撓?交撖Ⅳ <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="password"
+                            placeholder="隢??啗撓?乩誑摰??∪?"
+                            value={confirmNewPassword}
+                            onChange={e => setConfirmNewPassword(e.target.value)}
+                            className="w-full text-stone-900 px-3.5 py-2.5 text-xs border border-stone-200 bg-stone-50/50 focus:bg-white rounded-lg focus:outline-none focus:border-[#8D1B1B] shadow-inner font-mono"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          disabled={pwSubmitting}
+                          className="w-full py-3 bg-[#343131] text-[#D4AF37] font-semibold text-xs rounded-xl shadow hover:bg-stone-900 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-[#D4AF37]/15 active:scale-[0.99]"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          {pwSubmitting ? '甇??脰?霈摰銝剖?瑼?..' : '?脣????冽撖Ⅳ'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* SUBMENU 4: TRANSFER PRIMARY ADMIN */}
+                {adminsSubMenu === 'transfer' && (
+                  <div className="bg-white border border-[#E9E1D6] rounded-2xl p-6 md:p-8 space-y-6 shadow-sm">
+                    <div className="flex items-start gap-2.5 select-none">
+                      <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-150 flex items-center justify-center text-amber-600">
+                        <ArrowRightLeft className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-stone-900">蝘餉?銝餉?蝞∠???/h3>
+                        <p className="text-xs text-stone-400">撠頂蝯梁??蜓閬恣??(Primary Admin)???宏頧??嗡?撌脫?甈? HR 撣唾??????函?甈?撠矽?渡??蝞∠???/p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-stone-200/60 my-1"></div>
+
+                    {currentUser.email.toLowerCase().trim() !== primaryAdminEmail ? (
+                      <div className="bg-amber-50 border border-amber-200/70 p-5 rounded-xl flex items-start gap-3 select-none">
+                        <ShieldAlert className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                        <div className="text-xs text-amber-800 space-y-1">
+                          <h4 className="font-bold">?? ?函?甈銵蜓閬恣?宏頧?/h4>
+                          <p className="leading-relaxed text-stone-600">
+                            ?宏頧蜓閬恣??擃??典惜蝝???嚗????銝餉?蝞∠???<strong>{primaryAdminEmail}</strong> ?賢?銵蝙甇日????                          </p>
+                        </div>
+                      </div>
+                    ) : (() => {
+                      const otherAdmins = normalizedAdmins.filter(
+                        (admin: any) => admin.email.toLowerCase().trim() !== primaryAdminEmail
+                      );
+
+                      if (otherAdmins.length === 0) {
+                        return (
+                          <div className="bg-amber-50 border border-amber-200/70 p-5 rounded-xl flex items-start gap-3 select-none">
+                            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                            <div className="text-xs text-amber-800 space-y-1">
+                              <h4 className="font-bold">?? ?∪靘宏頧??嗡?蝞∠??董??/h4>
+                              <p className="leading-relaxed text-stone-600">
+                                蝟餌絞?抒?鈭隞亙?嚗??∪隞?雿恣???<strong>?憓恣?撣唾???/strong>銝哨??箸?隞??踵?遣蝡?HR 蝞∠?撣唾?嚗??甇日??Ｗ銵宏頧?                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <form onSubmit={handleTransferPrimary} className="space-y-5">
+                          <div className="bg-stone-50 border border-stone-150 rounded-xl p-4 text-xs text-stone-600 leading-relaxed space-y-1.5 select-none">
+                            <p className="font-semibold text-stone-700">?? 甈?摰蝘餉?隤芣?嚗?/p>
+                            <ul className="list-disc list-inside space-y-0.5 text-stone-500">
+                              <li>銝餉?蝞∠??蝟餌絞銝剖??賭???雿?銝餉??冽??鞈?銋里?貉?蝞∠??恣??/li>
+                              <li>摰?蝘餉?敺??唳?摰???撠?敺?strong>銝餉?蝞∠???/strong>甈?嚗?芾澈撠矽?渡<strong>??蝞∠???/strong>??/li>
+                              <li>甇日?蝘餉?撠?甇交?唳璈??澈?蝡臬??刻?霅?銝蝬敺噶?⊥??芾????儔??/li>
+                            </ul>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+                              ???唬遙銝餉?蝞∠???(隢?桀???銝剝?? <span className="text-rose-500">*</span>
+                            </label>
+                            <select
+                              value={transferTargetEmail}
+                              onChange={e => setTransferTargetEmail(e.target.value)}
+                              className="w-full text-stone-900 px-3 py-2.5 text-xs border border-stone-200 bg-stone-50/50 focus:bg-white rounded-lg focus:outline-none focus:border-[#8D1B1B] font-mono cursor-pointer"
+                              required
+                            >
+                              <option value="">-- 隢?隞?HR 蝞∠??摮縑蝞?--</option>
+                              {otherAdmins.map((admin: any) => (
+                                <option key={admin.email} value={admin.email}>
+                                  {admin.email} {admin.permissions?.includes('admin') ? '(?蝞∠?甈?)' : '(??蝞∠?)'}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="flex items-start gap-2.5 select-none">
+                            <input
+                              type="checkbox"
+                              id="transferConfirm"
+                              checked={transferConfirmCheckbox}
+                              onChange={e => setTransferConfirmCheckbox(e.target.checked)}
+                              className="mt-0.5 w-4 h-4 text-[#8D1B1B] border-stone-300 rounded focus:ring-[#8D1B1B] cursor-pointer"
+                            />
+                            <label htmlFor="transferConfirm" className="text-xs text-stone-600 leading-relaxed cursor-pointer font-medium select-none">
+                              ?歇???剛圾銝膩隤芣?嚗蒂蝣箄?閬??蜓閬恣??擃恣???莎?甇??蝘餉???蝯行?摰??踵????                            </label>
+                          </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="submit"
+                              disabled={transferSubmitting || !transferTargetEmail || !transferConfirmCheckbox}
+                              className="w-full py-3 bg-[#8D1B1B] text-[#D4AF37] hover:bg-[#701515] font-semibold text-xs rounded-xl shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border border-[#D4AF37]/15 active:scale-[0.99]"
+                            >
+                              <ArrowRightLeft className="w-3.5 h-3.5" />
+                              {transferSubmitting ? '甇?摰?啁宏頧??脫??葉...' : '蝣箄?銝衣宏頧蜓閬恣????}
+                            </button>
+                          </div>
+                        </form>
+                      );
+                    })()}
+                  </div>
+                )}
+
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 4. AI chatbot panel */}
+        {activeMenu === 'ai' && (
+          <div className="bg-white border border-[#EAE4DC] flex flex-col rounded-2xl h-[530px] overflow-hidden max-w-4xl mx-auto shadow-sm">
+            
+            {/* Header info */}
+            <div className="bg-stone-50 px-6 py-4 border-b border-stone-200 flex items-center justify-between">
+              <div className="flex items-center gap-2 select-none">
+                <div className="w-8 h-8 rounded-full bg-[#343131] flex items-center justify-center text-[#D4AF37]">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-stone-900">AI 蝘</h4>
+                  <p className="text-[10px] text-stone-400">撠 HR 憭乩撈閫???亥靽∟?蝔踴?隞方?蝭誑?極雿????瘜?垣閰?/p>
+                </div>
+              </div>
+              <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded">
+                ??撠惇隢株岷
+              </span>
+            </div>
+
+            {/* Messages box */}
+            <div className="flex-1 p-5 overflow-y-auto space-y-4 max-h-[350px]">
+              {aiHistory.map((m, idx) => (
+                <div key={idx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] rounded-2xl p-4 text-xs leading-relaxed space-y-1 shadow-sm ${
+                    m.role === 'user' 
+                      ? 'bg-[#343131] text-white rounded-br-none' 
+                      : 'bg-stone-50 text-stone-850 border border-stone-100 rounded-bl-none'
+                  }`}>
+                    <div className="whitespace-pre-wrap">{m.content}</div>
+                    <span className={`block text-[9px] text-right mt-1.5 ${m.role === 'user' ? 'text-stone-300' : 'text-stone-400'}`}>
+                      {m.timestamp}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {aiLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-stone-50 border border-stone-100 rounded-2xl rounded-bl-none p-4 text-xs flex items-center gap-2.5">
+                    <span className="inline-block w-2.5 h-2.5 bg-[#8D1B1B] rounded-full animate-bounce"></span>
+                    <span className="inline-block w-2.5 h-2.5 bg-[#8D1B1B] rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span className="inline-block w-2.5 h-2.5 bg-[#8D1B1B] rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                    <span className="text-stone-500">甇??亥岷銝哨??芸???隢?敺?..</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quick recommendation prompts */}
+            <div className="px-5 pb-3 pt-2 border-t border-[#FAF6F0] flex flex-wrap gap-1.5 select-none">
+              <button 
+                onClick={() => { setAiPrompt('憒??砍?銝撠策?圈脣?隞?甇∟??勗靽∴???Email ??6 雿??蝣潭???嚗?); }}
+                className="text-[10px] text-stone-600 bg-white border border-stone-200 px-2.5 py-1 rounded-full hover:border-[#8D1B1B] hover:text-[#8D1B1B] cursor-pointer"
+              >
+                ?? ?啣?隞迭餈縑?阮
+              </button>
+              <button 
+                onClick={() => { setAiPrompt('撌乩?閬?銝剔?銋?憭抵岫?冽????撌交??瑟遛銝?泵???箸???'); }}
+                className="text-[10px] text-stone-600 bg-white border border-stone-200 px-2.5 py-1 rounded-full hover:border-[#8D1B1B] hover:text-[#8D1B1B] cursor-pointer"
+              >
+                ?? 閰衣?瘜?靘?嚗?              </button>
+            </div>
+
+            {/* Input form */}
+            <div className="p-4 border-t border-stone-100 flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="頛詨?函???嚗?瘜?????喳?????????啣???..."
+                value={aiPrompt}
+                onChange={e => setAiPrompt(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSendAi();
+                }}
+                className="flex-grow text-stone-900 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-[#8D1B1B] focus:bg-white transition-colors"
+                disabled={aiLoading}
+              />
+              <button
+                onClick={handleSendAi}
+                className="p-3 bg-[#343131] text-[#D4AF37] rounded-xl hover:bg-[#721515] transition-colors flex items-center justify-center cursor-pointer"
+                disabled={aiLoading || !aiPrompt.trim()}
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+
+          </div>
+        )}
+
+        {/* 5. Activity logs panel */}
+        {activeMenu === 'logs' && (
+          <div className="bg-white border border-[#EAE4DC] rounded-2xl shadow-sm overflow-hidden p-6 max-w-5xl mx-auto space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-100 pb-5">
+              <div>
+                <h3 className="text-base font-bold text-stone-900 flex items-center gap-2">
+                  <History className="w-5 h-5 text-[#8D1B1B]" />
+                  敺摰????蕭頩?                </h3>
+                <p className="text-xs text-stone-500 mt-1">
+                  ?單?餈質馱 HR 蝞∠?鈭箏?典??唳?雿??啣?蝝???啣?鈭箏?耨?孵撌亦楊??文?隞??????嚗?                </p>
+              </div>
+              <div className="flex items-center gap-2 self-start md:self-center">
+                <button
+                  onClick={downloadLogsExcel}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  ?臬 Excel
+                </button>
+                <button
+                  onClick={fetchActivityLogs}
+                  className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                  disabled={logsLoading}
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${logsLoading ? 'animate-spin' : ''}`} />
+                  ??渡?
+                </button>
+              </div>
+            </div>
+
+            {logsLoading && activityLogs.length === 0 ? (
+              <div className="py-20 text-center text-stone-400 text-xs">
+                頛?啣?蝝?葉...
+              </div>
+            ) : activityLogs.length === 0 ? (
+              <div className="py-20 text-center text-stone-400 text-xs">
+                ? ?桀?撠隞颱??啣???蝝??              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-stone-50/75 border-b border-stone-200 text-stone-600 font-bold">
+                      <th className="p-3 w-[160px]">?交?????/th>
+                      <th className="p-3 w-[180px]">??蝞∠???/th>
+                      <th className="p-3 w-[120px]">鈭箏</th>
+                      <th className="p-3 w-[140px]">?啣??</th>
+                      <th className="p-3">?啣?蝝?敦??/th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {activityLogs.map((log) => {
+                      const displayDate = new Date(log.timestamp).toLocaleString('zh-TW', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                      });
+                      
+                      let badgeColor = 'bg-stone-105 text-stone-700 border border-stone-200';
+                      let actionText = log.actionType;
+                      if (log.actionType === 'CREATE_EMPLOYEE') {
+                        badgeColor = 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-semibold';
+                        actionText = '??撱箇??勗撌乩?';
+                      } else if (log.actionType === 'DELETE_EMPLOYEE') {
+                        badgeColor = 'bg-rose-50 text-rose-700 border border-rose-200/60 font-semibold';
+                        actionText = '??儭??芷??鞈?';
+                      } else if (log.actionType === 'REJECT_ONBOARDING') {
+                        badgeColor = 'bg-amber-50 text-amber-700 border border-amber-200/60 font-semibold';
+                        actionText = '?? ???唬耨??;
+                      } else if (log.actionType === 'UPDATE_EMP_ID') {
+                        badgeColor = 'bg-blue-50 text-blue-700 border border-blue-200/60 font-semibold';
+                        actionText = '?? 霈?∪極蝺刻?';
+                      } else if (log.actionType === 'ADD_ADMIN') {
+                        badgeColor = 'bg-purple-50 text-purple-700 border border-purple-200/60 font-semibold';
+                        actionText = '?? ?啣?蝞∠?鈭箏';
+                      }
+
+                      return (
+                        <tr key={log.id} className="hover:bg-stone-50/40 transition-colors">
+                          <td className="p-3 text-stone-500 font-mono tracking-tight">{displayDate}</td>
+                          <td className="p-3">
+                            <div className="font-semibold text-stone-800">{log.operatorName || '蝟餌絞蝞∠???}</div>
+                            <div className="text-[10px] text-stone-400 font-mono">{log.operatorEmail}</div>
+                          </td>
+                          <td className="p-3 font-semibold text-stone-700">{log.employeeName}</td>
+                          <td className="p-3">
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] ${badgeColor}`}>
+                              {actionText}
+                            </span>
+                          </td>
+                          <td className="p-3 text-stone-600 font-medium leading-relaxed">{log.details}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+      </main>
+
+      {/* Custom print overlay modal */}
+      {printingEmp && printFields && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm p-4 md:p-8 no-print flex items-start justify-center">
+          <div className="bg-stone-100 max-w-4xl w-full rounded-2xl shadow-2xl border border-stone-200 overflow-hidden my-4 text-left">
+            {/* Modal headers - strictly non-printing */}
+            <div className="bg-stone-900 text-[#D4AF37] px-6 py-4 flex items-center justify-between sticky top-0 z-10 no-print border-b border-[#D4AF37]/30">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-stone-850 flex items-center justify-center border border-[#D4AF37]/20">
+                  <Printer className="w-5 h-5 text-[#D4AF37]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">?儭??瑕極鈭箔?鞈?????汗</h3>
+                  <p className="text-[10px] text-stone-400">銵冽甈???湔蝺刻摩敺株矽嚗Ⅱ隤隤文?暺??撘撓?綽?銝行?唳撠店獢?摮 PDF??/p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    window.focus();
+                    window.print();
+                  }}
+                  className="px-4 py-2 bg-[#343131] hover:bg-[#721515] text-[#FAF6F0] text-xs font-bold rounded-lg flex items-center gap-1.5 shadow border border-[#D4AF37]/25 cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  蝣箄?? / ?血? PDF
+                </button>
+                <button
+                  onClick={() => setPrintingEmp(null)}
+                  className="px-3.5 py-2 bg-stone-850 hover:bg-stone-800 text-stone-300 text-xs font-semibold rounded-lg border border-stone-700 cursor-pointer"
+                >
+                  ?ａ??汗
+                </button>
+              </div>
+            </div>
+
+            {/* Hint alert for iframe printing restrictions */}
+            <div className="bg-amber-50 border-b border-amber-200 px-6 py-3.5 text-xs text-amber-800 flex items-start gap-2.5 no-print leading-relaxed">
+              <span className="text-sm mt-0.5">??</span>
+              <div>
+                <strong className="font-semibold">?汗?啣???內嚗?/strong>
+                ??汗?典?澆??刻????嗅撋瑽?(iFrame) ?澆???典??汗銝剝????寧??Ⅱ隤??啜????嚗?暺甇日?閬質?蝒銝????渡? <span className="font-bold underline text-amber-950">??啣??葉?? / Open in new tab??/span> ??嚗?函???????祉頂蝯梧??喳摰??瑁??銝衣?乓摮 PDF??
+              </div>
+            </div>
+
+            {/* Paper Container - styled to look like an A4 page */}
+            <div className="p-8 bg-neutral-200/40 flex justify-center overflow-auto no-print">
+              <div className="bg-white p-10 md:p-14 w-[210mm] min-h-[297mm] shadow-xl border border-stone-250 text-stone-900 mx-auto font-sans relative antialiased print-a4-preview">
+                
+                {/* Embedded styles for print accuracy */}
+                <style>{`
+                  .print-a4-preview input, .print-a4-preview textarea {
+                    color: #1c1917 !important;
+                  }
+                  @media print {
+                    body * {
+                      visibility: hidden;
+                    }
+                    .print-container-mount, .print-container-mount * {
+                      visibility: visible !important;
+                    }
+                    .print-container-mount {
+                      position: absolute !important;
+                      left: 0 !important;
+                      top: 0 !important;
+                      width: 210mm !important;
+                      height: 297mm !important;
+                      padding: 10mm !important;
+                      background: white !important;
+                      box-shadow: none !important;
+                      border: none !important;
+                    }
+                    /* Hide anything else */
+                    .no-print, header, nav, aside, footer, button, .backdrop-blur-sm, .fixed {
+                      display: none !important;
+                      visibility: hidden !important;
+                    }
+                    input, textarea {
+                      border: none !important;
+                      background: transparent !important;
+                      box-shadow: none !important;
+                      outline: none !important;
+                    }
+                    input[type="checkbox"] {
+                      appearance: checkbox !important;
+                      -webkit-appearance: checkbox !important;
+                      print-color-adjust: exact !important;
+                      -webkit-print-color-adjust: exact !important;
+                    }
+                  }
+                `}</style>
+
+                {/* Printable Area mount points */}
+                <div className="print-container-mount w-full">
+                  {/* Document Header */}
+                  <div className="text-center space-y-1 mb-6 text-black">
+                    <h2 className="text-xl font-bold tracking-[6px] text-stone-950 font-serif">{getCompanyDetails(printingEmp).name}</h2>
+                    <h3 className="text-sm font-bold tracking-[8px] text-stone-900 font-serif">?瑕極鈭箔?鞈???/h3>
+                  </div>
+
+                  {/* General OnboardEmployee Identifiers row */}
+                  <div className="flex justify-between items-center text-xs text-stone-850 mb-3 px-1">
+                    <div>
+                      <span className="font-semibold text-stone-700">?∪極蝺刻?嚗?/span>
+                      <input 
+                        type="text" 
+                        value={printFields.empId} 
+                        onChange={e => setPrintFields({...printFields, empId: e.target.value})}
+                        className="w-24 bg-transparent border-b border-stone-300 font-mono text-center font-bold focus:outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-stone-700">擗典嚗?/span>
+                      <input 
+                        type="text" 
+                        value={printFields.branchName} 
+                        onChange={e => setPrintFields({...printFields, branchName: e.target.value})}
+                        className="w-32 bg-transparent border-b border-stone-300 text-center font-bold focus:outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-stone-700">?啗?交?嚗?/span>
+                      <input 
+                        type="text" 
+                        value={printFields.onboardDate} 
+                        onChange={e => setPrintFields({...printFields, onboardDate: e.target.value})}
+                        className="w-28 bg-transparent border-b border-stone-300 font-mono text-center font-bold focus:outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Main table grid */}
+                  <table className="w-full border-collapse border border-stone-800 text-stone-900 text-xs text-left">
+                    <tbody>
+                      {/* Row 1: Profile and Portrait */}
+                      <tr className="h-10">
+                        <td rowSpan={4} className="border border-stone-800 w-[110px] text-center p-1 relative">
+                          {printingEmp.personalData?.avatarUrl ? (
+                            <div className="flex flex-col items-center justify-center p-0.5">
+                              <img src={printingEmp.personalData.avatarUrl} alt="?犖?? className="max-h-[125px] max-w-[95px] object-cover border border-stone-200" referrerPolicy="no-referrer" />
+                              <span className="text-[8px] text-stone-400 mt-1 block no-print">?芸?頛?喳憭折??/span>
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-stone-400 py-10 leading-relaxed font-semibold text-center w-full">
+                              暺票鈭?<br />?抒???                            </div>
+                          )}
+                        </td>
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center w-[70px] py-1">憪?nbsp;&nbsp;&nbsp;&nbsp;??/td>
+                        <td className="border border-stone-800 px-2 py-1 w-[110px]">
+                          <input 
+                            type="text" 
+                            value={printFields.name} 
+                            onChange={e => setPrintFields({...printFields, name: e.target.value})}
+                            className="w-full bg-transparent border-none text-xs font-bold text-stone-950 focus:outline-none focus:bg-amber-50/50" 
+                          />
+                        </td>
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center w-[70px]">??nbsp;&nbsp;&nbsp;&nbsp;??/td>
+                        <td className="border border-stone-800 px-2 py-1 w-[90px]">
+                          <input 
+                            type="text" 
+                            value={printFields.gender} 
+                            onChange={e => setPrintFields({...printFields, gender: e.target.value})}
+                            className="w-full bg-transparent border-none text-xs text-center focus:outline-none focus:bg-amber-50/50" 
+                          />
+                        </td>
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center w-[70px]">?箇??交?</td>
+                        <td colSpan={2} className="border border-stone-800 px-2 py-1">
+                          <input 
+                            type="text" 
+                            value={printFields.birthday} 
+                            onChange={e => setPrintFields({...printFields, birthday: e.target.value})}
+                            className="w-full bg-transparent border-none text-xs text-stone-950 focus:outline-none focus:bg-amber-50/50 font-mono" 
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Row 2 */}
+                      <tr className="h-10">
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center py-1">??nbsp;&nbsp;&nbsp;&nbsp;閰?/td>
+                        <td className="border border-stone-800 px-2 py-1">
+                          <input 
+                            type="text" 
+                            value={printFields.phone} 
+                            onChange={e => setPrintFields({...printFields, phone: e.target.value})}
+                            className="w-full bg-transparent border-none text-xs focus:outline-none focus:bg-amber-50/50 font-mono" 
+                          />
+                        </td>
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center">銵&nbsp;&nbsp;&nbsp;&nbsp;??/td>
+                        <td className="border border-stone-800 px-2 py-1">
+                          <input 
+                            type="text" 
+                            value={printFields.bloodType} 
+                            onChange={e => setPrintFields({...printFields, bloodType: e.target.value})}
+                            className="w-full bg-transparent border-none text-xs text-center font-bold focus:outline-none focus:bg-amber-50/50" 
+                          />
+                        </td>
+                        <td className="border border-stone-800 bg-stone-100/50 text-[10px] font-bold text-center">頨怠?霅???/td>
+                        <td colSpan={2} className="border border-stone-800 px-2 py-1">
+                          <input 
+                            type="text" 
+                            value={printFields.idNumber} 
+                            onChange={e => setPrintFields({...printFields, idNumber: e.target.value})}
+                            className="w-full bg-transparent border-none text-xs font-mono uppercase tracking-wider text-stone-950 focus:outline-none focus:bg-amber-50/50" 
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Row 3 */}
+                      <tr className="h-10">
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center py-1">?嗥??啣?</td>
+                        <td colSpan={6} className="border border-stone-800 px-2 py-1">
+                          <input 
+                            type="text" 
+                            value={printFields.legalAddress} 
+                            onChange={e => setPrintFields({...printFields, legalAddress: e.target.value})}
+                            className="w-full bg-transparent border-none text-[11px] text-stone-900 focus:outline-none focus:bg-amber-50/50" 
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Row 4 */}
+                      <tr className="h-10">
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center py-1">???啣?</td>
+                        <td colSpan={6} className="border border-stone-800 px-2 py-1">
+                          <input 
+                            type="text" 
+                            value={printFields.contactAddress} 
+                            onChange={e => setPrintFields({...printFields, contactAddress: e.target.value})}
+                            className="w-full bg-transparent border-none text-[11px] text-stone-900 focus:outline-none focus:bg-amber-50/50" 
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Row 5: 靽?鈭?*/}
+                      <tr className="h-10">
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center py-1 font-serif">靽?nbsp;霅?nbsp;鈭?/td>
+                        <td className="border border-stone-800 px-2 py-1">
+                          <input 
+                            type="text" 
+                            value={printFields.guarantorName} 
+                            onChange={e => setPrintFields({...printFields, guarantorName: e.target.value})}
+                            className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                          />
+                        </td>
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center">???啣?</td>
+                        <td colSpan={2} className="border border-stone-800 px-2 py-1">
+                          <input 
+                            type="text" 
+                            value={printFields.guarantorAddress} 
+                            onChange={e => setPrintFields({...printFields, guarantorAddress: e.target.value})}
+                            className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                          />
+                        </td>
+                        <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center">??nbsp;&nbsp;&nbsp;&nbsp;閰?/td>
+                        <td colSpan={2} className="border border-stone-800 px-2 py-1">
+                          <input 
+                            type="text" 
+                            value={printFields.guarantorPhone} 
+                            onChange={e => setPrintFields({...printFields, guarantorPhone: e.target.value})}
+                            className="w-full bg-transparent border-none text-xs font-mono focus:outline-none focus:bg-amber-50/50" 
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Row 6: Heading row for Experiences / Exams */}
+                      <tr className="h-8">
+                        <td colSpan={5} className="border border-stone-800 bg-[#FAF9F6] text-[11px] font-bold text-stone-900 text-center tracking-[4px] py-1.5 font-serif">
+                          蝬?nbsp;&nbsp;&nbsp;&nbsp;甇?                        </td>
+                        <td colSpan={3} className="border border-stone-800 bg-[#FAF9F6] text-[11px] font-bold text-stone-900 text-center tracking-[2px] py-1.5 font-serif">
+                          閮毀??璆剛???                        </td>
+                      </tr>
+
+                      {/* Row 7: Sub Headers */}
+                      <tr className="h-7 text-stone-700 bg-stone-50/50">
+                        <td colSpan={2} className="border border-stone-800 text-[10px] font-medium text-center py-1">韏瑁?撟湔?</td>
+                        <td colSpan={2} className="border border-stone-800 text-[10px] font-medium text-center">???桐?</td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center font-serif text-center">??nbsp;&nbsp;蝔?/td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">??nbsp;&nbsp;??/td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">霅?迂</td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">霅蝝</td>
+                      </tr>
+
+                      {/* Rows 8, 9, 10: Experiences and Licenses details */}
+                      {[0, 1, 2].map((idx) => (
+                        <tr key={`print-career-row-${idx}`} className="h-9">
+                          <td colSpan={2} className="border border-stone-800 px-1 py-0.5">
+                            <input 
+                              type="text" 
+                              value={printFields.experiences[idx]?.period || ''} 
+                              onChange={e => {
+                                const updated = [...printFields.experiences];
+                                updated[idx].period = e.target.value;
+                                setPrintFields({...printFields, experiences: updated});
+                              }}
+                              className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50 text-center font-mono" 
+                            />
+                          </td>
+                          <td colSpan={2} className="border border-stone-800 px-1.5 py-0.5">
+                            <input 
+                              type="text" 
+                              value={printFields.experiences[idx]?.company || ''} 
+                              onChange={e => {
+                                const updated = [...printFields.experiences];
+                                updated[idx].company = e.target.value;
+                                setPrintFields({...printFields, experiences: updated});
+                              }}
+                              className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                            />
+                          </td>
+                          <td className="border border-stone-800 px-1.5 py-0.5">
+                            <input 
+                              type="text" 
+                              value={printFields.experiences[idx]?.title || ''} 
+                              onChange={e => {
+                                const updated = [...printFields.experiences];
+                                updated[idx].title = e.target.value;
+                                setPrintFields({...printFields, experiences: updated});
+                              }}
+                              className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                            />
+                          </td>
+                          
+                          {/* Licenses */}
+                          <td className="border border-stone-800 px-1 py-0.5">
+                            <input 
+                              type="text" 
+                              value={printFields.licenses[idx]?.time || ''} 
+                              onChange={e => {
+                                const updated = [...printFields.licenses];
+                                updated[idx].time = e.target.value;
+                                setPrintFields({...printFields, licenses: updated});
+                              }}
+                              className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50 text-center font-mono" 
+                            />
+                          </td>
+                          <td className="border border-stone-800 px-1.5 py-0.5">
+                            <input 
+                              type="text" 
+                              value={printFields.licenses[idx]?.cate || ''} 
+                              onChange={e => {
+                                const updated = [...printFields.licenses];
+                                updated[idx].cate = e.target.value;
+                                setPrintFields({...printFields, licenses: updated});
+                              }}
+                              className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                            />
+                          </td>
+                          <td className="border border-stone-800 px-1.5 py-0.5">
+                            <input 
+                              type="text" 
+                              value={printFields.licenses[idx]?.level || ''} 
+                              onChange={e => {
+                                const updated = [...printFields.licenses];
+                                updated[idx].level = e.target.value;
+                                setPrintFields({...printFields, licenses: updated});
+                              }}
+                              className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                            />
+                          </td>
+                        </tr>
+                      ))}
+
+                      {/* Row 11: Section Heading: 摮豢風 and 隤? */}
+                      <tr className="h-8">
+                        <td colSpan={4} className="border border-stone-800 bg-[#FAF9F6] text-[11px] font-bold text-stone-900 text-center tracking-[4px] py-1.5 font-serif">
+                          摮?nbsp;&nbsp;&nbsp;&nbsp;甇?                        </td>
+                        <td colSpan={4} className="border border-stone-800 bg-[#FAF9F6] text-[11px] font-bold text-stone-900 text-center tracking-[4px] py-1.5 font-serif">
+                          隤?nbsp;&nbsp;閮&nbsp;&nbsp;??nbsp;&nbsp;??                        </td>
+                      </tr>
+
+                      {/* Sub Headers for Edu / Lang */}
+                      <tr className="h-7 text-stone-700 bg-stone-50/50">
+                        <td className="border border-stone-800 text-[10px] font-medium text-center py-1">摮豢?迂</td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">蝘頂</td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">韏瑁?撟湔?</td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">??(??</td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center font-serif text-center">蝔?nbsp;&nbsp;憿?/td>
+                        <td colSpan={3} className="border border-stone-800 text-[10px] font-medium text-center">蝔?nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;摨?/td>
+                      </tr>
+
+                      {/* 4 Rows for side by side Edu and Language */}
+                      {['english', 'japanese', 'korean', 'other'].map((langKey, idx) => {
+                        const isEnglish = langKey === 'english';
+                        const isJapanese = langKey === 'japanese';
+                        const isKorean = langKey === 'korean';
+                        const isOther = langKey === 'other';
+
+                        const langName = isEnglish ? '???? : isJapanese ? '???? : isKorean ? '???? : '??隞?;
+                        const currentLevel = printFields.langLevels[langKey === 'other' ? 'otherLevel' : langKey];
+
+                        return (
+                          <tr key={`print-edu-lang-row-${langKey}`} className="h-9">
+                            {idx < 3 ? (
+                              <>
+                                <td className="border border-stone-800 px-1 py-0.5">
+                                  <input 
+                                    type="text" 
+                                    value={printFields.educations[idx]?.school || ''} 
+                                    onChange={e => {
+                                      const updated = [...printFields.educations];
+                                      updated[idx].school = e.target.value;
+                                      setPrintFields({...printFields, educations: updated});
+                                    }}
+                                    className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                                  />
+                                </td>
+                                <td className="border border-stone-800 px-1 py-0.5">
+                                  <input 
+                                    type="text" 
+                                    value={printFields.educations[idx]?.major || ''} 
+                                    onChange={e => {
+                                      const updated = [...printFields.educations];
+                                      updated[idx].major = e.target.value;
+                                      setPrintFields({...printFields, educations: updated});
+                                    }}
+                                    className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                                  />
+                                </td>
+                                <td className="border border-stone-800 px-1 py-0.5 text-center">
+                                  <input 
+                                    type="text" 
+                                    value={printFields.educations[idx]?.period || ''} 
+                                    onChange={e => {
+                                      const updated = [...printFields.educations];
+                                      updated[idx].period = e.target.value;
+                                      setPrintFields({...printFields, educations: updated});
+                                    }}
+                                    className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50 text-center font-mono" 
+                                  />
+                                </td>
+                                <td className="border border-stone-800 px-1 py-0.5 text-center">
+                                  <input 
+                                    type="text" 
+                                    value={printFields.educations[idx]?.status || ''} 
+                                    onChange={e => {
+                                      const updated = [...printFields.educations];
+                                      updated[idx].status = e.target.value;
+                                      setPrintFields({...printFields, educations: updated});
+                                    }}
+                                    className="w-full bg-transparent border-none text-[11px] text-center focus:outline-none focus:bg-amber-50/50" 
+                                  />
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td className="border border-stone-800 bg-stone-50/40"></td>
+                                <td className="border border-stone-800 bg-stone-50/40"></td>
+                                <td className="border border-stone-800 bg-stone-50/40"></td>
+                                <td className="border border-stone-800 bg-stone-50/40"></td>
+                              </>
+                        )}
+
+                            {/* Languages columns */}
+                            <td className="border border-stone-800 bg-stone-100/50 text-[11px] font-bold text-center py-1 select-none">
+                              {isOther ? (
+                                <div className="flex items-center gap-1 justify-center">
+                                  <span>?嗡?:</span>
+                                  <input 
+                                    type="text" 
+                                    value={printFields.langLevels.otherName || ''} 
+                                    onChange={e => {
+                                      setPrintFields({
+                                        ...printFields,
+                                        langLevels: {
+                                          ...printFields.langLevels,
+                                          otherName: e.target.value
+                                        }
+                                      });
+                                    }}
+                                    className="w-10 bg-transparent border-b border-stone-300 font-bold focus:outline-none text-[10px] text-center" 
+                                  />
+                                </div>
+                          ) : (
+                            langName
+                          )}
+                            </td>
+                            <td colSpan={3} className="border border-stone-800 px-1 py-0.5">
+                              <div className="flex items-center justify-around h-full gap-0.5 text-[9px] text-stone-850">
+                                {['expert', 'good', 'medium', 'fluent'].map((lvl) => {
+                                  const label = lvl === 'expert' ? '蝎暸? : lvl === 'good' ? '?芾' : lvl === 'medium' ? '銝剔?' : '?交?';
+                                  const langField = isOther ? 'otherLevel' : langKey;
+                                  const isChecked = printFields.langLevels[langField] === lvl;
+
+                                  return (
+                                    <label key={lvl} className="flex items-center gap-0.5 cursor-pointer hover:bg-stone-50 px-1 py-0.5 rounded leading-none">
+                                      <input 
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => {
+                                          setPrintFields({
+                                            ...printFields,
+                                            langLevels: {
+                                              ...printFields.langLevels,
+                                              [langField]: isChecked ? 'none' : lvl
+                                            }
+                                          });
+                                        }}
+                                        className="w-3.5 h-3.5 border-stone-400 text-[#8D1B1B] rounded focus:ring-[#8D1B1B] cursor-pointer"
+                                      />
+                                      <span>{label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                    );
+                  })}
+
+                      {/* Row 12: Family information section heading */}
+                      <tr className="h-8">
+                        <td colSpan={8} className="border border-stone-800 bg-[#FAF9F6] text-[11px] font-bold text-stone-900 text-center tracking-[4px] py-1.5 font-serif">
+                          摰?nbsp;&nbsp;摨?nbsp;&nbsp;?&nbsp;&nbsp;瘜?                        </td>
+                      </tr>
+
+                      {/* Family Column Sub Headers */}
+                      <tr className="h-7 text-stone-700 bg-stone-50/50">
+                        <td className="border border-stone-800 text-[10px] font-medium text-center py-1">蝔?雓?/td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">憪???/td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">?箇??交?</td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">?蝔漲</td>
+                        <td colSpan={2} className="border border-stone-800 text-[10px] font-medium text-center font-serif text-center">??nbsp;&nbsp;??nbsp;&nbsp;??nbsp;&nbsp;雿?/td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center">?臬??</td>
+                        <td className="border border-stone-800 text-[10px] font-medium text-center font-serif text-center">??nbsp;&nbsp;閮?/td>
+                      </tr>
+
+                      {/* 3 Family rows */}
+                      {[0, 1, 2].map((idx) => {
+                        const relationLabel = idx === 0 ? '?? : idx === 1 ? '瘥? : '?';
+                        return (
+                          <tr key={`print-family-row-${idx}`} className="h-9">
+                            <td className="border border-stone-800 text-center text-[10px] font-bold bg-stone-50 md:bg-stone-50/30 py-1">{relationLabel}</td>
+                            <td className="border border-stone-800 px-1 py-0.5">
+                              <input 
+                                type="text" 
+                                value={printFields.family[idx]?.name || ''} 
+                                onChange={e => {
+                                  const updated = [...printFields.family];
+                                  updated[idx].name = e.target.value;
+                                  setPrintFields({...printFields, family: updated});
+                                }}
+                                className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50 text-center" 
+                              />
+                            </td>
+                            <td className="border border-stone-800 px-1 py-0.5 text-center">
+                              <input 
+                                type="text" 
+                                value={printFields.family[idx]?.birthday || ''} 
+                                onChange={e => {
+                                  const updated = [...printFields.family];
+                                  updated[idx].birthday = e.target.value;
+                                  setPrintFields({...printFields, family: updated});
+                                }}
+                                className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50 text-center font-mono" 
+                              />
+                            </td>
+                            <td className="border border-stone-800 px-1 py-0.5 text-center">
+                              <input 
+                                type="text" 
+                                value={printFields.family[idx]?.edu || ''} 
+                                onChange={e => {
+                                  const updated = [...printFields.family];
+                                  updated[idx].edu = e.target.value;
+                                  setPrintFields({...printFields, family: updated});
+                                }}
+                                className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50 text-center" 
+                              />
+                            </td>
+                            <td colSpan={2} className="border border-stone-800 px-1.5 py-0.5">
+                              <input 
+                                type="text" 
+                                value={printFields.family[idx]?.company || ''} 
+                                onChange={e => {
+                                  const updated = [...printFields.family];
+                                  updated[idx].company = e.target.value;
+                                  setPrintFields({...printFields, family: updated});
+                                }}
+                                className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                              />
+                            </td>
+                            <td className="border border-stone-800 px-1 py-0.5 text-center">
+                              <input 
+                                type="text" 
+                                value={printFields.family[idx]?.coLive || ''} 
+                                onChange={e => {
+                                  const updated = [...printFields.family];
+                                  updated[idx].coLive = e.target.value;
+                                  setPrintFields({...printFields, family: updated});
+                                }}
+                                className="w-full bg-transparent border-none text-[10px] text-center focus:outline-none focus:bg-amber-50/50" 
+                              />
+                            </td>
+                            <td className="border border-stone-800 px-1 py-0.5">
+                              <input 
+                                type="text" 
+                                value={printFields.family[idx]?.note || ''} 
+                                onChange={e => {
+                                  const updated = [...printFields.family];
+                                  updated[idx].note = e.target.value;
+                                  setPrintFields({...printFields, family: updated});
+                                }}
+                                className="w-full bg-transparent border-none text-[11px] focus:outline-none focus:bg-amber-50/50" 
+                              />
+                            </td>
+                          </tr>
+                    );
+                  })}
+
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom confirmation dialog for deleting an OnboardEmployee (Safe modal) */}
+      {employeeToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-xs p-4 no-print">
+          <div className="bg-white border border-[#E9E1D6] rounded-2xl max-w-sm w-full p-6 shadow-xl animate-in fade-in zoom-in duration-150 text-left">
+            <div className="flex items-center gap-3 text-rose-700 mb-3">
+              <div className="w-10 h-10 bg-rose-50 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 flex-shrink-0" />
+              </div>
+              <h3 className="text-sm font-bold text-stone-900">摰?芷?亥?嚗?/h3>
+            </div>
+            <p className="text-xs text-stone-605 text-left mb-6 leading-relaxed">
+              ?函Ⅱ摰?摰?芷?啣?隞?<strong className="text-[#8D1B1B]">?employeeToDelete.name}??/strong> ??瑞?勗獢?撌脖??單?獢?嚗迨??撠偶銋宏?歹??⊥?敺拙???            </p>
+            <div className="flex justify-end gap-2.5">
+              <button
+                onClick={() => setEmployeeToDelete(null)}
+                className="px-3.5 py-1.5 text-xs font-semibold text-stone-500 bg-stone-50 hover:bg-stone-100 rounded-lg border border-stone-200 cursor-pointer"
+              >
+                ??
+              </button>
+              <button
+                onClick={async () => {
+                  setIsDeleting(true);
+                  try {
+                    const res = await fetch(`/api/hr/employees/${employeeToDelete.id}`, { 
+                      method: 'DELETE',
+                      headers: {
+                        'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+                        'x-operator-name': encodeURIComponent(currentUser?.name || '')
+                      }
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                      setEmployees(data.employees);
+                      setInfoMsg(`??儭?撌脩蝟餌絞摰??? ${employeeToDelete.name} ?勗?脣漲`);
+                      if (selectedEmp?.id === employeeToDelete.id) setSelectedEmp(null);
+                      fetchActivityLogs();
+                    } else {
+                      setErrorMsg(data.error || '?芷憭望?');
+                    }
+                  } catch {
+                    setErrorMsg('隡箸??券????文仃??);
+                  } finally {
+                    setIsDeleting(false);
+                    setEmployeeToDelete(null);
+                  }
+                }}
+                disabled={isDeleting}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 rounded-lg cursor-pointer flex items-center gap-1 shadow-sm"
+              >
+                {isDeleting ? '?芷銝?..' : '蝣箄??芷'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom confirmation dialog for deleting an administrator (Safe modal) */}
+      {adminToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-xs p-4 no-print" id="admin-delete-modal">
+          <div className="bg-white border border-[#E9E1D6] rounded-2xl max-w-sm w-full p-6 shadow-xl animate-in fade-in zoom-in duration-150 text-left">
+            <div className="flex items-center gap-3 text-[#8D1B1B] mb-3">
+              <div className="w-10 h-10 bg-rose-50 rounded-full flex items-center justify-center">
+                <ShieldAlert className="w-5 h-5 flex-shrink-0" />
+              </div>
+              <h3 className="text-sm font-bold text-stone-900">閮駁蝞∠?????</h3>
+            </div>
+            <p className="text-xs text-stone-600 text-left mb-6 leading-relaxed">
+              ?函Ⅱ摰?閮駁 <strong className="text-[#8D1B1B]">?adminToDelete}??/strong> ?恣????嚗府撣喳?撠◤?餃銝瘜??餃甇文??堆?甇文?雿瘜儔??            </p>
+            <div className="flex justify-end gap-2.5">
+              <button
+                onClick={() => setAdminToDelete(null)}
+                className="px-3.5 py-1.5 text-xs font-semibold text-stone-500 bg-stone-50 hover:bg-stone-100 rounded-lg border border-stone-200 cursor-pointer"
+              >
+                ??
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await handleDeleteAdmin(adminToDelete);
+                  } finally {
+                    setAdminToDelete(null);
+                  }
+                }}
+                disabled={isDeletingAdmin}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-[#8D1B1B] hover:bg-[#721515] disabled:bg-stone-300 rounded-lg cursor-pointer flex items-center gap-1 shadow-sm"
+              >
+                {isDeletingAdmin ? '??銝?..' : '蝣箄?閮駁'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom confirmation dialog for returning/rejecting an OnboardEmployee to pending */}
+      {employeeToReject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-xs p-4 no-print">
+          <div className="bg-white border border-[#E9E1D6] rounded-2xl max-w-sm w-full p-6 shadow-xl animate-in fade-in zoom-in duration-150 text-left">
+            <div className="flex items-center gap-3 text-amber-700 mb-3">
+              <div className="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center">
+                <RotateCcw className="w-5 h-5 flex-shrink-0" />
+              </div>
+              <h3 className="text-sm font-bold text-stone-900 font-sans">???啗??耨?對?</h3>
+            </div>
+            <p className="text-xs text-stone-600 font-sans mb-6 leading-relaxed">
+              ?函Ⅱ摰???? <strong className="text-[#8D1B1B]">?employeeToReject.name}??/strong> ??圈脣漲??‵撖思葉??嚗?              <br /><br />
+              甇斗?雿???span className="font-semibold text-red-600">?身閮遙???極雿?蝝???偷蝵脩???/span>嚗?靘???span className="font-semibold text-emerald-700">靽?????憛怠末靽???砍??飛蝬風???質???/span>嚗??駁?銴‵撖怎???嚗????湔?餃?脰??炊??            </p>
+            <div className="flex justify-end gap-2.5 font-sans">
+              <button
+                onClick={() => setEmployeeToReject(null)}
+                className="px-3.5 py-1.5 text-xs font-semibold text-stone-500 bg-stone-50 hover:bg-stone-100 rounded-lg border border-stone-200 cursor-pointer"
+              >
+                ??
+              </button>
+              <button
+                onClick={async () => {
+                  setIsRejecting(true);
+                  try {
+                    const res = await fetch(`/api/hr/employees/${employeeToReject.id}/reject`, { 
+                      method: 'POST',
+                      headers: {
+                        'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+                        'x-operator-name': encodeURIComponent(currentUser?.name || '')
+                      }
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                      setEmployees(data.employees);
+                      setInfoMsg(`?? 撌脫????? ??{employeeToReject.name}???勗?脣漲??‵撖思葉????撌脤?閮剜?甈曉???);
+                      // If the details card of this OnboardEmployee is currently open, refresh its data inside selectedEmp
+                      if (selectedEmp?.id === employeeToReject.id) {
+                        setSelectedEmp(data.OnboardEmployee);
+                      }
+                      fetchActivityLogs();
+                    } else {
+                      setErrorMsg(data.error || '??仃??);
+                    }
+                  } catch {
+                    setErrorMsg('隡箸??券?????雿仃??);
+                  } finally {
+                    setIsRejecting(false);
+                    setEmployeeToReject(null);
+                  }
+                }}
+                disabled={isRejecting}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 rounded-lg cursor-pointer flex items-center gap-1 shadow-sm"
+              >
+                {isRejecting ? '??葉...' : '蝣箄????}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 撖?瑕?唬縑?汗??Google Auth Modal */}
+      {emailPreviewEmp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 backdrop-blur-xs p-4 no-print overflow-y-auto" id="email-preview-modal">
+          <div className="bg-white border border-[#E9E1D6] rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-150 flex flex-col gap-5 text-left max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-2 text-[#8D1B1B]">
+                <Mail className="w-5 h-5" />
+                <h3 className="text-base font-bold text-stone-900">?潮?瑕?唬縑</h3>
+              </div>
+              <button 
+                onClick={() => setEmailPreviewEmp(null)}
+                className="text-stone-400 hover:text-stone-600 text-sm font-semibold p-1"
+              >
+                ??              </button>
+            </div>
+
+            {/* Google / Gmail Auth Connector Box inside the modal */}
+            <div className="bg-stone-50 border border-stone-200/60 rounded-xl p-4 space-y-3.5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-2.5 h-2.5 rounded-full ${googleToken ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                  <div>
+                    <h4 className="text-xs font-bold text-stone-850">
+                      {googleToken ? '? Google Gmail ?喲??賢歇撠梁?' : '? Google Gmail ?喲??賣?'}
+                    </h4>
+                    <p className="text-[11px] text-stone-500">
+                      {googleToken 
+                        ? `蝟餌絞撠誑?函?蝞∠??隞嗅董?嗥??瑕?撘` 
+                        : '?祉頂蝯望?湧? Google Auth 隞交?恣?靽∠拳?潮縑隞塚?隢?摰??????'}
+                    </p>
+                  </div>
+                </div>
+                
+                {googleToken && (
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignOut}
+                    className="text-[10px] text-stone-500 hover:text-[#8D1B1B] hover:underline font-medium cursor-pointer"
+                  >
+                    銝剜 Google ???
+                  </button>
+                )}
+              </div>
+
+              {!googleToken ? (
+                <div className="pt-1 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    disabled={isGoogleConnecting}
+                    className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-stone-200 rounded-lg hover:bg-stone-50 active:bg-stone-100 shadow-xs text-xs font-semibold text-stone-750 cursor-pointer transition-all"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                      <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.59 5.59 0 0 1 8.4 12.915a5.59 5.59 0 0 1 5.591-5.6a5.54 5.54 0 0 1 3.844 1.5l3.24-3.24A10.12 10.12 0 0 0 14.001 2a10.08 10.08 0 0 0-10.08 10.08A10.08 10.08 0 0 0 14.001 22.16c5.736 0 10.16-4.032 10.16-10.16 0-.615-.054-1.2-.16-1.715H12.24z"/>
+                    </svg>
+                    <span>{isGoogleConnecting ? '甇???? Google...' : '??? Google 撣唾? (? Gmail 撖縑)'}</span>
+                  </button>
+                  <span className="text-[10px] text-stone-400">?餃敺????祉頂蝯勗??典??唬縑隞?/span>
+                </div>
+              ) : (
+                <div className="bg-white border border-stone-150 rounded-lg px-3.5 py-2 flex items-center gap-2.5 text-xs text-stone-700">
+                  <div className="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center font-bold text-[#8D1B1B] text-xs shadow-xs select-none">
+                    {googleUser?.displayName ? googleUser.displayName[0] : 'HR'}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-stone-850">{googleUser?.displayName || '蝞∠???} ({googleUser?.email})</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Email Metadata Details */}
+            <div className="space-y-2 text-xs">
+              <div className="grid grid-cols-12 gap-1.5 border-b border-stone-100 pb-1.5">
+                <span className="col-span-2 text-stone-400 font-medium">?嗡辣??</span>
+                <span className="col-span-10 font-medium text-stone-850">
+                  {emailPreviewEmp.name} &lt;{emailPreviewEmp.email}&gt;
+                </span>
+              </div>
+              <div className="grid grid-cols-12 gap-1.5 border-b border-stone-100 pb-1.5">
+                <span className="col-span-2 text-stone-400 font-medium">銝餅:</span>
+                <span className="col-span-10 font-semibold text-stone-900">
+                  ?getCompanyDetails(emailPreviewEmp).name}?迭餈???伐??圈脖犖?∪?瑕?啁頂蝯梁?亙?撠?                </span>
+              </div>
+            </div>
+
+            {/* Email Body Preview Frame */}
+            <div className="flex-1 overflow-y-auto max-h-[350px] border border-stone-200 rounded-xl bg-[#FAF9F6] p-4 font-sans text-xs text-stone-700 space-y-4">
+              <div className="border-b border-[#8D1B1B] pb-2 text-center">
+                <h4 style={{ color: '#8D1B1B', margin: 0, fontSize: '16px', fontWeight: 'bold', letterSpacing: '1px' }}>
+                  {getCompanyDetails(emailPreviewEmp).name}
+                </h4>
+                <p className="text-[10px] text-stone-500">LDC Hotels & Resorts</p>
+              </div>
+              <p>閬芣???<strong className="text-stone-900 underline">{emailPreviewEmp.name}</strong> ?? ?典末嚗?/p>
+              <p>?剖??券???砍嚗鈭??箸颲衣??亥??靽?蝥?隢暺?銝撟喳???嚗蒂雿輻?函??餃??萎辣??撅祆?甈Ⅳ?餃嚗‵憒亙?唳???犖??蝝?祈???</p>
+              
+              <div className="bg-white border border-[#8D1B1B]/20 border-l-4 border-l-[#8D1B1B] rounded-lg p-3.5 space-y-2 text-[11px] leading-relaxed">
+                <div>? <strong className="text-stone-500">?勗?瑞迂嚗?/strong><span className="text-stone-900 font-bold">{emailPreviewEmp.title}</span></div>
+                <div>?? <strong className="text-stone-500">?勗?交?嚗?/strong><span className="text-[#8D1B1B] font-bold">{emailPreviewEmp.onboardDate}</span></div>
+                <div>?? <strong className="text-stone-500">?勗?圈?嚗?/strong><span className="text-stone-900">{emailPreviewEmp.contractWorkLocation || '?脫?閫??(?啣?撣葉撅勗?銝剖控?楝鈭挾96??璅?'}</span></div>
+                <div>? <strong className="text-stone-500">??芾?嚗?/strong>{emailPreviewEmp.contractSalaryType === 'daily' ? '?亥' : emailPreviewEmp.contractSalaryType === 'hourly' ? '?' : '?'} <strong className="text-[#8D1B1B] font-bold">NT$ {emailPreviewEmp.contractSalaryAmount || '36,000'}</strong> ??/div>
+                <div className="pt-1.5 border-t border-dashed border-stone-200">
+                  ?? <strong className="text-stone-500">撠惇??蝣潘?</strong>
+                  <span className="bg-[#8D1B1B] text-white px-2 py-0.5 rounded font-mono font-bold text-xs">
+                    {emailPreviewEmp.authToken}
+                  </span>
+                </div>
+                <div className="pt-1.5">
+                  <strong className="text-stone-500 block">?? 撟喳???嚗?/strong>
+                  <a href="https://ldc-onboarding-portal-554356081371.asia-east1.run.app" target="_blank" rel="noreferrer" className="text-blue-600 underline font-mono break-all font-semibold">https://ldc-onboarding-portal-554356081371.asia-east1.run.app</a>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-stone-400 border-t border-stone-200 pt-2 leading-relaxed">
+                ???砌縑隞嗅??? Google Auth ??Gmail API ?潮?冽?隞颱???嚗??湔?犖??皞?舐鼠嚗?雓?br />
+              </p>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end items-center gap-3 pt-2 border-t border-stone-100 select-none">
+              <button
+                onClick={() => setEmailPreviewEmp(null)}
+                className="px-4 py-2 text-xs font-semibold text-stone-500 bg-stone-50 hover:bg-stone-100 rounded-lg border border-stone-200 cursor-pointer"
+              >
+                ??
+              </button>
+              
+              <button
+                onClick={() => handleSendOnboardingEmail(emailPreviewEmp)}
+                disabled={sendingEmailId === emailPreviewEmp.id}
+                className="px-5 py-2 bg-[#8D1B1B] text-[#D4AF37] hover:bg-[#721515] font-bold text-xs rounded-lg shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {sendingEmailId === emailPreviewEmp.id 
+                  ? '撖葉...' 
+                  : googleToken 
+                    ? '?? Gmail ?潮? 
+                    : '?潮葫閰?}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ?芾???像??憿?梯” A4 Print Modal */}
+      {printTaxEmp && (
+        <TaxDeclarationPrintModal
+          OnboardEmployee={printTaxEmp}
+          onClose={() => setPrintTaxEmp(null)}
+        />
+      )}
+
+      {/* ?????A4 Print Modal */}
+      {printContractEmp && (
+        <ContractPrintModal
+          OnboardEmployee={printContractEmp}
+          onClose={() => setPrintContractEmp(null)}
+        />
+      )}
+
+      {/* ??????A4 Print Modal */}
+      {printConsentEmp && (
+        <ConsentPrintModal
+          OnboardEmployee={printConsentEmp}
+          onClose={() => setPrintConsentEmp(null)}
+        />
+      )}
+
+      {/* ?瑕靽???A4 Print Modal */}
+      {printGuarantorEmp && (
+        <GuarantorPrintModal
+          OnboardEmployee={printGuarantorEmp}
+          onClose={() => setPrintGuarantorEmp(null)}
+        />
+      )}
+
+      {/* ?瑕極??蝝? A4 Print Modal */}
+      {printServiceEmp && (
+        <ServicePrintModal
+          OnboardEmployee={printServiceEmp}
+          onClose={() => setPrintServiceEmp(null)}
+        />
+      )}
+
+    </div>
+  );
+}
+
