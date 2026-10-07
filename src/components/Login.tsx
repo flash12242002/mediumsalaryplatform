@@ -95,7 +95,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-8 text-center select-none">
-          <LdcLogo size="md" color="gold" className="mb-4" />
+          <div className="flex-shrink-0 flex items-center justify-center bg-white rounded">
+            <img src={officialLogo} alt="LDC Logo" className="h-12 w-auto object-contain" />
+          </div>
           <h1 className="text-sm font-semibold tracking-wide text-stone-600 font-sans mt-2 select-none">
             雲朗觀光-HR平台
           </h1>
