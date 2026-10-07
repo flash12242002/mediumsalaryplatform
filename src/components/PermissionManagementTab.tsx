@@ -4,7 +4,6 @@ import {
   Shield, Key, UserPlus, Lock, Check, Mail, UserCheck, AlertCircle, RefreshCw, 
   Settings, Save, Eye, EyeOff, ShieldAlert, BadgeHelp 
 } from "lucide-react";
-import HrDashboard from "./HrDashboard";
 
 interface PermissionManagementTabProps {
   user: User;
@@ -12,7 +11,7 @@ interface PermissionManagementTabProps {
 }
 
 export default function PermissionManagementTab({ user, onLogAction }: PermissionManagementTabProps) {
-  const [subTab, setSubTab] = useState<"role_permissions" | "add_account" | "change_password" | "onboarding_admin">("role_permissions");
+  const [subTab, setSubTab] = useState<"role_permissions" | "add_account" | "change_password">("role_permissions");
   
   // States for Permissions & Users
   const [users, setUsers] = useState<any[]>([]);
@@ -38,12 +37,6 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
   const [showPass, setShowPass] = useState(false);
   const [passError, setPassError] = useState<string | null>(null);
   const [passSuccess, setPassSuccess] = useState<string | null>(null);
-
-  // States for Adding New Role
-  const [newRoleName, setNewRoleName] = useState("");
-
-  const baseRoles = ["HR_ADMIN", "EXECUTIVE", "SALES_LEADER"];
-  const customRoles = Object.keys(rolePermissions || {}).filter(r => !baseRoles.includes(r));
 
   const fetchPermissionsData = async () => {
     try {
@@ -72,36 +65,13 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
     setRolePermissions((prev: any) => {
       const updatedRole = {
         ...prev[roleKey],
-        [permKey]: !prev[roleKey]?.[permKey]
+        [permKey]: !prev[roleKey][permKey]
       };
       return {
         ...prev,
         [roleKey]: updatedRole
       };
     });
-  };
-
-  const handleAddRole = () => {
-    if (!newRoleName.trim()) return;
-    const key = newRoleName.trim().toUpperCase().replace(/\s+/g, '_');
-    if (rolePermissions[key]) {
-      setError("角色已存在");
-      return;
-    }
-    setRolePermissions((prev: any) => ({
-      ...prev,
-      [key]: {
-        view_salary: false,
-        calculate_commission: false,
-        manage_backups: false,
-        onboarding_portal: false,
-        audit_trail: false,
-        permission_management: false
-      }
-    }));
-    setNewRoleName("");
-    setSuccessMsg(`角色 ${key} 已新增，請勾選權限後點擊儲存以套用。`);
-    setError(null);
   };
 
   const handleSaveRolePermissions = async () => {
@@ -124,12 +94,12 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
         onLogAction("更新權限", "更新了角色權限矩陣設定");
         
         // Update user session permissions in localStorage if the logged in user's role is updated
-        const currentStored = localStorage.getItem("ldc_onboard_user");
+        const currentStored = localStorage.getItem("hr_user");
         if (currentStored) {
           const parsed = JSON.parse(currentStored);
           if (rolePermissions[parsed.role]) {
             parsed.permissions = rolePermissions[parsed.role];
-            localStorage.setItem("ldc_onboard_user", JSON.stringify(parsed));
+            localStorage.setItem("hr_user", JSON.stringify(parsed));
           }
         }
       } else {
@@ -239,9 +209,8 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
       case "EXECUTIVE":
         return <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full font-bold">高階主管</span>;
       case "SALES_LEADER":
+        default:
         return <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-full font-bold">業務主管</span>;
-      default:
-        return <span className="px-2 py-0.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-full font-bold">{role}</span>;
     }
   };
 
@@ -391,57 +360,39 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
             {/* Dynamic Permission Configuration Table */}
             <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 mb-4">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800">核心功能角色存取矩陣</h4>
-                    <p className="text-[11px] text-slate-400">變更勾選後，請點選儲存來立即套用權限變更。</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
-                      <input 
-                        type="text" 
-                        value={newRoleName} 
-                        onChange={(e) => setNewRoleName(e.target.value)}
-                        placeholder="輸入新角色名稱 (如 IT_ADMIN)"
-                        className="px-2.5 py-1.5 text-xs focus:outline-none w-48"
-                      />
-                      <button
-                        onClick={handleAddRole}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors border-l border-slate-200"
-                      >
-                        新增角色
-                      </button>
-                    </div>
-                    <button
-                      onClick={handleSaveRolePermissions}
-                      disabled={saving}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs disabled:bg-indigo-400"
-                    >
-                      {saving ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Save className="w-3.5 h-3.5" />
-                      )}
-                      <span>儲存權限設定</span>
-                    </button>
-                  </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">核心功能角色存取矩陣</h4>
+                  <p className="text-[11px] text-slate-400">變更勾選後，請點選儲存來立即套用權限變更。</p>
                 </div>
+                <button
+                  onClick={handleSaveRolePermissions}
+                  disabled={saving}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs disabled:bg-indigo-400"
+                >
+                  {saving ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  <span>儲存權限設定</span>
+                </button>
+              </div>
 
               {successMsg && (
-                <div className="mb-4 p-2.5 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-lg text-xs font-medium flex items-center gap-2 mt-4">
+                <div className="mb-4 p-2.5 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-lg text-xs font-medium flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>{successMsg}</span>
                 </div>
               )}
 
               {error && (
-                <div className="mb-4 p-2.5 bg-red-50 border border-red-100 text-red-800 rounded-lg text-xs font-medium flex items-center gap-2 mt-4">
+                <div className="mb-4 p-2.5 bg-red-50 border border-red-100 text-red-800 rounded-lg text-xs font-medium flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
 
-              <div className="overflow-x-auto border border-slate-150 rounded-xl mt-4">
+              <div className="overflow-x-auto border border-slate-150 rounded-xl">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
@@ -449,11 +400,6 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                       <th className="py-2.5 px-3 font-bold text-slate-700 text-center">HR管理者</th>
                       <th className="py-2.5 px-3 font-bold text-slate-700 text-center">高階主管</th>
                       <th className="py-2.5 px-3 font-bold text-slate-700 text-center">業務團隊主管</th>
-                      {customRoles.map(role => (
-                        <th key={role} className="py-2.5 px-3 font-bold text-slate-700 text-center">
-                          {role}
-                        </th>
-                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-600">
@@ -488,16 +434,6 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
-                      {customRoles.map(role => (
-                        <td key={role} className="py-3 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={rolePermissions[role]?.view_salary || false}
-                            onChange={() => handleTogglePermission(role, "view_salary")}
-                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </td>
-                      ))}
                     </tr>
 
                     {/* Permission Row 2 */}
@@ -530,16 +466,6 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
-                      {customRoles.map(role => (
-                        <td key={role} className="py-3 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={rolePermissions[role]?.calculate_commission || false}
-                            onChange={() => handleTogglePermission(role, "calculate_commission")}
-                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </td>
-                      ))}
                     </tr>
 
                     {/* Permission Row 3 */}
@@ -572,58 +498,38 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
-                      {customRoles.map(role => (
-                        <td key={role} className="py-3 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={rolePermissions[role]?.manage_backups || false}
-                            onChange={() => handleTogglePermission(role, "manage_backups")}
-                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </td>
-                      ))}
                     </tr>
 
                     {/* Permission Row 4 */}
                     <tr className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-3 px-4">
-                        <span className="font-bold text-slate-800 block">新進同仁報到處理 (onboarding_portal)</span>
-                        <span className="text-[10px] text-slate-400">管理新進人員的報到追蹤與作業流程</span>
+                        <span className="font-bold text-slate-800 block">AI 智慧諮詢 (ai_compliance)</span>
+                        <span className="text-[10px] text-slate-400">存取上市櫃法規合規智慧助理與產出說明書</span>
                       </td>
                       <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
-                          checked={rolePermissions["HR_ADMIN"]?.onboarding_portal || false}
-                          onChange={() => handleTogglePermission("HR_ADMIN", "onboarding_portal")}
+                          checked={rolePermissions["HR_ADMIN"]?.ai_compliance || false}
+                          onChange={() => handleTogglePermission("HR_ADMIN", "ai_compliance")}
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
                       <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
-                          checked={rolePermissions["EXECUTIVE"]?.onboarding_portal || false}
-                          onChange={() => handleTogglePermission("EXECUTIVE", "onboarding_portal")}
+                          checked={rolePermissions["EXECUTIVE"]?.ai_compliance || false}
+                          onChange={() => handleTogglePermission("EXECUTIVE", "ai_compliance")}
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
                       <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
-                          checked={rolePermissions["SALES_LEADER"]?.onboarding_portal || false}
-                          onChange={() => handleTogglePermission("SALES_LEADER", "onboarding_portal")}
+                          checked={rolePermissions["SALES_LEADER"]?.ai_compliance || false}
+                          onChange={() => handleTogglePermission("SALES_LEADER", "ai_compliance")}
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
-                      {customRoles.map(role => (
-                        <td key={role} className="py-3 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={rolePermissions[role]?.onboarding_portal || false}
-                            onChange={() => handleTogglePermission(role, "onboarding_portal")}
-                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </td>
-                      ))}
                     </tr>
 
                     {/* Permission Row 5 */}
@@ -656,16 +562,6 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
-                      {customRoles.map(role => (
-                        <td key={role} className="py-3 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={rolePermissions[role]?.audit_trail || false}
-                            onChange={() => handleTogglePermission(role, "audit_trail")}
-                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </td>
-                      ))}
                     </tr>
 
                     {/* Permission Row 6 */}
@@ -698,16 +594,6 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
-                      {customRoles.map(role => (
-                        <td key={role} className="py-3 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={rolePermissions[role]?.permission_management || false}
-                            onChange={() => handleTogglePermission(role, "permission_management")}
-                            className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </td>
-                      ))}
                     </tr>
 
                   </tbody>
@@ -823,9 +709,6 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                     <option value="HR_ADMIN">HR管理者 (最高權限)</option>
                     <option value="EXECUTIVE">高階主管 (唯讀調閱)</option>
                     <option value="SALES_LEADER">業務主管 (僅獎金試算)</option>
-                    {customRoles.map(role => (
-                      <option key={role} value={role}>{role} (自訂角色)</option>
-                    ))}
                   </select>
                 </div>
 
@@ -977,22 +860,6 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
               </button>
             </div>
           </form>
-        </div>
-      )}
-
-      {subTab === "onboarding_admin" && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3 mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">Onboarding帳號管理</h3>
-              <p className="text-xs text-slate-500">管理可登入「新進同仁報到追蹤」後台的 HR 帳號。</p>
-            </div>
-            {subTabsSelector}
-          </div>
-          
-          <div className="w-full bg-[#F8FAFC] rounded-xl shadow-sm border border-slate-200 overflow-hidden relative overflow-y-auto no-print" style={{height: '70vh'}}>
-             <HrDashboard currentUser={{ email: user.email, name: user.username }} initialEmployees={[]} onLogout={() => {}} activeMenu="admins" hideNavigation={true} />
-          </div>
         </div>
       )}
 

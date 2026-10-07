@@ -107,10 +107,10 @@ async function getSalesConfig() {
   if (!row) {
     return {
       tiers: [
-        { id: "t1", min: 0, max: 50000, rate: 2, label: "?箸璆剔蜀" },
-        { id: "t2", min: 50001, max: 150000, rate: 5, label: "璅?璆剔蜀" },
-        { id: "t3", min: 150001, max: 300000, rate: 8, label: "?芾璆剔蜀" },
-        { id: "t4", min: 300001, max: 99999999, rate: 12, label: "??璆剔蜀" }
+        { id: "t1", min: 0, max: 50000, rate: 2, label: "基本業績" },
+        { id: "t2", min: 50001, max: 150000, rate: 5, label: "標準業績" },
+        { id: "t3", min: 150001, max: 300000, rate: 8, label: "優良業績" },
+        { id: "t4", min: 300001, max: 99999999, rate: 12, label: "卓越業績" }
       ],
       targetBonus: 10000,
       targetAmount: 200000
@@ -236,7 +236,7 @@ async function initSQLite() {
         bonus INTEGER NOT NULL DEFAULT 0,
         total_pay INTEGER NOT NULL DEFAULT 0,
         period TEXT,
-        status TEXT DEFAULT '撌脰?蝞?,
+        status TEXT DEFAULT '已計算',
         created_at TEXT DEFAULT (datetime('now'))
       )
     `);
@@ -291,7 +291,7 @@ async function initSQLite() {
       )
     `);
 
-    // ?? Seed Default Data (only if tables are empty) ??
+    // ── Seed Default Data (only if tables are empty) ──
 
     // Default Users
     const existingUsers = await db.get(`SELECT COUNT(*) as count FROM users`);
@@ -299,12 +299,12 @@ async function initSQLite() {
       await db.run(`INSERT INTO users (email, username, name, password, role) VALUES (?,?,?,?,?)`,
         ['gordon.huang@ldchotels.com', 'gordon.huang@ldchotels.com', 'Gordon', 'mis', 'HR_ADMIN']);
       await db.run(`INSERT INTO users (email, username, name, password, role) VALUES (?,?,?,?,?)`,
-        ['vivian.chiang@ldchotels.com', 'vivian.chiang@ldchotels.com', '擃?銝餌恣', 'mis', 'EXECUTIVE']);
+        ['vivian.chiang@ldchotels.com', 'vivian.chiang@ldchotels.com', '高階主管', 'mis', 'EXECUTIVE']);
       await db.run(`INSERT INTO users (email, username, name, password, role) VALUES (?,?,?,?,?)`,
-        ['sales_director@ldchotels.com', 'sales_leader', '璆剖?銝餌恣', 'sales', 'SALES_LEADER']);
+        ['sales_director@ldchotels.com', 'sales_leader', '業務主管', 'sales', 'SALES_LEADER']);
       await db.run(`INSERT INTO users (email, username, name, password, role) VALUES (?,?,?,?,?)`,
         ['ann.hsu@ldchotels.com', 'ann.hsu@ldchotels.com', 'Ann', 'mis', 'HR_ADMIN']);
-      console.log("??Seeded default users.");
+      console.log("✅ Seeded default users.");
     }
 
     // Default Role Permissions
@@ -318,20 +318,20 @@ async function initSQLite() {
       for (const [role, permissions] of perms) {
         await db.run(`INSERT INTO role_permissions (role, permissions) VALUES (?, ?)`, [role, permissions]);
       }
-      console.log("??Seeded default role permissions.");
+      console.log("✅ Seeded default role permissions.");
     }
 
     // Default Sales Config
     const existingConfig = await db.get(`SELECT COUNT(*) as count FROM sales_config`);
     if (existingConfig.count === 0) {
       const tiers = JSON.stringify([
-        { id: "t1", min: 0, max: 50000, rate: 2, label: "?箸璆剔蜀" },
-        { id: "t2", min: 50001, max: 150000, rate: 5, label: "璅?璆剔蜀" },
-        { id: "t3", min: 150001, max: 300000, rate: 8, label: "?芾璆剔蜀" },
-        { id: "t4", min: 300001, max: 99999999, rate: 12, label: "??璆剔蜀" }
+        { id: "t1", min: 0, max: 50000, rate: 2, label: "基本業績" },
+        { id: "t2", min: 50001, max: 150000, rate: 5, label: "標準業績" },
+        { id: "t3", min: 150001, max: 300000, rate: 8, label: "優良業績" },
+        { id: "t4", min: 300001, max: 99999999, rate: 12, label: "卓越業績" }
       ]);
       await db.run(`INSERT INTO sales_config (id, tiers, target_bonus, target_amount) VALUES (1, ?, 10000, 200000)`, [tiers]);
-      console.log("??Seeded default sales config.");
+      console.log("✅ Seeded default sales config.");
     }
 
     // Default Drive Sync Settings
@@ -342,12 +342,12 @@ async function initSQLite() {
         VALUES (1, 'https://drive.google.com/drive/folders/1i8t5Q1r5-Y4RZeadGcq9QGEzLUponwQ7',
                 '1i8t5Q1r5-Y4RZeadGcq9QGEzLUponwQ7', 0, 'manual', 'idle', 2025, 'direct', '')
       `);
-      console.log("??Seeded default drive sync settings.");
+      console.log("✅ Seeded default drive sync settings.");
     }
 
-    console.log("?? SQLite initialization complete!");
+    console.log("🎉 SQLite initialization complete!");
   } catch (err) {
-    console.error("??Failed to initialize SQLite tables:", err);
+    console.error("❌ Failed to initialize SQLite tables:", err);
     throw err;
   }
 }
@@ -379,10 +379,10 @@ app.post("/api/auth/login", async (req, res) => {
     );
 
     if (employee) {
-      await addAuditLog(employee.name, 'employee', "?∪極?勗?餃", "?圈脣撌仿?撠惇??蝣潛?亦頂蝯?);
+      await addAuditLog(employee.name, 'employee', "員工報到登入", "新進員工透過專屬授權碼登入系統");
       return res.json({ success: true, user: employee, role: 'employee' });
     } else {
-      return res.status(401).json({ success: false, message: "?餃憭望?嚗摮隞嗆???蝣潔?甇?Ⅱ (Invalid token)" });
+      return res.status(401).json({ success: false, message: "登入失敗，電子郵件或授權碼不正確 (Invalid token)" });
     }
   }
 
@@ -416,14 +416,14 @@ app.post("/api/auth/login", async (req, res) => {
         email: userRecord.email,
         permissions
       };
-      await addAuditLog(matchedUser.username, matchedUser.role, "?餃蝟餌絞", `???餃蝟餌絞嚗?鈭?${matchedUser.role} 甈?`);
+      await addAuditLog(matchedUser.username, matchedUser.role, "登入系統", `成功登入系統，授予 ${matchedUser.role} 權限`);
       return res.json({ success: true, user: matchedUser, role: matchedUser.role });
     }
 
-    return res.status(401).json({ success: false, message: "撣唾???蝣潮隤?(Invalid username or password)" });
+    return res.status(401).json({ success: false, message: "帳號或密碼錯誤 (Invalid username or password)" });
   } catch (err: any) {
     console.error("Login error:", err);
-    return res.status(500).json({ success: false, message: "隡箸??券隤? " + err.message });
+    return res.status(500).json({ success: false, message: "伺服器錯誤: " + err.message });
   }
 });
 
@@ -453,7 +453,7 @@ app.post("/api/permissions/roles", async (req, res) => {
         [r, JSON.stringify(perms)]
       );
     }
-    await addAuditLog(username || "蝞∠???, role || "HR_ADMIN", "?湔閫甈?閮剖?", "靽格鈭頂蝯梯??脩??摮?甈?");
+    await addAuditLog(username || "管理員", role || "HR_ADMIN", "更新角色權限設定", "修改了系統角色的功能存取權限");
     res.json({ success: true, rolePermissions });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -463,7 +463,7 @@ app.post("/api/permissions/roles", async (req, res) => {
 app.post("/api/permissions/users", async (req, res) => {
   const { email, username, name, password, role: newRole, creatorUsername, creatorRole } = req.body;
   if (!email || !username || !name || !password || !newRole) {
-    return res.status(400).json({ error: "???雿??箏?憛恬?" });
+    return res.status(400).json({ error: "所有欄位皆為必填！" });
   }
   try {
     const db = await getDb();
@@ -472,14 +472,14 @@ app.post("/api/permissions/users", async (req, res) => {
       [email, username]
     );
     if (existing) {
-      return res.status(400).json({ error: "撣唾???E-mail 撌脣??剁?" });
+      return res.status(400).json({ error: "帳號或 E-mail 已存在！" });
     }
     await db.run(
       `INSERT INTO users (email, username, name, password, role) VALUES (?, ?, ?, ?, ?)`,
       [email, username, name, password, newRole]
     );
     const users = await db.all(`SELECT email, username, name, role FROM users`);
-    await addAuditLog(creatorUsername || "蝞∠???, creatorRole || "HR_ADMIN", "?啣???撣唾?", `?啣?撣唾?: ${name} (${email}), 閫: ${newRole}`);
+    await addAuditLog(creatorUsername || "管理員", creatorRole || "HR_ADMIN", "新增同仁帳號", `新增帳號: ${name} (${email}), 角色: ${newRole}`);
     res.json({ success: true, users });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -489,16 +489,16 @@ app.post("/api/permissions/users", async (req, res) => {
 app.post("/api/auth/change-password", async (req, res) => {
   const { email, oldPassword, newPassword, username, role } = req.body;
   if (!email || !oldPassword || !newPassword) {
-    return res.status(400).json({ error: "甈?銝雲嚗? });
+    return res.status(400).json({ error: "欄位不足！" });
   }
   try {
     const db = await getDb();
     const user = await db.get(`SELECT * FROM users WHERE LOWER(email) = LOWER(?)`, [email]);
-    if (!user) return res.status(404).json({ error: "?曆??啗府??撣唾?嚗? });
-    if (user.password !== oldPassword) return res.status(400).json({ error: "??蝣潔?甇?Ⅱ嚗? });
+    if (!user) return res.status(404).json({ error: "找不到該同仁帳號！" });
+    if (user.password !== oldPassword) return res.status(400).json({ error: "舊密碼不正確！" });
     await db.run(`UPDATE users SET password = ? WHERE LOWER(email) = LOWER(?)`, [newPassword, email]);
-    await addAuditLog(username || user.name, role || user.role, "靽格撖Ⅳ", `?? ${user.name} (${email}) ??霈?餃撖Ⅳ`);
-    res.json({ success: true, message: "撖Ⅳ靽格??嚗? });
+    await addAuditLog(username || user.name, role || user.role, "修改密碼", `同仁 ${user.name} (${email}) 成功變更登入密碼`);
+    res.json({ success: true, message: "密碼修改成功！" });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -532,7 +532,7 @@ app.get("/api/sales/config", async (req, res) => {
 app.post("/api/sales/config", async (req, res) => {
   const { tiers, targetBonus, targetAmount, username, role } = req.body;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R蝞∠??∩耨??(HR Admin permission required)" });
+    return res.status(403).json({ error: "權限不足，僅限HR管理員修改 (HR Admin permission required)" });
   }
   try {
     const db = await getDb();
@@ -542,7 +542,7 @@ app.post("/api/sales/config", async (req, res) => {
       [JSON.stringify(tiers), targetBonus, targetAmount]
     );
     await refreshCommissionRecords();
-    await addAuditLog(username, role, "?湔???", `霈?鈭平蝮曄???頝????嚗?憿???瑼鳴?${targetAmount}嚗?璅??蛛?${targetBonus}`);
+    await addAuditLog(username, role, "更新獎金參數", `變動了業績獎金級距與達標參數：高額獎金門檻：${targetAmount}，達標獎勵：${targetBonus}`);
     const config = await getSalesConfig();
     res.json({ success: true, salesConfig: config });
   } catch (err: any) {
@@ -593,9 +593,9 @@ app.get("/auth/google/callback", (req, res) => {
     </head>
     <body>
       <div class="container">
-        <div class="icon">??</div>
-        <h2>甇??? Google ??...</h2>
-        <p>隢???閬?撠????/p>
+        <div class="icon">🔐</div>
+        <h2>正在處理 Google 授權...</h2>
+        <p>請稍候，視窗將自動關閉。</p>
         <div class="spinner"></div>
       </div>
       <script>
@@ -661,7 +661,7 @@ app.post("/api/drive-sync/settings", async (req, res) => {
     username, role, authMode, googleClientId
   } = req.body;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R蝞∠??∩耨?? });
+    return res.status(403).json({ error: "權限不足，僅限HR管理員修改" });
   }
   try {
     const db = await getDb();
@@ -685,8 +685,8 @@ app.post("/api/drive-sync/settings", async (req, res) => {
       authMode || "direct",
       googleClientId || ""
     ]);
-    await addAuditLog(username, role, "?湔?脩垢?郊閮剖?",
-      `?湔 Google Drive ?芸??郊??嚗?{frequency}嚗璅冗嚗?{folderId}嚗?霅芋撘?${authMode || "direct"}`);
+    await addAuditLog(username, role, "更新雲端同步設定",
+      `更新 Google Drive 自動同步排程：${frequency}，目標夾：${folderId}，驗證模式：${authMode || "direct"}`);
     const r = await db.get(`SELECT * FROM drive_sync_settings WHERE id = 1`);
     res.json({
       success: true, driveSyncSettings: {
@@ -720,7 +720,7 @@ app.get("/api/sales/records", async (req, res) => {
 app.post("/api/sales/records", async (req, res) => {
   const { empId, name, baseSalary, salesAmount, period, username, role } = req.body;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲 (HR Admin permission required)" });
+    return res.status(403).json({ error: "權限不足 (HR Admin permission required)" });
   }
   try {
     const db = await getDb();
@@ -731,15 +731,15 @@ app.post("/api/sales/records", async (req, res) => {
       `INSERT INTO sales_records (id, emp_id, name, base_salary, sales_amount, commission, bonus, total_pay, period, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, empId, name, Number(baseSalary), Number(salesAmount), cal.commission, cal.bonus,
-        Number(baseSalary) + cal.totalPay, period, "撌脰?蝞?]
+        Number(baseSalary) + cal.totalPay, period, "已計算"]
     );
-    await addAuditLog(username, role, "?啣?璆剔蜀閮?",
-      `?箏撌?${name} (${empId}) 撱箇? ${period} ?平蝮曇???璆剔蜀嚗?{salesAmount}嚗?蝞???${cal.totalPay}`);
+    await addAuditLog(username, role, "新增業績記錄",
+      `為員工 ${name} (${empId}) 建立 ${period} 的業績記錄，業績：${salesAmount}，計算獎金：${cal.totalPay}`);
     res.json({
       success: true, record: {
         id, empId, name, baseSalary: Number(baseSalary), salesAmount: Number(salesAmount),
         commission: cal.commission, bonus: cal.bonus,
-        totalPay: Number(baseSalary) + cal.totalPay, period, status: "撌脰?蝞?
+        totalPay: Number(baseSalary) + cal.totalPay, period, status: "已計算"
       }
     });
   } catch (err: any) {
@@ -750,16 +750,16 @@ app.post("/api/sales/records", async (req, res) => {
 app.put("/api/sales/records/:id", async (req, res) => {
   const { id } = req.params;
   const { salesAmount, baseSalary, status, username, role } = req.body;
-  if (role === "SALES_LEADER" && status && status !== "?詨?銝?) {
-    return res.status(403).json({ error: "璆剖?銝餌恣???詨?嚗??舐?亥??渡???(Access denied)" });
+  if (role === "SALES_LEADER" && status && status !== "核准中") {
+    return res.status(403).json({ error: "業務主管僅能送出核准，不可直接變更狀態 (Access denied)" });
   }
   if (role !== "HR_ADMIN" && role !== "SALES_LEADER") {
-    return res.status(403).json({ error: "甈?銝雲 (Permission required)" });
+    return res.status(403).json({ error: "權限不足 (Permission required)" });
   }
   try {
     const db = await getDb();
     const old = await db.get(`SELECT * FROM sales_records WHERE id = ?`, [id]);
-    if (!old) return res.status(404).json({ error: "?曆??啗府蝑平蝮曇??? });
+    if (!old) return res.status(404).json({ error: "找不到該筆業績記錄" });
     const newSalesAmount = salesAmount !== undefined ? Number(salesAmount) : Number(old.sales_amount);
     const newBaseSalary = baseSalary !== undefined ? Number(baseSalary) : Number(old.base_salary);
     const newStatus = status !== undefined ? status : old.status;
@@ -769,8 +769,8 @@ app.put("/api/sales/records/:id", async (req, res) => {
       `UPDATE sales_records SET base_salary=?, sales_amount=?, commission=?, bonus=?, total_pay=?, status=? WHERE id=?`,
       [newBaseSalary, newSalesAmount, cal.commission, cal.bonus, newBaseSalary + cal.totalPay, newStatus, id]
     );
-    await addAuditLog(username, role, "靽格璆剔蜀閮?",
-      `?湔 ${old.name} (${old.period}) 璆剔蜀??嚗????渡 ${newStatus}`);
+    await addAuditLog(username, role, "修改業績記錄",
+      `更新 ${old.name} (${old.period}) 業績獎金：狀態變更為 ${newStatus}`);
     res.json({
       success: true, record: {
         id, empId: old.emp_id, name: old.name, baseSalary: newBaseSalary,
@@ -787,15 +787,15 @@ app.delete("/api/sales/records/:id", async (req, res) => {
   const { id } = req.params;
   const { username, role } = req.query;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲 (HR Admin permission required)" });
+    return res.status(403).json({ error: "權限不足 (HR Admin permission required)" });
   }
   try {
     const db = await getDb();
     const record = await db.get(`SELECT * FROM sales_records WHERE id = ?`, [id]);
-    if (!record) return res.status(404).json({ error: "?曆??啗府蝑平蝮曇??? });
+    if (!record) return res.status(404).json({ error: "找不到該筆業績記錄" });
     await db.run(`DELETE FROM sales_records WHERE id = ?`, [id]);
-    await addAuditLog(String(username), String(role), "?芷璆剔蜀閮?",
-      `?芷鈭?${record.name} (${record.period}) ?平蝮曄???蝞?蝝躬);
+    await addAuditLog(String(username), String(role), "刪除業績記錄",
+      `刪除了 ${record.name} (${record.period}) 的業績獎金計算明細`);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -806,7 +806,7 @@ app.delete("/api/sales/records/:id", async (req, res) => {
 app.get("/api/employees/records", async (req, res) => {
   const { role } = req.query;
   if (role !== "HR_ADMIN" && role !== "EXECUTIVE") {
-    return res.status(403).json({ error: "甈?銝雲嚗迨鞈?????芾?甈?嚗???HR 鈭箏???蜓蝞⊥?? });
+    return res.status(403).json({ error: "權限不足！此資料包含敏感薪資欄位，僅限 HR 人員或高階主管查看。" });
   }
   try {
     const db = await getDb();
@@ -846,10 +846,10 @@ app.get("/api/employees/records", async (req, res) => {
 app.post("/api/employees/import", async (req, res) => {
   const { employees, year, username, role } = req.body;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R鈭箏?臬?∪極?芾? (HR Admin only)" });
+    return res.status(403).json({ error: "權限不足，僅限HR人員匯入員工薪資 (HR Admin only)" });
   }
   if (!Array.isArray(employees) || employees.length === 0) {
-    return res.status(400).json({ error: "?⊥???交?? });
+    return res.status(400).json({ error: "無效的匯入數據" });
   }
   try {
     const db = await getDb();
@@ -861,7 +861,7 @@ app.post("/api/employees/import", async (req, res) => {
         `SELECT id FROM employees WHERE emp_id = ? AND year = ?`, [emp.empId, targetYear]
       );
       const empValues = [
-        emp.name, emp.title || "?冽?鈭箏", emp.department || "???,
+        emp.name, emp.title || "全時人員", emp.department || "研發部",
         Math.max(0, Number(emp.salary || 0)), Math.max(0, Number(emp.welfare || 70000)), targetYear,
         emp.months !== undefined ? Number(emp.months) : null,
         emp.originalAnnualSalary !== undefined ? Number(emp.originalAnnualSalary) : null,
@@ -907,16 +907,16 @@ app.post("/api/employees/import", async (req, res) => {
       // Sync with members table
       const existingMember = await db.get(`SELECT id FROM members WHERE emp_id = ?`, [emp.empId]);
       if (existingMember) {
-        await db.run(`UPDATE members SET department=? WHERE emp_id=?`, [emp.department || "???, emp.empId]);
+        await db.run(`UPDATE members SET department=? WHERE emp_id=?`, [emp.department || "研發部", emp.empId]);
       } else {
         await db.run(
           `INSERT INTO members (emp_id, name, grade, onboarding_date, department) VALUES (?, ?, ?, ?, ?)`,
-          [emp.empId, emp.name, "銝??, "", emp.department || "???]
+          [emp.empId, emp.name, "一般", "", emp.department || "研發部"]
         );
       }
     }
-    await addAuditLog(username, role, "?臬?∪極?芾?",
-      `???臬 ${year} 撟游漲?∪極?芣偌 CSV?憓?${addedCount} 蝑?閬??湔嚗?{updatedCount} 蝑);
+    await addAuditLog(username, role, "匯入員工薪資",
+      `成功匯入 ${year} 年度員工薪水 CSV。新增：${addedCount} 筆，覆蓋更新：${updatedCount} 筆。`);
     res.json({ success: true, addedCount, updatedCount });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -931,7 +931,7 @@ app.post("/api/employees/records", async (req, res) => {
     birthdayGift, overtime, severance, maternityAllowance, nonRegularSalary, monthlySalaries
   } = req.body;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R鈭箏?啣??∪極?芾? (HR Admin only)" });
+    return res.status(403).json({ error: "權限不足，僅限HR人員新增員工薪資 (HR Admin only)" });
   }
   try {
     const db = await getDb();
@@ -970,11 +970,11 @@ app.post("/api/employees/records", async (req, res) => {
     } else {
       await db.run(
         `INSERT INTO members (emp_id, name, grade, onboarding_date, department) VALUES (?, ?, ?, ?, ?)`,
-        [empId, name, "銝??, "", department]
+        [empId, name, "一般", "", department]
       );
     }
-    await addAuditLog(username, role, "?啣??∪極?芾?閮?",
-      `撱箇? ${year} 撟游漲?蜓蝞∪撌伐?${name} (${empId})嚗鞈?${salary}嚗??拚?嚗?{welfare}`);
+    await addAuditLog(username, role, "新增員工薪資記錄",
+      `建立 ${year} 年度非主管員工：${name} (${empId})，薪資：${salary}，福利金：${welfare}`);
     res.json({
       success: true,
       employee: { id, empId, name, title, department, salary: Number(salary), welfare: Number(welfare), year: Number(year) }
@@ -993,12 +993,12 @@ app.put("/api/employees/records/:id", async (req, res) => {
     birthdayGift, overtime, severance, maternityAllowance, nonRegularSalary, monthlySalaries
   } = req.body;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R鈭箏靽格?∪極?芾? (HR Admin only)" });
+    return res.status(403).json({ error: "權限不足，僅限HR人員修改員工薪資 (HR Admin only)" });
   }
   try {
     const db = await getDb();
     const old = await db.get(`SELECT * FROM employees WHERE id = ?`, [id]);
-    if (!old) return res.status(404).json({ error: "?曆??啗府?∪極?芾?閮?" });
+    if (!old) return res.status(404).json({ error: "找不到該員工薪資記錄" });
     await db.run(`
       UPDATE employees SET
         name=?, title=?, department=?, salary=?, welfare=?, year=?,
@@ -1038,11 +1038,11 @@ app.put("/api/employees/records/:id", async (req, res) => {
     } else {
       await db.run(
         `INSERT INTO members (emp_id, name, grade, onboarding_date, department) VALUES (?, ?, ?, ?, ?)`,
-        [old.emp_id, name || old.name, "銝??, "", updatedDept || "."]
+        [old.emp_id, name || old.name, "一般", "", updatedDept || "."]
       );
     }
-    await addAuditLog(username, role, "靽格?∪極?芾?閮?",
-      `?湔 ${name || old.name} (${year || old.year}撟游漲) ?芾????抵??);
+    await addAuditLog(username, role, "修改員工薪資記錄",
+      `更新 ${name || old.name} (${year || old.year}年度) 薪資與福利資料`);
     res.json({ success: true, employee: { id, empId: old.emp_id, name: name || old.name } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1053,15 +1053,15 @@ app.delete("/api/employees/records/:id", async (req, res) => {
   const { id } = req.params;
   const { username, role } = req.query;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R鈭箏?芷?∪極?芾? (HR Admin only)" });
+    return res.status(403).json({ error: "權限不足，僅限HR人員刪除員工薪資 (HR Admin only)" });
   }
   try {
     const db = await getDb();
     const emp = await db.get(`SELECT * FROM employees WHERE id = ?`, [id]);
-    if (!emp) return res.status(404).json({ error: "?曆??啗府?∪極?芾?閮?" });
+    if (!emp) return res.status(404).json({ error: "找不到該員工薪資記錄" });
     await db.run(`DELETE FROM employees WHERE id = ?`, [id]);
-    await addAuditLog(String(username), String(role), "?芷?∪極?芾?閮?",
-      `?芷鈭?${emp.name} (${emp.year}撟游漲) ?喳鞈?`);
+    await addAuditLog(String(username), String(role), "刪除員工薪資記錄",
+      `刪除了 ${emp.name} (${emp.year}年度) 申報資料`);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1071,7 +1071,7 @@ app.delete("/api/employees/records/:id", async (req, res) => {
 app.delete("/api/employees/records", async (req, res) => {
   const { username, role, year } = req.query;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R鈭箏?芷?∪極?芾? (HR Admin only)" });
+    return res.status(403).json({ error: "權限不足，僅限HR人員刪除員工薪資 (HR Admin only)" });
   }
   try {
     const db = await getDb();
@@ -1080,15 +1080,15 @@ app.delete("/api/employees/records", async (req, res) => {
       const result = await db.get(`SELECT COUNT(*) as count FROM employees WHERE year = ?`, [targetYear]);
       const deletedCount = result.count;
       await db.run(`DELETE FROM employees WHERE year = ?`, [targetYear]);
-      await addAuditLog(String(username), String(role), "?寞活?芷?∪極?芾?",
-        `?寞活?芷鈭?${targetYear} 撟游漲??撌亦?梯?????${deletedCount} 蝑);
+      await addAuditLog(String(username), String(role), "批次刪除員工薪資",
+        `批次刪除了 ${targetYear} 年度所有員工申報資料，共 ${deletedCount} 筆`);
       return res.json({ success: true, deletedCount });
     } else {
       const result = await db.get(`SELECT COUNT(*) as count FROM employees`);
       const deletedCount = result.count;
       await db.run(`DELETE FROM employees`);
-      await addAuditLog(String(username), String(role), "皜征??撌亥鞈?,
-        `皜征鈭??僑摨衣??∪極?喳鞈?嚗 ${deletedCount} 蝑);
+      await addAuditLog(String(username), String(role), "清空所有員工薪資",
+        `清空了所有年度的員工申報資料，共 ${deletedCount} 筆`);
       return res.json({ success: true, deletedCount });
     }
   } catch (err: any) {
@@ -1096,7 +1096,7 @@ app.delete("/api/employees/records", async (req, res) => {
   }
 });
 
-// Member Management (鈭箏蝞∠?) Endpoints
+// Member Management (人員管理) Endpoints
 app.get("/api/members", async (req, res) => {
   try {
     const db = await getDb();
@@ -1114,10 +1114,10 @@ app.get("/api/members", async (req, res) => {
 app.post("/api/members/bulk", async (req, res) => {
   const { username, role, members } = req.body;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R鈭箏銝蝞∠?鈭箏鞈?" });
+    return res.status(403).json({ error: "權限不足，僅限HR人員上傳管理人員資料" });
   }
   if (!Array.isArray(members)) {
-    return res.status(400).json({ error: "鞈??澆??航炊" });
+    return res.status(400).json({ error: "資料格式錯誤" });
   }
   try {
     const db = await getDb();
@@ -1126,10 +1126,10 @@ app.post("/api/members/bulk", async (req, res) => {
       await db.run(
         `INSERT INTO members (emp_id, name, grade, onboarding_date, department) VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(emp_id) DO UPDATE SET name=excluded.name, grade=excluded.grade, onboarding_date=excluded.onboarding_date, department=excluded.department`,
-        [m.empId || m.emp_id, m.name, m.grade || "銝??, m.onboardingDate || m.onboarding_date || "", m.department || ""]
+        [m.empId || m.emp_id, m.name, m.grade || "一般", m.onboardingDate || m.onboarding_date || "", m.department || ""]
       );
     }
-    await addAuditLog(String(username), String(role), "?臬鈭箏?", `?臬鈭?${members.length} 蝑犖?∪?祈??);
+    await addAuditLog(String(username), String(role), "匯入人員名單", `匯入了 ${members.length} 筆人員基本資料`);
     res.json({ success: true, count: members.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1139,21 +1139,21 @@ app.post("/api/members/bulk", async (req, res) => {
 app.delete("/api/members", async (req, res) => {
   const { username, role } = req.query;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R鈭箏皜征鈭箏鞈?" });
+    return res.status(403).json({ error: "權限不足，僅限HR人員清空人員資料" });
   }
   try {
     const db = await getDb();
     const result = await db.get(`SELECT COUNT(*) as count FROM members`);
     const originalCount = result.count;
     await db.run(`DELETE FROM members`);
-    await addAuditLog(String(username), String(role), "皜征鈭箏?", `皜征鈭??犖?∪?祈?????${originalCount} 蝑);
+    await addAuditLog(String(username), String(role), "清空人員名單", `清空了所有人員基本資料，共 ${originalCount} 筆`);
     res.json({ success: true, deletedCount: originalCount });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Insiders (?折鈭? Management Endpoints
+// Insiders (內部人) Management Endpoints
 app.get("/api/insiders", async (req, res) => {
   try {
     const db = await getDb();
@@ -1166,11 +1166,11 @@ app.get("/api/insiders", async (req, res) => {
 
 app.post("/api/insiders", async (req, res) => {
   const { empId, username, role } = req.body;
-  if (!empId) return res.status(400).json({ error: "蝻箏??∪極蝺刻? (empId)" });
+  if (!empId) return res.status(400).json({ error: "缺少員工編號 (empId)" });
   try {
     const db = await getDb();
     await db.run(`INSERT OR IGNORE INTO insiders (emp_id) VALUES (?)`, [empId]);
-    await addAuditLog(String(username || "蝟餌絞"), String(role || "HR_ADMIN"), "閮剖??折鈭?, `撠蝺?${empId} 閮剖??箏?其犖`);
+    await addAuditLog(String(username || "系統"), String(role || "HR_ADMIN"), "設定內部人", `將員編 ${empId} 設定為內部人`);
     const rows = await db.all(`SELECT emp_id FROM insiders`);
     res.json({ success: true, insiders: rows.map((r: any) => r.emp_id) });
   } catch (err: any) {
@@ -1184,7 +1184,7 @@ app.delete("/api/insiders/:empId", async (req, res) => {
   try {
     const db = await getDb();
     await db.run(`DELETE FROM insiders WHERE emp_id = ?`, [empId]);
-    await addAuditLog(String(username || "蝟餌絞"), String(role || "HR_ADMIN"), "??閮剖??折鈭?, `撠蝺?${empId} ???折鈭箄澈?);
+    await addAuditLog(String(username || "系統"), String(role || "HR_ADMIN"), "取消設定內部人", `將員編 ${empId} 取消內部人身分`);
     const rows = await db.all(`SELECT emp_id FROM insiders`);
     res.json({ success: true, insiders: rows.map((r: any) => r.emp_id) });
   } catch (err: any) {
@@ -1196,7 +1196,7 @@ app.delete("/api/insiders/:empId", async (req, res) => {
 app.get("/api/employees/statistics", async (req, res) => {
   const { role } = req.query;
   if (role !== "HR_ADMIN" && role !== "EXECUTIVE") {
-    return res.status(403).json({ error: "甈?銝雲嚗甈???梁絞閮??" });
+    return res.status(403).json({ error: "權限不足，無權存取申報統計數據！" });
   }
   try {
     const db = await getDb();
@@ -1270,7 +1270,7 @@ app.get("/api/employees/statistics", async (req, res) => {
 app.get("/api/cloud/backups", async (req, res) => {
   const { role } = req.query;
   if (role !== "HR_ADMIN" && role !== "EXECUTIVE") {
-    return res.status(403).json({ error: "甈?銝雲嚗瘜??蝡臬?瑼?" });
+    return res.status(403).json({ error: "權限不足，無法讀取雲端存檔！" });
   }
   try {
     const db = await getDb();
@@ -1288,7 +1288,7 @@ app.get("/api/cloud/backups", async (req, res) => {
 app.post("/api/cloud/backups", async (req, res) => {
   const { filename, fileType, size, username, role } = req.body;
   if (role !== "HR_ADMIN") {
-    return res.status(403).json({ error: "甈?銝雲嚗??R鈭箏銝??隞?(HR Admin only)" });
+    return res.status(403).json({ error: "權限不足，僅限HR人員上傳或備份 (HR Admin only)" });
   }
   try {
     const db = await getDb();
@@ -1299,7 +1299,7 @@ app.post("/api/cloud/backups", async (req, res) => {
       `INSERT INTO backups (id, filename, file_type, size, created_by, created_at, url) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [id, filename, fileType, size, username, createdAt, url]
     );
-    await addAuditLog(username, role, "?脩垢?脣??遢", `撠銵具?{filename}??隞質摰?脩垢蝛粹?嚗?里?賊?皝?甈?靽風`);
+    await addAuditLog(username, role, "雲端儲存備份", `將報表「${filename}」備份至安全雲端空間，產生稽核雜湊與權限保護`);
     res.json({ success: true, backup: { id, filename, fileType, size, createdBy: username, createdAt, url } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1311,34 +1311,34 @@ app.post("/api/gemini/analyze", async (req, res) => {
   const { reportData, question, username, role } = req.body;
 
   if (role !== "HR_ADMIN" && role !== "EXECUTIVE") {
-    return res.status(403).json({ error: "甈?銝雲嚗瘜蝙?杗I?????芾??豢?嚗? });
+    return res.status(403).json({ error: "權限不足，無法使用AI分析分析薪資數據！" });
   }
 
   try {
     const reportSummary = JSON.stringify(reportData, null, 2);
-    const systemPrompt = `雿銝雿?璆剔??啁銝?銝??砍鈭箏?鞈?撠?蝬???隞文?閬??“??
-雿?隞餃??臬??拐犖鞈蜓蝞?HR Admin)??璆剝??蜓蝞?Executive)???啁霅鈭斗????鞎瑚葉敹?閬?銋??遙銝餌恣?瑕?銋?撌亥鞈葉雿?像???望??
-??撠平?移皞泵??隞斗?閬?撠?撅斗扔?瑕???潛?蝜?銝剜?????
+    const systemPrompt = `你是一位專業的台灣上市上櫃公司人力資源專案經理與法令合規分析顧問。
+你的任務是協助人資主管(HR Admin)或企業高階主管(Executive)分析台灣證券交易所及櫃買中心所規定之「非擔任主管職務之全時員工薪資中位數及平均數」申報數據。
+提供專業、精準、符合法令法規且對高層極具參考價值的繁體中文分析。
 
-??閬??胯?
-?啁?恣??霅漱?閬?嚗?撣??砍瘥僑??喳銝?撟游漲??銝餌恣?瑕?銋?撌亥鞈?閮??亙?貊泵?誑銝嗾??璅???璅?隞嗡?銝嚗???祇?鞈?閫皜祉?隤芣??鞈??扼?貉鞈蝑??芯??孵?閮嚗?
-1. ?∪極撟喳??芾??芷?50?砍???
-2. ?平?拍?銵圈嚗??蜓蝞∩??冽??∪極撟喳??芾??餉???撟游漲皜?嚗???皜嚗?
-3. ?平?拍??嚗??蜓蝞∩??冽??∪極撟喳??芾??餅憓?嚗???膜嚗?
-4. 閰脣僑摨阡?銝餌恣?冽??∪極?芾?銝凋??訾??澆?璆剖像?偌皞?
+【法規背景】：
+台灣金管會與證交所規定，上市櫃公司每年需申報上一年度「非主管職務之全時員工薪資資訊」，若公司符合以下幾項「黃標」或「紅標」條件之一，必須在公開資訊觀測站說明「薪資合理性」、公司薪資政策與未來改善計畫：
+1. 員工平均薪資未達50萬元者。
+2. 營業利益衰退，但非主管之全時員工平均薪資卻較前一年度減少（不合理減薪）。
+3. 營業利益成長，但非主管之全時員工平均薪資卻未增加（未合理分潤）。
+4. 該年度非主管全時員工薪資中位數低於同業平均水準。
 
-????撘?
-1. ??蝯虫?銋絞閮銵?(??僑摨血撌乩犖?詻像?鞈葉雿???抵祥?具oY霈?????
-2. ?閰脣?豢?行?蝚血??恣??餈啜??祇?隤芣??芾????扼?霅衣內????
-3. ??HR?函?璆剔蜀???矽?游??迎?蝯虫?撖血?撱箄降??
-4. ??蝚血?霅漱?閬??鞈蝑??芯??孵?閮隤芣??詻??啣神?祉??移蝪⊥蝔選?靘?訾??喳??閮?皜祉?雿輻??
-5. 靽?隤除?渲牲?恥閫??璆准??恣?犖?拍??
+【分析指引】：
+1. 分析給予之統計報表 (包含各年度員工人數、平均薪資、中位數、福利費用、YoY變動率)。
+2. 指出該公司是否有符合金管會上述「需公開說明薪資合理性」的警示指標。
+3. 針對HR在算業績獎金或調整底薪，給予實務建議。
+4. 提供符合證交所規定「薪資政策與未來改善計畫說明書」的撰寫公版或精簡擬稿，供公司上傳公開資訊觀測站使用。
+5. 保持語氣嚴謹、客觀、專業、高階管理人適用。
 
-?撓?亦??梯”?豢???
+【輸入的報表數據】：
 ${reportSummary}
 `;
 
-    const userPrompt = question || "隢?撠?餈啁?望???脰??冽雿????扯????扯那?瘀?銝衣?箔?隞賜移蝪∠???鈭?蝪∪?????閮?皜祉??喳隤芣?撱箄降??;
+    const userPrompt = question || "請針對上述申報數據，進行全方位的合規性與合理性診斷，並產出一份精簡的董監事級簡報指引與公開資訊觀測站申報說明建議。";
 
     // Call Gemini
     const response = await ai.models.generateContent({
@@ -1349,15 +1349,15 @@ ${reportSummary}
       ]
     });
 
-    const aiText = response.text || "AI ?急??⊥??Ｙ????勗???;
+    const aiText = response.text || "AI 暫時無法產生分析報告。";
 
     // Log this AI consult
-    await addAuditLog(username, role, "AI 憿批???", `雿輻 Gemini AI 撠?勗銵券脰??????撖怠?閬牧?`);
+    await addAuditLog(username, role, "AI 顧問分析", `使用 Gemini AI 對申報報表進行合規分析與撰寫合規說明書`);
 
     res.json({ analysis: aiText });
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    res.status(500).json({ error: "AI ???粹: " + (error.message || String(error)) });
+    res.status(500).json({ error: "AI 分析出錯: " + (error.message || String(error)) });
   }
 });
 
@@ -1444,11 +1444,11 @@ interface Employee {
 let employees: Employee[] = [
   {
     id: 'emp_001',
-    name: 'Alex ??,
+    name: 'Alex 陳',
     email: 'alex.chen@example.com',
     authToken: 'LDC888',
-    department: '???? - 擗ㄡ??,
-    title: '擗ㄡ?',
+    department: '君品酒店 - 餐飲部',
+    title: '餐飲領班',
     onboardDate: '2026-06-15',
     status: 'pending',
     progress: 15,
@@ -1456,37 +1456,37 @@ let employees: Employee[] = [
     rulesAgreed: false,
     privacyAgreed: false,
     contractSigned: false,
-    contractWorkLocation: '???? (?啣?) (?啣?撣敺瑁楝銝畾???',
+    contractWorkLocation: '君品酒店 (台北) (台北市承德路一段3號)',
     contractLeaveOption: 'biweekly',
     contractLeavedays: '8',
     contractSalaryType: 'monthly',
     contractSalaryAmount: '36,000',
-    contractProbationMonths: '銝?,
+    contractProbationMonths: '三',
     updatedAt: new Date().toISOString(),
     personalData: {
-      name: 'Alex ??,
+      name: 'Alex 陳',
       idNumber: 'A123456789',
       birthday: '1998-05-12',
-      gender: '??,
+      gender: '男',
       phone: '0912-345-678',
       email: 'alex.chen@example.com',
-      legalAddress: '?啣?撣之摰??啁??楝銝挾 10 ??,
-      contactAddress: '?啣?撣之摰??啁??楝銝挾 10 ??,
-      bankName: '?????平?銵?,
+      legalAddress: '台北市大安區新生南路三段 10 號',
+      contactAddress: '台北市大安區新生南路三段 10 號',
+      bankName: '兆豐國際商業銀行',
       bankAccount: '017123456789',
-      dependentsCount: '0 鈭?,
-      emergencyName: '?喳之??,
-      emergencyRelationship: '?嗉扛',
+      dependentsCount: '0 人',
+      emergencyName: '陳大同',
+      emergencyRelationship: '父親',
       emergencyPhone: '0988-765-432'
     }
   },
   {
     id: 'emp_002',
-    name: 'Sophia ??,
+    name: 'Sophia 林',
     email: 'sophia.lin@example.com',
     authToken: 'LDC999',
-    department: '?脣?皞急??? - 摰Ｘ??,
-    title: '撠旨摰Ｗ??亙?撠',
+    department: '雲品溫泉酒店 - 客房部',
+    title: '尊榮客務接待專員',
     onboardDate: '2026-07-01',
     status: 'pending',
     progress: 0,
@@ -1494,12 +1494,12 @@ let employees: Employee[] = [
     rulesAgreed: false,
     privacyAgreed: false,
     contractSigned: false,
-    contractWorkLocation: '?脣?皞急??? (?交?瞏? (??蝮??瘙?銝剜迤頝?3??',
+    contractWorkLocation: '雲品溫泉酒店 (日月潭) (南投縣魚池鄉中正路23號)',
     contractLeaveOption: 'weekly',
     contractLeavedays: '8',
     contractSalaryType: 'monthly',
     contractSalaryAmount: '36,000',
-    contractProbationMonths: '銝?,
+    contractProbationMonths: '三',
     updatedAt: new Date().toISOString()
   }
 ];
@@ -1615,7 +1615,7 @@ async function replicateToFirestoreBg() {
     const isPermissionError = err.message && (err.message.includes('PERMISSION_DENIED') || err.message.includes('insufficient permissions'));
     if (isPermissionError) {
       isFirestoreAvailable = false;
-      console.warn('?? Firestore Sync Info: Replication encountered permission error. Switched to local JSON database mode.');
+      console.warn('⚠️ Firestore Sync Info: Replication encountered permission error. Switched to local JSON database mode.');
     } else {
       console.error('Failed background replication to Firestore:', err);
     }
@@ -1714,9 +1714,9 @@ async function loadDatabaseFromFirestore() {
     isFirestoreAvailable = false;
     const isPermissionError = err.message && (err.message.includes('PERMISSION_DENIED') || err.message.includes('insufficient permissions'));
     if (isPermissionError) {
-      console.warn('?? Firestore Sync Info: Missing or insufficient permissions. Operating in reliable local-only JSON database mode.');
+      console.warn('⚠️ Firestore Sync Info: Missing or insufficient permissions. Operating in reliable local-only JSON database mode.');
     } else {
-      console.warn('?? Firestore Sync Info: Could not connect to Firestore (', err.message, '). Operating in reliable local-only JSON database mode.');
+      console.warn('⚠️ Firestore Sync Info: Could not connect to Firestore (', err.message, '). Operating in reliable local-only JSON database mode.');
     }
   }
 }
@@ -1747,8 +1747,8 @@ function logActivity(req: express.Request, employeeName: string, actionType: str
   const newLog: ActivityLog = {
     id: 'log_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
     operatorEmail: operatorEmail.trim() || 'system@ldchotels.com',
-    operatorName: operatorName.trim() || '蝟餌絞蝞∠???,
-    employeeName: employeeName ? employeeName.trim() : '?券??',
+    operatorName: operatorName.trim() || '系統管理員',
+    employeeName: employeeName ? employeeName.trim() : '全體項目',
     actionType,
     details: details.trim(),
     timestamp: new Date().toISOString()
@@ -1810,12 +1810,12 @@ app.post('/api/hr/employees', (req, res) => {
   } = req.body;
   
   if (!name || !email || !authToken || !department || !title || !onboardDate) {
-    return res.status(400).json({ error: '???雿??箏?憛? });
+    return res.status(400).json({ error: '所有欄位均為必填' });
   }
 
   const exists = employees.some(emp => emp.email.toLowerCase() === email.trim().toLowerCase());
   if (exists) {
-    return res.status(400).json({ error: '甇日摮隞嗅歇摮?潭?脣?隞??桐葉' });
+    return res.status(400).json({ error: '此電子郵件已存在於新進同仁名單中' });
   }
 
   const newEmp: Employee = {
@@ -1833,19 +1833,19 @@ app.post('/api/hr/employees', (req, res) => {
     rulesAgreed: false,
     privacyAgreed: false,
     contractSigned: false,
-    contractWorkLocation: contractWorkLocation || '???? (?啣?撣敺瑁楝銝畾???',
+    contractWorkLocation: contractWorkLocation || '君品酒店 (台北市承德路一段3號)',
     contractLeaveOption: contractLeaveOption || 'biweekly',
     contractLeavedays: contractLeavedays || '8',
     contractSalaryType: contractSalaryType || 'monthly',
     contractSalaryAmount: contractSalaryAmount || '36,000',
-    contractProbationMonths: contractProbationMonths || '銝?,
+    contractProbationMonths: contractProbationMonths || '三',
     updatedAt: new Date().toISOString()
   };
 
   employees.push(newEmp);
-  logActivity(req, newEmp.name, 'CREATE_EMPLOYEE', `?啣??圈脣?隞? ${newEmp.name} (${newEmp.department} - ${newEmp.title})`);
+  logActivity(req, newEmp.name, 'CREATE_EMPLOYEE', `新增新進同仁: ${newEmp.name} (${newEmp.department} - ${newEmp.title})`);
   saveDatabase();
-  return res.json({ message: '???啣??圈脣?隞?, employee: newEmp, employees });
+  return res.json({ message: '成功新增新進同仁', employee: newEmp, employees });
 });
 
 // Delete individual employee
@@ -1853,7 +1853,7 @@ app.delete('/api/hr/employees/:id', (req, res) => {
   const { id } = req.params;
   const index = employees.findIndex(emp => emp.id === id);
   if (index === -1) {
-    return res.status(404).json({ error: '?曆??啗府??鞈?' });
+    return res.status(404).json({ error: '找不到該同仁資料' });
   }
 
   const emp = employees[index];
@@ -1867,9 +1867,9 @@ app.delete('/api/hr/employees/:id', (req, res) => {
     });
   }
 
-  logActivity(req, empName, 'DELETE_EMPLOYEE', `?芷??鞈?: ${empName} (${emp.department})`);
+  logActivity(req, empName, 'DELETE_EMPLOYEE', `刪除同仁資料: ${empName} (${emp.department})`);
   saveDatabase();
-  return res.json({ message: '???芷??鞈?', employees });
+  return res.json({ message: '成功刪除同仁資料', employees });
 });
 
 // Reject / Return employee onboarding to fill state (Reset signatures but keep text fields)
@@ -1877,7 +1877,7 @@ app.post('/api/hr/employees/:id/reject', (req, res) => {
   const { id } = req.params;
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
-    return res.status(404).json({ error: '?曆??啗府??鞈?' });
+    return res.status(404).json({ error: '找不到該同仁資料' });
   }
 
   const emp = employees[empIndex];
@@ -1922,48 +1922,48 @@ app.post('/api/hr/employees/:id/reject', (req, res) => {
   emp.updatedAt = new Date().toISOString();
   
   employees[empIndex] = emp;
-  logActivity(req, emp.name, 'REJECT_ONBOARDING', `撠?隞?圈???曆耨?? ${emp.name}`);
+  logActivity(req, emp.name, 'REJECT_ONBOARDING', `將同仁報到退回開放修改: ${emp.name}`);
   saveDatabase();
-  return res.json({ message: '撌脣????唾?????靽格', employee: emp, employees });
+  return res.json({ message: '已將同仁申請退回，開放修改', employee: emp, employees });
 });
 
-// Update employee ID (?∪極蝺刻?)
+// Update employee ID (員工編號)
 app.put('/api/hr/employees/:id/empid', (req, res) => {
   const { id } = req.params;
   const { empId } = req.body;
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
-    return res.status(404).json({ error: '?曆??啗府??鞈?' });
+    return res.status(404).json({ error: '找不到該同仁資料' });
   }
 
   const emp = employees[empIndex];
-  const oldId = emp.empId || '?芾身摰?;
+  const oldId = emp.empId || '未設定';
   const newId = empId ? empId.trim() : '';
   emp.empId = newId;
   emp.updatedAt = new Date().toISOString();
-  logActivity(req, emp.name, 'UPDATE_EMP_ID', `?湔??蝺刻?: "${oldId}" -> "${newId || '?芾身摰?}"`);
+  logActivity(req, emp.name, 'UPDATE_EMP_ID', `更新同仁編號: "${oldId}" -> "${newId || '未設定'}"`);
   saveDatabase();
-  return res.json({ message: '?∪極蝺刻??湔摰?', employee: emp, employees });
+  return res.json({ message: '員工編號更新完成', employee: emp, employees });
 });
 
-// Update employee email address (靽格?餃??萎辣?啣?)
+// Update employee email address (修改電子郵件地址)
 app.put('/api/hr/employees/:id/email', (req, res) => {
   const { id } = req.params;
   const { email } = req.body;
   
   if (!email || !email.trim()) {
-    return res.status(400).json({ error: '?餃??萎辣?啣?銝?箇征' });
+    return res.status(400).json({ error: '電子郵件地址不能為空' });
   }
 
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
-    return res.status(404).json({ error: '?曆??啗府??鞈?' });
+    return res.status(404).json({ error: '找不到該同仁資料' });
   }
 
   const newEmail = email.trim().toLowerCase();
   const duplicateExists = employees.some(emp => emp.id !== id && emp.email.toLowerCase() === newEmail);
   if (duplicateExists) {
-    return res.status(400).json({ error: '甇日摮隞嗅?撌脰◤?嗡???雿輻' });
+    return res.status(400).json({ error: '此電子郵件地址已被其他同仁使用' });
   }
 
   const emp = employees[empIndex];
@@ -1971,28 +1971,28 @@ app.put('/api/hr/employees/:id/email', (req, res) => {
   emp.email = newEmail;
   emp.updatedAt = new Date().toISOString();
   
-  logActivity(req, emp.name, 'UPDATE_EMAIL', `?湔???餃??萎辣?啣?: "${oldEmail}" -> "${newEmail}"`);
+  logActivity(req, emp.name, 'UPDATE_EMAIL', `更新同仁電子郵件地址: "${oldEmail}" -> "${newEmail}"`);
   saveDatabase();
-  return res.json({ message: '?餃??萎辣?啣??湔摰?', employee: emp, employees });
+  return res.json({ message: '電子郵件地址更新完成', employee: emp, employees });
 });
 
-// Update employee contract probation months (??閰衣??
+// Update employee contract probation months (合約試用期)
 app.put('/api/hr/employees/:id/probation', (req, res) => {
   const { id } = req.params;
   const { contractProbationMonths } = req.body;
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
-    return res.status(404).json({ error: '?曆??啗府??鞈?' });
+    return res.status(404).json({ error: '找不到該同仁資料' });
   }
 
   const emp = employees[empIndex];
-  const oldProbation = emp.contractProbationMonths || '銝?;
-  const newProbation = contractProbationMonths ? contractProbationMonths.trim() : '銝?;
+  const oldProbation = emp.contractProbationMonths || '三';
+  const newProbation = contractProbationMonths ? contractProbationMonths.trim() : '三';
   emp.contractProbationMonths = newProbation;
   emp.updatedAt = new Date().toISOString();
-  logActivity(req, emp.name, 'UPDATE_PROBATION', `?湔??閰衣?? "${oldProbation}" -> "${newProbation}"`);
+  logActivity(req, emp.name, 'UPDATE_PROBATION', `更新同仁試用期: "${oldProbation}" -> "${newProbation}"`);
   saveDatabase();
-  return res.json({ message: '??閰衣??啣???, employee: emp, employees });
+  return res.json({ message: '合約試用期更新完成', employee: emp, employees });
 });
 
 // Send onboarding notification email (simulated)
@@ -2000,7 +2000,7 @@ app.post('/api/hr/employees/:id/send-onboarding-email', (req, res) => {
   const { id } = req.params;
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
-    return res.status(404).json({ error: '?曆??啗府??鞈?' });
+    return res.status(404).json({ error: '找不到該同仁資料' });
   }
 
   const emp = employees[empIndex];
@@ -2009,10 +2009,10 @@ app.post('/api/hr/employees/:id/send-onboarding-email', (req, res) => {
     req, 
     emp.name, 
     'SEND_ONBOARDING_EMAIL', 
-    `?潮?瑕?圈靽∟: ${emp.email} (?憪?: ${emp.name}?蝔? ${emp.title}??? ${emp.onboardDate}?暺? ${emp.contractWorkLocation || '????'}?鞈? ${emp.contractSalaryAmount || '36,000'}??霅Ⅳ: ${emp.authToken})`
+    `發送入職報到通知信至: ${emp.email} (包含姓名: ${emp.name}、職稱: ${emp.title}、日期: ${emp.onboardDate}、地點: ${emp.contractWorkLocation || '君品酒店'}、薪資: ${emp.contractSalaryAmount || '36,000'}與驗證碼: ${emp.authToken})`
   );
   saveDatabase();
-  return res.json({ message: '?勗?靽∠????, employee: emp, employees });
+  return res.json({ message: '報到通知信發送成功', employee: emp, employees });
 });
 
 // Update onboarding progress and checklists manually by HR
@@ -2033,7 +2033,7 @@ app.put('/api/hr/employees/:id/onboarding-progress', (req, res) => {
 
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
-    return res.status(404).json({ error: '?曆??啗府??鞈?' });
+    return res.status(404).json({ error: '找不到該同仁資料' });
   }
 
   const emp = employees[empIndex];
@@ -2048,13 +2048,13 @@ app.put('/api/hr/employees/:id/onboarding-progress', (req, res) => {
           idNumber: 'A123456789',
           birthday: '2000-01-01',
           email: emp.email,
-          legalAddress: '??HR ??閬摰?',
-          contactAddress: '??HR ??閬摰?',
-          bankName: '???詨?',
-          bankAccount: '???詨?',
-          dependentsCount: '0 鈭?,
-          emergencyName: '?舐窗鈭?,
-          emergencyRelationship: '?嗡?',
+          legalAddress: '由 HR 手動覆核完成',
+          contactAddress: '由 HR 手動覆核完成',
+          bankName: '手動核備',
+          bankAccount: '手動核備',
+          dependentsCount: '0 人',
+          emergencyName: '聯絡人',
+          emergencyRelationship: '其他',
           emergencyPhone: '0900-000-000'
         };
       }
@@ -2067,9 +2067,9 @@ app.put('/api/hr/employees/:id/onboarding-progress', (req, res) => {
     if (careerDataCompleted) {
       if (!emp.careerData) {
         emp.careerData = {
-          experiences: [{ companyName: '???詨?', jobTitle: '??, startDate: '', endDate: '', leaveReason: '' }],
+          experiences: [{ companyName: '手動核備', jobTitle: '無', startDate: '', endDate: '', leaveReason: '' }],
           licenses: [],
-          additionalNotes: '??HR ??閬摰?'
+          additionalNotes: '由 HR 手動覆核完成'
         };
       }
     } else {
@@ -2084,7 +2084,7 @@ app.put('/api/hr/employees/:id/onboarding-progress', (req, res) => {
           name: 'HR_MANUAL_VERIFIED.pdf',
           size: 1024,
           uploadedAt: new Date().toISOString(),
-          docType: '?嗡??像?辣'
+          docType: '其他應繳文件'
         }];
       }
     } else {
@@ -2126,16 +2126,16 @@ app.put('/api/hr/employees/:id/onboarding-progress', (req, res) => {
       if (!emp.guarantorDate) emp.guarantorDate = new Date().toISOString().split('T')[0];
       if (!emp.guarantorData) {
         emp.guarantorData = {
-          guarantorName: '??閬',
+          guarantorName: '手動覆核',
           birthday: '1980-01-01',
           idNumber: 'A123456789',
-          address: '??閬',
+          address: '手動覆核',
           phone: '0900-000-000',
-          companyName: '??,
-          companyTitle: '??,
-          companyAddress: '??,
+          companyName: '無',
+          companyTitle: '無',
+          companyAddress: '無',
           companyPhone: '0900-000-000',
-          relationship: '?嗡?',
+          relationship: '其他',
           validUntil: new Date().toISOString().split('T')[0]
         };
       }
@@ -2195,10 +2195,10 @@ app.put('/api/hr/employees/:id/onboarding-progress', (req, res) => {
   emp.updatedAt = new Date().toISOString();
   employees[empIndex] = emp;
   
-  logActivity(req, emp.name, 'MANUAL_PROGRESS_UPDATE', `HR???湔????{emp.name}???勗?脣漲????(?脣漲: ${emp.progress}%, ??? ${emp.status})`);
+  logActivity(req, emp.name, 'MANUAL_PROGRESS_UPDATE', `HR手動更新同仁「${emp.name}」的報到進度與狀態 (進度: ${emp.progress}%, 狀態: ${emp.status})`);
   saveDatabase();
 
-  return res.json({ message: '???湔?勗?脣漲??', employee: emp, employees });
+  return res.json({ message: '手動更新報到進度成功', employee: emp, employees });
 });
 
 // Get HR Admins
@@ -2224,19 +2224,19 @@ app.post('/api/hr/admins', (req, res) => {
   );
 
   if (!operatorPermissions.includes('admin')) {
-    return res.status(403).json({ error: '?? ?函?蝞∠?撣唾?銝行???恣????admin)嚗瘜脰?蝞∠??董???啣?嚗? });
+    return res.status(403).json({ error: '⚠️ 您的管理帳號並未附加「管理權限」(admin)，無法進行管理者帳號之新增！' });
   }
 
   const { email, permissions } = req.body;
   if (!email || !email.trim()) {
-    return res.status(400).json({ error: 'Email 甈?銝?箇征' });
+    return res.status(400).json({ error: 'Email 欄位不能為空' });
   }
 
   const cleanEmail = email.trim().toLowerCase();
   const exists = normalized.some(admin => admin.email === cleanEmail);
 
   if (exists) {
-    return res.status(400).json({ error: '甇?Email 撌脫HR蝞∠???銝' });
+    return res.status(400).json({ error: '此 Email 已是HR管理者之一' });
   }
 
   const finalPermissions = Array.isArray(permissions) && permissions.length > 0
@@ -2248,14 +2248,14 @@ app.post('/api/hr/admins', (req, res) => {
     password: 'mis',
     permissions: finalPermissions
   });
-  logActivity(req, '鈭箄?蝞∠?蝟餌絞', 'ADD_ADMIN', `?啣? HR 蝞∠??? ${cleanEmail} (甈?: ${finalPermissions.join(', ')})`);
+  logActivity(req, '人資管理系統', 'ADD_ADMIN', `新增 HR 管理者: ${cleanEmail} (權限: ${finalPermissions.join(', ')})`);
   saveDatabase();
 
   const freshAdmins = getNormalizedAdmins().map(admin => ({
     email: admin.email,
     permissions: admin.permissions || []
   }));
-  return res.json({ message: '???啣?HR蝞∠???, hrAdmins: freshAdmins });
+  return res.json({ message: '成功新增HR管理者', hrAdmins: freshAdmins });
 });
 
 // Delete HR Admin
@@ -2264,7 +2264,7 @@ app.delete('/api/hr/admins', (req, res) => {
   const targetEmail = (req.body.email || '').toLowerCase().trim();
 
   if (!targetEmail) {
-    return res.status(400).json({ error: '?? 隢?靘炬?芷?恣?靽∠拳' });
+    return res.status(400).json({ error: '⚠️ 請提供欲刪除的管理員信箱' });
   }
 
   // 1. Verify operator has 'admin' permission
@@ -2277,17 +2277,17 @@ app.delete('/api/hr/admins', (req, res) => {
   );
 
   if (!operatorPermissions.includes('admin')) {
-    return res.status(403).json({ error: '?? ?函?蝞∠?撣唾?銝行???恣????admin)嚗瘜脰?蝞∠??∪董???芷嚗? });
+    return res.status(403).json({ error: '⚠️ 您的管理帳號並未附加「管理權限」(admin)，無法進行管理員帳號之刪除！' });
   }
 
   // 2. Prevent deleting Primary Admin
   if (targetEmail === primaryAdminEmail.toLowerCase().trim()) {
-    return res.status(400).json({ error: `?? 銝餉?鞎痊鈭?(${primaryAdminEmail}) ?箇頂蝯望敹董?塚?蝳迫?芷嚗?甈脣?方??脰?銝餉?蝞∠??宏頧 });
+    return res.status(400).json({ error: `⚠️ 主要負責人 (${primaryAdminEmail}) 為系統核心帳戶，禁止刪除！如欲刪除請先進行主要管理者移轉。` });
   }
 
   // 3. Prevent deleting themselves
   if (targetEmail === operatorEmail) {
-    return res.status(400).json({ error: '?? ?粹?恣????蝛綽?蝢斤?撣唾?蝳迫?芷?桀?甇??餃雿輻?董?塚?' });
+    return res.status(400).json({ error: '⚠️ 為避免管理權限真空，群組帳號禁止刪除目前正在登入使用的帳戶！' });
   }
 
   // Find target in current hrAdmins
@@ -2297,7 +2297,7 @@ app.delete('/api/hr/admins', (req, res) => {
   });
 
   if (targetIdx === -1) {
-    return res.status(404).json({ error: '?? ?曆??唳炬?芷?恣?撣唾?' });
+    return res.status(404).json({ error: '⚠️ 找不到欲刪除的管理員帳號' });
   }
 
   // Remove from hrAdmins list
@@ -2310,14 +2310,14 @@ app.delete('/api/hr/admins', (req, res) => {
     });
   }
 
-  logActivity(req, '鈭箄?蝞∠?蝟餌絞', 'DELETE_ADMIN', `?芷 HR 蝞∠??? ${targetEmail}`);
+  logActivity(req, '人資管理系統', 'DELETE_ADMIN', `刪除 HR 管理者: ${targetEmail}`);
   saveDatabase();
 
   const freshAdmins = getNormalizedAdmins().map(admin => ({
     email: admin.email,
     permissions: admin.permissions || []
   }));
-  return res.json({ message: '???芷 HR 蝞∠???, hrAdmins: freshAdmins });
+  return res.json({ message: '成功刪除 HR 管理者', hrAdmins: freshAdmins });
 });
 
 // Transfer Primary Admin
@@ -2326,26 +2326,26 @@ app.post('/api/hr/transfer-primary', (req, res) => {
   const { targetEmail } = req.body;
 
   if (!targetEmail) {
-    return res.status(400).json({ error: '?? 隢??亦?銝餉?蝞∠??? });
+    return res.status(400).json({ error: '⚠️ 請選擇承接的主要管理者' });
   }
 
   const cleanTargetEmail = targetEmail.trim().toLowerCase();
 
   // 1. Verify operator is the current primary admin
   if (operatorEmail !== primaryAdminEmail.toLowerCase().trim()) {
-    return res.status(403).json({ error: `?? ?芣??嗅??蜓閬恣??(${primaryAdminEmail}) ?隞仿脰?甈?蝘餉?嚗 });
+    return res.status(403).json({ error: `⚠️ 只有當前的主要管理者 (${primaryAdminEmail}) 才可以進行權限移轉！` });
   }
 
   // 2. Prevent transferring to themselves
   if (cleanTargetEmail === operatorEmail) {
-    return res.status(400).json({ error: '?? ?⊥?蝘餉?蝯西撌梧?隢?隞?HR 撣唾??? });
+    return res.status(400).json({ error: '⚠️ 無法移轉給自己！請選擇其他 HR 帳號。' });
   }
 
   // 3. Verify target admin exists
   const normalized = getNormalizedAdmins();
   const targetAdmin = normalized.find(a => a.email === cleanTargetEmail);
   if (!targetAdmin) {
-    return res.status(404).json({ error: '?? ?曆??唳?亦? HR 撣唾?嚗?蝣箄?閰脖縑蝞勗歇鋡急憓蝞∠??? });
+    return res.status(404).json({ error: '⚠️ 找不到承接的 HR 帳號，請確認該信箱已被新增為管理者。' });
   }
 
   // 4. Update the target admin's permissions to ensure they have all permissions
@@ -2387,7 +2387,7 @@ app.post('/api/hr/transfer-primary', (req, res) => {
   // 5. Update primaryAdminEmail
   primaryAdminEmail = cleanTargetEmail;
 
-  logActivity(req, '鈭箄?蝞∠?蝟餌絞', 'TRANSFER_PRIMARY_ADMIN', `銝餉?蝞∠????宏頧???${operatorEmail} 蝘餉???${cleanTargetEmail}`);
+  logActivity(req, '人資管理系統', 'TRANSFER_PRIMARY_ADMIN', `主要管理者權限移轉：由 ${operatorEmail} 移轉至 ${cleanTargetEmail}`);
   saveDatabase();
 
   const freshAdmins = getNormalizedAdmins().map(admin => ({
@@ -2397,7 +2397,7 @@ app.post('/api/hr/transfer-primary', (req, res) => {
   }));
 
   return res.json({ 
-    message: `??撠蜓閬恣???宏頧策??{cleanTargetEmail}??`, 
+    message: `成功將主要管理者權限移轉給「${cleanTargetEmail}」！`, 
     hrAdmins: freshAdmins,
     primaryAdminEmail: primaryAdminEmail
   });
@@ -2407,7 +2407,7 @@ app.post('/api/hr/transfer-primary', (req, res) => {
 app.post('/api/hr/change-password', (req, res) => {
   const { email, oldPassword, newPassword } = req.body;
   if (!email || !oldPassword || !newPassword) {
-    return res.status(400).json({ error: '???雿??箏??詨‵' });
+    return res.status(400).json({ error: '所有欄位均為必選填' });
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -2415,16 +2415,16 @@ app.post('/api/hr/change-password', (req, res) => {
   const adminIndex = normalized.findIndex(admin => admin.email === normalizedEmail);
 
   if (adminIndex === -1) {
-    return res.status(404).json({ error: '?曆??啗府蝞∠??∪董?? });
+    return res.status(404).json({ error: '找不到該管理員帳號' });
   }
 
   const currentPassword = normalized[adminIndex].password || 'mis';
   if (oldPassword !== currentPassword) {
-    return res.status(400).json({ error: '?桀?撖Ⅳ撽?銝迤蝣綽?霈憭望?' });
+    return res.status(400).json({ error: '目前密碼驗證不正確，變更失敗' });
   }
 
   if (newPassword.length < 3) {
-    return res.status(400).json({ error: '?啣?蝣潮摨西撠? 3 ???? });
+    return res.status(400).json({ error: '新密碼長度至少需 3 個字元' });
   }
 
   // Update in official array
@@ -2433,17 +2433,17 @@ app.post('/api/hr/change-password', (req, res) => {
     password: newPassword
   };
 
-  logActivity(req, '鈭箄?蝞∠?蝟餌絞', 'CHANGE_PASSWORD', `霈 HR 蝞∠???蝣潭??? ${normalizedEmail}`);
+  logActivity(req, '人資管理系統', 'CHANGE_PASSWORD', `變更 HR 管理者密碼成功: ${normalizedEmail}`);
   saveDatabase();
 
-  return res.json({ success: true, message: '撖Ⅳ霈??嚗?閮??函??啣?蝣? });
+  return res.json({ success: true, message: '密碼變更成功，請記住您的新密碼' });
 });
 
 // Request Forgot Password (Simulated Email reset link)
 app.post('/api/hr/forgot-password', (req, res) => {
   const { email } = req.body;
   if (!email) {
-    return res.status(400).json({ error: '隢撓?仿摮隞? });
+    return res.status(400).json({ error: '請輸入電子郵件' });
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -2451,7 +2451,7 @@ app.post('/api/hr/forgot-password', (req, res) => {
   const exists = normalized.some(admin => admin.email === normalizedEmail);
 
   if (!exists) {
-    return res.status(404).json({ error: '甇日摮隞園???銋?HR 蝞∠???隢?銝餉?鞎痊鈭箄蝯? });
+    return res.status(404).json({ error: '此電子郵件非授權之 HR 管理者，請與主要負責人聯絡' });
   }
 
   // Generate simple token: "tok_xxxx"
@@ -2468,14 +2468,14 @@ app.post('/api/hr/forgot-password', (req, res) => {
   const protocol = req.protocol || 'http';
   const resetLink = `${protocol}://${host}/?reset_token=${token}`;
 
-  console.log(`\n==========================================\n[璅⊥?餃??萎辣? SMS / EMAIL SIMULATOR]\n==========================================\n?嗡辣??(To): ${normalizedEmail}\n璅? (Subject): ?脫???鈭箔?蝟餌絞 - HR蝞∠???閮剖?蝣潔縑隞跚n?批捆 (Body):\n?典末嚗?暺隞乩?????身?函? HR 敺?餃撖Ⅳ嚗?? 30 ???扳???嚗n${resetLink}\n==========================================\n`);
+  console.log(`\n==========================================\n[模擬電子郵件通知 SMS / EMAIL SIMULATOR]\n==========================================\n收件者 (To): ${normalizedEmail}\n標題 (Subject): 雲朗集團人事系統 - HR管理者重設密碼信件\n內容 (Body):\n您好，請點選以下連結重設您的 HR 後台登入密碼（連結 30 分鐘內有效）：\n${resetLink}\n==========================================\n`);
 
   return res.json({
     success: true,
-    message: '?身撖Ⅳ靽∩辣撌脫????(?祉頂蝯勗歇?箸璅⊥?嗡縑?)嚗?,
+    message: '重設密碼信件已成功發送 (本系統已為您模擬收信通知)！',
     simulatedEmail: {
       to: normalizedEmail,
-      subject: '?脫???鈭箔?蝟餌絞 - HR蝞∠???閮剖?蝣潔縑隞?,
+      subject: '雲朗集團人事系統 - HR管理者重設密碼信件',
       link: resetLink,
       token: token
     }
@@ -2486,17 +2486,17 @@ app.post('/api/hr/forgot-password', (req, res) => {
 app.post('/api/hr/reset-password', (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || !newPassword) {
-    return res.status(400).json({ error: '隢?靘?閮?Token ?撖Ⅳ' });
+    return res.status(400).json({ error: '請提供重設 Token 與新密碼' });
   }
 
   const record = forgotPasswordTokens[token];
   if (!record) {
-    return res.status(400).json({ error: '?身????⊥???甇日??撌脰◤雿輻?? });
+    return res.status(400).json({ error: '重設連結無效、或此連結已被使用過' });
   }
 
   if (Date.now() > record.expires) {
     delete forgotPasswordTokens[token];
-    return res.status(400).json({ error: '甇日??撌脤???隢??啁隢?閮剖?蝣? });
+    return res.status(400).json({ error: '此連結已過期，請重新申請重設密碼' });
   }
 
   const normalizedEmail = record.email.toLowerCase().trim();
@@ -2505,11 +2505,11 @@ app.post('/api/hr/reset-password', (req, res) => {
 
   if (adminIndex === -1) {
     delete forgotPasswordTokens[token];
-    return res.status(404).json({ error: '?曆??啗府蝞∠??∪董?? });
+    return res.status(404).json({ error: '找不到該管理員帳號' });
   }
 
   if (newPassword.length < 3) {
-    return res.status(400).json({ error: '撖Ⅳ?瑕漲?喳?? 3 ???? });
+    return res.status(400).json({ error: '密碼長度至少需 3 個字元' });
   }
 
   // Overwrite password
@@ -2521,10 +2521,10 @@ app.post('/api/hr/reset-password', (req, res) => {
   // Burn token
   delete forgotPasswordTokens[token];
 
-  logActivity(req, '鈭箄?蝞∠?蝟餌絞', 'RESET_PASSWORD', `HR蝞∠??∩???閮凋縑摰??身撖Ⅳ: ${normalizedEmail}`);
+  logActivity(req, '人資管理系統', 'RESET_PASSWORD', `HR管理員依靠重設信完成重設密碼: ${normalizedEmail}`);
   saveDatabase();
 
-  return res.json({ success: true, message: '撖Ⅳ?身??嚗???餃?銝虫蝙?冽撖Ⅳ?脰??餃?? });
+  return res.json({ success: true, message: '密碼重設成功！請回到登入頁面並使用新密碼進行登入。' });
 });
 
 // 3. Employee Endpoints
@@ -2534,7 +2534,7 @@ app.put('/api/employee/save', (req, res) => {
   
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
-    return res.status(404).json({ error: '?曆??唳?脣?隞??? });
+    return res.status(404).json({ error: '找不到新進同仁資料' });
   }
 
   const emp = employees[empIndex];
@@ -2599,19 +2599,19 @@ app.put('/api/employee/save', (req, res) => {
   employees[empIndex] = emp;
   saveDatabase();
 
-  return res.json({ message: '?阮?脣???', employee: emp });
+  return res.json({ message: '草稿儲存成功', employee: emp });
 });
 
 // Upload verification documents (PDF file representation)
 app.post('/api/employee/upload', (req, res) => {
   const { id, fileName, fileSize, base64Data, docType } = req.body;
   if (!id || !fileName || !fileSize) {
-    return res.status(400).json({ error: '蝻箏?銝鞈?' });
+    return res.status(400).json({ error: '缺少上傳資訊' });
   }
 
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
-    return res.status(404).json({ error: '?曆??啗府??鞈?' });
+    return res.status(404).json({ error: '找不到該同仁資料' });
   }
 
   const emp = employees[empIndex];
@@ -2650,7 +2650,7 @@ app.post('/api/employee/upload', (req, res) => {
   emp.updatedAt = new Date().toISOString();
   saveDatabase();
   
-  return res.json({ message: '?辣銝??', employee: emp });
+  return res.json({ message: '文件上傳成功', employee: emp });
 });
 
 // Delete uploaded verification documents
@@ -2658,7 +2658,7 @@ app.delete('/api/employee/upload', (req, res) => {
   const { id, fileName } = req.body;
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
-    return res.status(404).json({ error: '?曆??啗府??鞈?' });
+    return res.status(404).json({ error: '找不到該同仁資料' });
   }
 
   const emp = employees[empIndex];
@@ -2680,7 +2680,7 @@ app.delete('/api/employee/upload', (req, res) => {
   emp.updatedAt = new Date().toISOString();
   saveDatabase();
 
-  return res.json({ message: '?辣撌脩宏??, employee: emp });
+  return res.json({ message: '文件已移除', employee: emp });
 });
 
 async function bootstrap() {
@@ -2705,22 +2705,10 @@ async function bootstrap() {
     });
   }
 
-  const startServer = (port: number) => {
-    const server = app.listen(port, "0.0.0.0", () => {
-      console.log(`🚀 Server running on http://localhost:${port}`);
-    });
-
-    server.on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        console.log(`⚠️ Port ${port} is in use, trying ${port + 1}...`);
-        startServer(port + 1);
-      } else {
-        console.error('Server error:', err);
-      }
-    });
-  };
-
-  startServer(PORT);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+}
 
 bootstrap().catch(err => {
   console.error("❌ Failed to start server:", err);

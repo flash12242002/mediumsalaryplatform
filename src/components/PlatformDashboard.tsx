@@ -11,13 +11,13 @@ import {
   Shield, LogOut, Briefcase, FileBarChart2, CloudLightning, 
   Bot, ShieldAlert, History, User as UserIcon, RefreshCw, Key, Lock, Settings, Clock
 } from "lucide-react";
+// @ts-ignore
 import officialLogo from '../assets/images/ldc_logo_official.png';
 
 import HrDashboard from "./HrDashboard";
 export default function PlatformDashboard({ currentUser, onLogout }: any) {
   
   const [activeTab, setActiveTab] = useState<string>("onboarding");
-  const [onboardingSubMenu, setOnboardingSubMenu] = useState<'tracker' | 'add' | 'admins' | 'logs'>('tracker');
   const [onboardingSubMenu, setOnboardingSubMenu] = useState<'tracker' | 'add' | 'admins' | 'logs'>('tracker');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<EmployeeStats[]>([]);
