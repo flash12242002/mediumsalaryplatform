@@ -2705,9 +2705,20 @@ async function bootstrap() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-  });
+  const startServer = (port: number) => {
+    app.listen(port, "0.0.0.0", () => {
+      console.log(`🚀 Server running on http://localhost:${port}`);
+    }).on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`Port ${port} is busy, trying ${port + 1}...`);
+        startServer(port + 1);
+      } else {
+        console.error(err);
+      }
+    });
+  };
+
+  startServer(PORT);
 }
 
 bootstrap().catch(err => {
