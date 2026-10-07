@@ -336,7 +336,7 @@ export default function SalesCommissionTab({ user, onLogAction }: SalesCommissio
                     <div>
                       <span className="font-semibold text-slate-700 block">{tier.label}</span>
                       <span className="text-slate-500 font-mono">
-                        {tier.min.toLocaleString()} ~ {tier.max > 50000000 ? "無限" : tier.max.toLocaleString()} 元
+                        {tier.min.toLocaleString()} ~ {tier.max > 50000000 ? "以上" : tier.max.toLocaleString()} 元
                       </span>
                     </div>
                     <div className="text-right">

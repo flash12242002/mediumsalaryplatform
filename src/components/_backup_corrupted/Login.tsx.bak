@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Shield, User, Mail, AlertCircle, X, CheckCircle } from 'lucide-react';
 import LdcLogo from './LdcLogo';
 
 interface LoginProps {
-  onLoginSuccess: (role: string, user: any, adminEmails?: string[]) => void;
+  onLoginSuccess: (role: 'hr' | 'OnboardEmployee', user: any, adminEmails?: string[]) => void;
 }
 
 export default function Login({ onLoginSuccess }: LoginProps) {
-  const [role, setRole] = useState<'employee' | 'hr'>('employee');
+  const [role, setRole] = useState<'OnboardEmployee' | 'hr'>('OnboardEmployee');
   const [email, setEmail] = useState('');
   const [authToken, setAuthToken] = useState('');
   const [error, setError] = useState('');
@@ -35,7 +35,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || '密碼重置信件發送失敗，請確認此 Email 是否為授權管理員');
+        throw new Error(data.error || '密碼?�置信件?�送失?��?請確認此 Email ?�否?��?權管?�員');
       }
 
       setForgotSuccess(true);
@@ -43,7 +43,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         setSimulatedEmail(data.simulatedEmail);
       }
     } catch (err: any) {
-      setForgotError(err.message || '連線逾時，請確認伺服端連線');
+      setForgotError(err.message || '????��?，�?確�?伺�?端�??');
     } finally {
       setForgotLoading(false);
     }
@@ -59,7 +59,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     }
 
     if (role === 'hr' && !authToken) {
-      setError('請輸入密碼');
+      setError('請輸入電子郵件');
       return;
     }
 
@@ -77,12 +77,12 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || '登入失敗，請確認您的帳號或密碼');
+        throw new Error(data.error || '?�入失�?，�?確�??��?帳�??��?�?);
       }
 
       onLoginSuccess(data.role, data.user, data.adminEmails);
     } catch (err: any) {
-      setError(err.message || '連線逾時，請確認伺服端連線');
+      setError(err.message || '????��?，�?確�?伺�?端�??');
     } finally {
       setLoading(false);
     }
@@ -97,7 +97,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         <div className="flex flex-col items-center mb-8 text-center select-none">
           <LdcLogo size="md" color="gold" className="mb-4" />
           <h1 className="text-sm font-semibold tracking-wide text-stone-600 font-sans mt-2 select-none">
-            雲朗觀光-HR平台
+            ?��??��? ?� ?�工線�??�職?�到系統
           </h1>
         </div>
 
@@ -106,19 +106,18 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           <button
             type="button"
             className={`flex-1 py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all duration-200 ${
-              role === 'employee'
+              role === 'OnboardEmployee'
                 ? 'bg-white text-indigo-700 shadow-sm'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
             onClick={() => {
-              setRole('employee');
+              setRole('OnboardEmployee');
               setAuthToken('');
               setError('');
             }}
           >
             <User className="w-3.5 h-3.5" />
-            新進同仁報到
-          </button>
+            ?�進�?仁報??          </button>
           <button
             type="button"
             className={`flex-1 py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all duration-200 ${
@@ -133,7 +132,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             }}
           >
             <Shield className="w-3.5 h-3.5" />
-            HR管理後台
+            HR管�?後台
           </button>
         </div>
 
@@ -141,7 +140,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-              電子信箱
+              ?��?信箱
             </label>
             <input
               type="email"
@@ -154,21 +153,20 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             />
           </div>
 
-          {role === 'employee' && (
+          {role === 'OnboardEmployee' && (
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  授權碼
-                </label>
+                  ?��?�?                </label>
                 <span className="text-[10px] text-slate-400">
-                  例: LDC888
+                  �? LDC888
                 </span>
               </div>
               <input
                 type="text"
                 value={authToken}
                 onChange={(e) => setAuthToken(e.target.value)}
-                placeholder="輸入6碼授權碼"
+                placeholder="輸入6碼�?權碼"
                 className="w-full text-slate-950 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-xs tracking-wide font-mono"
                 disabled={loading}
                 required
@@ -180,7 +178,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  登入密碼
+                  ?�入密碼
                 </label>
                 <button
                   type="button"
@@ -193,14 +191,13 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                   }}
                   className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold transition-colors cursor-pointer focus:outline-none"
                 >
-                  忘記密碼？
-                </button>
+                  忘�?密碼�?                </button>
               </div>
               <input
                 type="password"
                 value={authToken}
                 onChange={(e) => setAuthToken(e.target.value)}
-                placeholder="請輸入密碼"
+                placeholder="請輸?��?�?
                 className="w-full text-slate-950 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-xs"
                 disabled={loading}
                 required
@@ -212,15 +209,15 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           {role === 'hr' && (
             <div className="text-[11px] text-slate-500 bg-slate-50 p-4 border border-slate-150 rounded-xl leading-relaxed space-y-1">
               <span className="font-semibold text-slate-800 block text-xs mb-1">
-                🔒 HR 身分核對說明
+                ?? HR 身�??��?說�?
               </span>
-              <p>後台僅限授權之 HR 同仁使用登入。</p>
+              <p>後台?��??��?�?HR ?��?使用?�入??/p>
             </div>
           )}
 
           {error && (
             <p className="text-xs text-rose-600 bg-rose-50 border border-slate-200 px-4 py-2.5 rounded-lg flex items-center gap-2">
-              ⚠️ {error}
+              ?��? {error}
             </p>
           )}
 
@@ -232,14 +229,14 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             {loading ? (
               <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             ) : (
-              '驗證身分並開始'
+              '驗�?身�?並�?�?
             )}
           </button>
         </form>
 
         {/* Brand Footer */}
         <div className="mt-8 text-center border-t border-slate-100 pt-5 text-[10px] text-slate-400">
-          做值得的事
+          ?�值�??��?
         </div>
       </div>
 
@@ -251,7 +248,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
               <div className="flex items-center gap-2 text-indigo-600">
                 <Shield className="w-5 h-5 animate-pulse" />
-                <h3 className="text-sm font-semibold text-slate-900 font-sans">HR管理者密碼重置</h3>
+                <h3 className="text-sm font-semibold text-slate-900 font-sans">HR管�??��?碼�?�?/h3>
               </div>
               <button
                 type="button"
@@ -267,17 +264,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               {!forgotSuccess ? (
                 <form onSubmit={handleForgotSubmit} className="space-y-4">
                   <p className="text-xs text-slate-500 leading-relaxed font-sans">
-                    請輸入您的 Email。系統會核發一封<strong>專用密碼重置驗證信</strong>，憑驗證信內代碼/連結即可登入並修改您的登入密碼。
-                  </p>
+                    請輸?�您??Email?�系統�??�發一�?strong>專用密碼?�置驗�?�?/strong>，�?驗�?信內�?��/????�可?�入並修?�您?�登?��?碼�?                  </p>
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 font-sans">
-                      人資主管電子信箱 Address
+                      人�?主管?��?信箱 Address
                     </label>
                     <input
                       type="email"
                       required
-                      placeholder="例如: admin@example.com"
+                      placeholder="例�?: admin@example.com"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       className="w-full text-slate-950 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-xs text-slate-950"
@@ -297,7 +293,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                       onClick={() => setShowForgotModal(false)}
                       className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-all cursor-pointer text-center font-sans"
                     >
-                      取消
+                      ?��?
                     </button>
                     <button
                       type="submit"
@@ -307,7 +303,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                       {forgotLoading ? (
                         <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                       ) : (
-                        '發送密碼重置信件'
+                        '?�送�?碼�?置信�?
                       )}
                     </button>
                   </div>
@@ -318,9 +314,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                   <div className="p-4 bg-emerald-50 border border-emerald-150 rounded-xl flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-xs font-bold text-emerald-800 font-sans">信件模擬發送完成！</h4>
+                      <h4 className="text-xs font-bold text-emerald-800 font-sans">信件模擬?�送�??��?</h4>
                       <p className="text-[11px] text-emerald-700 leading-relaxed mt-1 font-sans">
-                        我們已成功發送密碼重置信件。因本應用目前在 AI Studio 開發沙盒，系統自動為您開啟「模擬開發郵件箱」：
+                        ?�們已?��??�送�?碼�?置信件。�??��??�目?�在 AI Studio ?�發沙�?，系統自?�為?��??�「模?��??�郵件箱?��?
                       </p>
                     </div>
                   </div>
@@ -331,27 +327,27 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                       <div className="bg-slate-800 px-4 py-2 flex items-center justify-between text-white text-[10px] uppercase font-mono select-none">
                         <span className="flex items-center gap-1.5 text-indigo-300 font-sans font-semibold">
                           <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                          📬 LDC 郵件安全網 (開發模擬)
+                          ?�� LDC ?�件安全�?(?�發模擬)
                         </span>
                         <span className="text-slate-400">STATUS: DELIVERED</span>
                       </div>
                       
                       <div className="p-4 space-y-3 text-xs text-slate-700">
                         <div className="grid grid-cols-6 border-b border-slate-200/50 pb-2">
-                          <span className="col-span-1 text-slate-400 font-sans">收件人:</span>
+                          <span className="col-span-1 text-slate-400 font-sans">?�件�?</span>
                           <span className="col-span-5 text-slate-800 font-bold font-mono">
                             {simulatedEmail.to}
                           </span>
                         </div>
                         <div className="grid grid-cols-6 border-b border-slate-200/50 pb-2">
-                          <span className="col-span-1 text-slate-400 font-sans">主題:</span>
+                          <span className="col-span-1 text-slate-400 font-sans">主�?:</span>
                           <span className="col-span-5 text-slate-800 font-semibold select-none">
                             {simulatedEmail.subject}
                           </span>
                         </div>
                         <div className="pt-2 leading-relaxed text-[11px] space-y-3 font-sans">
-                          <p className="text-slate-600">人資主管同仁，您好：</p>
-                          <p className="text-slate-600">我們收到您要求密碼重置之需求。煩請直接點選下方重置按鈕設定新密碼：</p>
+                          <p className="text-slate-600">人�?主管?��?，您好�?</p>
+                          <p className="text-slate-600">?�們收?�您要�?密碼?�置之�?求。煩請直?��??��??��?置�??�設定新密碼�?/p>
                           
                           <div className="py-2 flex justify-center">
                             <a
@@ -359,13 +355,12 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                               className="px-5 py-2.5 bg-[#343131] hover:bg-[#252222] text-[#D4AF37] font-bold text-xs rounded-xl shadow-md transition-all inline-flex items-center gap-1.5 select-none no-underline cursor-pointer"
                             >
                               <Mail className="w-3.5 h-3.5" />
-                              點擊此處重新設定我的密碼
+                              點�?此�??�新設�??��?密碼
                             </a>
                           </div>
                           
                           <p className="text-[10px] text-slate-400 leading-normal text-center select-none pt-1">
-                            提示: 模擬重置連結只有 30 分鐘期效。重置後，即可返回登入。
-                          </p>
+                            ?�示: 模擬?�置????��? 30 ?��??��??��?置�?，即?��??�登?��?                          </p>
                         </div>
                       </div>
                     </div>
@@ -377,8 +372,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                       onClick={() => setShowForgotModal(false)}
                       className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-colors cursor-pointer font-sans"
                     >
-                      關閉並重新登入
-                    </button>
+                      ?��?並�??�登??                    </button>
                   </div>
                 </div>
               )}
@@ -389,3 +383,4 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     </div>
   );
 }
+

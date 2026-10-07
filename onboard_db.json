@@ -1,0 +1,76 @@
+{
+  "hrAdmins": [
+    {
+      "email": "gordon.huang@ldchotels.com",
+      "password": "mis"
+    },
+    {
+      "email": "vivian.chiang@ldchotels.com",
+      "password": "mis"
+    }
+  ],
+  "employees": [
+    {
+      "id": "emp_001",
+      "name": "Alex 陳",
+      "email": "alex.chen@example.com",
+      "authToken": "LDC888",
+      "department": "君品酒店 - 餐飲部",
+      "title": "餐飲領班",
+      "onboardDate": "2026-06-15",
+      "status": "pending",
+      "progress": 15,
+      "uploadedFiles": [],
+      "rulesAgreed": false,
+      "privacyAgreed": false,
+      "contractSigned": false,
+      "contractWorkLocation": "君品酒店 (台北) (台北市承德路一段3號)",
+      "contractLeaveOption": "biweekly",
+      "contractLeavedays": "8",
+      "contractSalaryType": "monthly",
+      "contractSalaryAmount": "36,000",
+      "contractProbationMonths": "三",
+      "updatedAt": "2026-10-01T04:23:04.412Z",
+      "personalData": {
+        "name": "Alex 陳",
+        "idNumber": "A123456789",
+        "birthday": "1998-05-12",
+        "gender": "男",
+        "phone": "0912-345-678",
+        "email": "alex.chen@example.com",
+        "legalAddress": "台北市大安區新生南路三段 10 號",
+        "contactAddress": "台北市大安區新生南路三段 10 號",
+        "bankName": "兆豐國際商業銀行",
+        "bankAccount": "017123456789",
+        "dependentsCount": "0 人",
+        "emergencyName": "陳大同",
+        "emergencyRelationship": "父親",
+        "emergencyPhone": "0988-765-432"
+      }
+    },
+    {
+      "id": "emp_002",
+      "name": "Sophia 林",
+      "email": "sophia.lin@example.com",
+      "authToken": "LDC999",
+      "department": "雲品溫泉酒店 - 客房部",
+      "title": "尊榮客務接待專員",
+      "onboardDate": "2026-07-01",
+      "status": "pending",
+      "progress": 0,
+      "uploadedFiles": [],
+      "rulesAgreed": false,
+      "privacyAgreed": false,
+      "contractSigned": false,
+      "contractWorkLocation": "雲品溫泉酒店 (日月潭) (南投縣魚池鄉中正路23號)",
+      "contractLeaveOption": "weekly",
+      "contractLeavedays": "8",
+      "contractSalaryType": "monthly",
+      "contractSalaryAmount": "36,000",
+      "contractProbationMonths": "三",
+      "updatedAt": "2026-10-01T04:23:04.413Z"
+    }
+  ],
+  "activityLogs": [],
+  "primaryAdminEmail": "gordon.huang@ldchotels.com"
+}

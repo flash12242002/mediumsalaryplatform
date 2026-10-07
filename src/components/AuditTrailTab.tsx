@@ -5,6 +5,8 @@ import {
   Clock, UserCheck, Key, FileText, CheckCircle2 
 } from "lucide-react";
 
+import HrDashboard from "./HrDashboard";
+
 interface AuditTrailTabProps {
   user: User;
 }
@@ -14,6 +16,7 @@ export default function AuditTrailTab({ user }: AuditTrailTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
+  const [subTab, setSubTab] = useState<"system_logs" | "onboarding_logs">("system_logs");
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -105,7 +108,34 @@ export default function AuditTrailTab({ user }: AuditTrailTabProps) {
         </div>
       </div>
 
-      {/* Searching and Filtering */}
+      
+      {/* Sub Tab Selector */}
+      <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 w-fit mb-4">
+        <button
+          onClick={() => setSubTab("system_logs")}
+          className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${
+            subTab === "system_logs" 
+              ? "bg-white text-slate-900 shadow-xs border border-slate-200/50" 
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          系統異動紀錄
+        </button>
+        <button
+          onClick={() => setSubTab("onboarding_logs")}
+          className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${
+            subTab === "onboarding_logs" 
+              ? "bg-white text-slate-900 shadow-xs border border-slate-200/50" 
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          Onboarding異動紀錄
+        </button>
+      </div>
+
+      {subTab === "system_logs" && (
+        <div className="space-y-6">
+{/* Searching and Filtering */}
       <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
@@ -199,6 +229,15 @@ export default function AuditTrailTab({ user }: AuditTrailTabProps) {
           )}
         </div>
       </div>
+        </div>
+      )}
+
+      {subTab === "onboarding_logs" && (
+        <div className="w-full bg-[#F8FAFC] rounded-xl shadow-sm border border-slate-200 overflow-hidden relative overflow-y-auto no-print" style={{height: '70vh'}}>
+           <HrDashboard currentUser={{ email: user.email, name: user.username }} initialEmployees={[]} onLogout={() => {}} activeMenu="logs" hideNavigation={true} />
+        </div>
+      )}
+
 
     </div>
   );

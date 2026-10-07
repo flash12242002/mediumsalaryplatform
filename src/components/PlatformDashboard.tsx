@@ -11,11 +11,13 @@ import {
   Shield, LogOut, Briefcase, FileBarChart2, CloudLightning, 
   Bot, ShieldAlert, History, User as UserIcon, RefreshCw, Key, Lock, Settings, Clock
 } from "lucide-react";
+import officialLogo from '../assets/images/ldc_logo_official.png';
 
 import HrDashboard from "./HrDashboard";
 export default function PlatformDashboard({ currentUser, onLogout }: any) {
   
   const [activeTab, setActiveTab] = useState<string>("onboarding");
+  const [onboardingSubMenu, setOnboardingSubMenu] = useState<'tracker' | 'add' | 'admins' | 'logs'>('tracker');
   const [onboardingSubMenu, setOnboardingSubMenu] = useState<'tracker' | 'add' | 'admins' | 'logs'>('tracker');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<EmployeeStats[]>([]);
@@ -166,15 +168,15 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
             
             {/* Title with Primary Traditional Chinese & Secondary English */}
             <div className="flex items-center gap-2.5">
-              <div className="p-1.5 bg-blue-50 border border-blue-100 rounded-lg text-blue-600">
-                <Shield className="w-5 h-5" />
+              <div className="flex-shrink-0 flex items-center justify-center bg-white rounded">
+                <img src={officialLogo} alt="LDC Logo" className="h-8 sm:h-10 w-auto object-contain" />
               </div>
               <div>
                 <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-800">
                   雲朗觀光-HR平台
                 </h1>
                 <p className="text-[9px] text-slate-400 font-semibold tracking-wider font-mono">
-                  HR C&B Related Report Platform
+                  HR Platform
                 </p>
               </div>
             </div>
@@ -190,7 +192,7 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
               }`}>
                 <Clock className="w-3.5 h-3.5" />
                 <span>
-                  {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
+                  倒數計時 {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
                 </span>
               </div>
 
@@ -244,10 +246,10 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
             {(() => {
               const getHasPermission = (permKey: string) => {
                 if (!currentUser) return false;
-                if (currentUser.permissions && currentUser.permissions[permKey] !== undefined) {
-                  return currentUser.permissions[permKey];
+                if (currentUser.permissions) {
+                  return !!currentUser.permissions[permKey];
                 }
-                // Fallbacks
+                // Fallbacks only if permissions object is entirely missing
                 if (currentUser.role === "HR_ADMIN") return true;
                 if (currentUser.role === "EXECUTIVE") {
                   if (permKey === "view_salary" || permKey === "onboarding_portal" || permKey === "audit_trail") return true;
@@ -298,6 +300,36 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
                     </div>
                   )}
                     </>
+                  )}
+
+                  
+                  {activeTab === "onboarding" && (
+                    <div className="ml-6 mt-1 flex flex-col gap-1 border-l-2 border-blue-100 pl-3 py-1">
+                      <button
+                        onClick={() => setOnboardingSubMenu('tracker')}
+                        className={`text-left text-xs px-2 py-1.5 rounded transition-all ${onboardingSubMenu === 'tracker' ? 'text-blue-700 font-bold bg-blue-50/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                      >
+                        資料填寫追蹤
+                      </button>
+                      <button
+                        onClick={() => setOnboardingSubMenu('add')}
+                        className={`text-left text-xs px-2 py-1.5 rounded transition-all ${onboardingSubMenu === 'add' ? 'text-blue-700 font-bold bg-blue-50/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                      >
+                        建立報到工作
+                      </button>
+                      <button
+                        onClick={() => setOnboardingSubMenu('admins')}
+                        className={`text-left text-xs px-2 py-1.5 rounded transition-all ${onboardingSubMenu === 'admins' ? 'text-blue-700 font-bold bg-blue-50/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                      >
+                        系統帳號管理
+                      </button>
+                      <button
+                        onClick={() => setOnboardingSubMenu('logs')}
+                        className={`text-left text-xs px-2 py-1.5 rounded transition-all ${onboardingSubMenu === 'logs' ? 'text-blue-700 font-bold bg-blue-50/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                      >
+                        異動紀錄追蹤
+                      </button>
+                    </div>
                   )}
 
                   {/* Tab 1: Sales Commission */}
@@ -399,8 +431,8 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
           {(() => {
             const getHasPermission = (permKey: string) => {
               if (!currentUser) return false;
-              if (currentUser.permissions && currentUser.permissions[permKey] !== undefined) {
-                return currentUser.permissions[permKey];
+              if (currentUser.permissions) {
+                return !!currentUser.permissions[permKey];
               }
               if (currentUser.role === "HR_ADMIN") return true;
               if (currentUser.role === "EXECUTIVE") {

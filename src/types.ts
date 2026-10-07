@@ -35,6 +35,7 @@ export interface SalesRecord {
 }
 
 export interface Employee {
+  [key: string]: any;
   id: string;
   empId: string;
   name: string;
@@ -144,7 +145,7 @@ export interface Education {
   major: string;
   degree: string;
   period: string;
-  status: '?¢æ¥­' | '?„æ¥­' | 'å°±è?ä¸? | '';
+  status: 'ç•¢æ¥­' | 'è‚„æ¥­' | 'å°±å­¸ä¸­' | '';
 }
 
 export interface ProfessionalLicense {
@@ -155,9 +156,9 @@ export interface ProfessionalLicense {
 }
 
 export interface LanguageSkill {
-  language: string; // '?±æ?' | '?¥æ?' | '?“æ?' | '?¶ä?'
-  level: 'ç²¾é€? | '?ªè‰¯' | 'ä¸­ç?' | '?¥æ?' | '';
-  customName?: string; // If '?¶ä?', custom language name
+  language: string;
+  level: 'ç²¾é€š' | 'å„ªè‰¯' | 'ä¸­ç­‰' | 'ç•¥æ‡‚' | '';
+  customName?: string;
 }
 
 export interface CareerData {
@@ -177,6 +178,7 @@ export interface UploadedFile {
 }
 
 export interface OnboardEmployee {
+  [key: string]: any;
   id: string;
   empId?: string;
   name: string;
@@ -229,7 +231,7 @@ export interface TaxDependent {
   birthday: string;
   idNumber: string;
   condition: string;
-  type: '?´ç³»å°Šè¦ªå±? | 'å­å¥³' | '?Œè??„å?å§Šå¦¹' | '?¶ä?è¦ªå±¬' | string;
+  type: 'ç›´ç³»å°Šè¦ªå±¬' | 'å­å¥³' | 'å…„å¼Ÿå§Šå¦¹' | 'å…¶ä»–è¦ªå±¬' | string;
 }
 
 export interface TaxDeclaration {

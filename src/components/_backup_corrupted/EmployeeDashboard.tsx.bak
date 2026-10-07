@@ -21,50 +21,50 @@ import {
   Trash2,
   Users
 } from 'lucide-react';
-import { Employee, PersonalData, CareerExperience, Education, ProfessionalLicense, LanguageSkill, TaxDependent, TaxDeclaration, GuarantorData } from '../types';
+import { OnboardEmployee, PersonalData, CareerExperience, Education, ProfessionalLicense, LanguageSkill, TaxDependent, TaxDeclaration, GuarantorData } from '../types';
 import LdcLogo from './LdcLogo';
 import { TaxDeclarationPrintModal, ContractPrintModal, GuarantorPrintModal, ServicePrintModal } from './PrintModals';
 import { Printer } from 'lucide-react';
 
 const eHrdLoginDemo = "/src/assets/images/ehrd_login_demo_1781503393310.jpg";
 
-// Helper to get company details based on employee branch / department
+// Helper to get company details based on OnboardEmployee branch / department
 export const getCompanyDetails = (emp: { department?: string; contractWorkLocation?: string }) => {
   const dept = (emp.department || '').toLowerCase();
   const loc = (emp.contractWorkLocation || '').toLowerCase();
 
-  if (dept.includes('雲品') || loc.includes('雲品')) {
+  if (dept.includes('?��?') || loc.includes('?��?')) {
     return {
-      name: '雲品國際酒店股份有限公司',
-      owner: '盛治仁',
+      name: '?��??��??��??�份?��??�司',
+      owner: 'Test',
       taxId: '54023418',
-      address: '台北市中山區中山北路二段96號8樓'
+      address: '?��?市中山�?中山?�路二段96??�?
     };
-  } else if (dept.includes('致和') || loc.includes('致和')) {
+  } else if (dept.includes('?��?') || loc.includes('?��?')) {
     return {
-      name: '致和管理顧問股份有限公司',
-      owner: '辜懷如',
+      name: '?��?管�?顧�??�份?��??�司',
+      owner: 'Test',
       taxId: '12955445',
-      address: '台北市中山區中山北路二段96號8樓'
+      address: '?��?市中山�?中山?�路二段96??�?
     };
   } else {
     return {
-      name: '雲朗觀光股份有限公司',
-      owner: '賈子南',
+      name: '?��?觀?�股份�??�公??,
+      owner: 'Test',
       taxId: '62021700',
-      address: '台北市中山區中山北路二段96號8樓'
+      address: '?��?市中山�?中山?�路二段96??�?
     };
   }
 };
 
 
 interface EmployeeDashboardProps {
-  initialEmployee: Employee;
+  initialEmployee: OnboardEmployee;
   onLogout: () => void;
 }
 
 export default function EmployeeDashboard({ initialEmployee, onLogout }: EmployeeDashboardProps) {
-  const [employee, setEmployee] = useState<Employee>(initialEmployee);
+  const [OnboardEmployee, setEmployee] = useState<OnboardEmployee>(initialEmployee);
   const [activeTab, setActiveTab] = useState<'tasks' | 'training' | 'ai'>('tasks');
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
@@ -75,40 +75,40 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
   // Guarantor state
   const [guarantorForm, setGuarantorForm] = useState<GuarantorData>({
-    guarantorName: employee.guarantorData?.guarantorName || '',
-    birthday: employee.guarantorData?.birthday || '',
-    idNumber: employee.guarantorData?.idNumber || '',
-    address: employee.guarantorData?.address || '',
-    phone: employee.guarantorData?.phone || '',
-    companyName: employee.guarantorData?.companyName || '',
-    companyTitle: employee.guarantorData?.companyTitle || '',
-    companyAddress: employee.guarantorData?.companyAddress || '',
-    companyPhone: employee.guarantorData?.companyPhone || '',
-    relationship: employee.guarantorData?.relationship || '',
-    validUntil: employee.guarantorData?.validUntil || ''
+    guarantorName: OnboardEmployee.guarantorData?.guarantorName || '',
+    birthday: OnboardEmployee.guarantorData?.birthday || '',
+    idNumber: OnboardEmployee.guarantorData?.idNumber || '',
+    address: OnboardEmployee.guarantorData?.address || '',
+    phone: OnboardEmployee.guarantorData?.phone || '',
+    companyName: OnboardEmployee.guarantorData?.companyName || '',
+    companyTitle: OnboardEmployee.guarantorData?.companyTitle || '',
+    companyAddress: OnboardEmployee.guarantorData?.companyAddress || '',
+    companyPhone: OnboardEmployee.guarantorData?.companyPhone || '',
+    relationship: OnboardEmployee.guarantorData?.relationship || '',
+    validUntil: OnboardEmployee.guarantorData?.validUntil || ''
   });
 
   // Personal state
   const [personalForm, setPersonalForm] = useState<PersonalData>({
-    name: employee.personalData?.name || employee.name || '',
-    englishName: employee.personalData?.englishName || '',
-    avatarUrl: employee.personalData?.avatarUrl || '',
-    idNumber: employee.personalData?.idNumber || '',
-    birthday: employee.personalData?.birthday || '',
-    gender: employee.personalData?.gender || '',
-    bloodType: employee.personalData?.bloodType || '',
-    phone: employee.personalData?.phone || '',
-    email: employee.personalData?.email || employee.email || '',
-    legalAddress: employee.personalData?.legalAddress || '',
-    contactAddress: employee.personalData?.contactAddress || '',
-    bankName: '中國信託銀行 (822)',
-    bankAccount: employee.personalData?.bankAccount || '',
-    dependentsCount: employee.personalData?.dependentsCount || '0 人',
-    healthDependentsCount: employee.personalData?.healthDependentsCount || '0 人',
-    healthDependents: employee.personalData?.healthDependents || [],
-    emergencyName: employee.personalData?.emergencyName || '',
-    emergencyRelationship: employee.personalData?.emergencyRelationship || '',
-    emergencyPhone: employee.personalData?.emergencyPhone || ''
+    name: OnboardEmployee.personalData?.name || OnboardEmployee.name || '',
+    englishName: OnboardEmployee.personalData?.englishName || '',
+    avatarUrl: OnboardEmployee.personalData?.avatarUrl || '',
+    idNumber: OnboardEmployee.personalData?.idNumber || '',
+    birthday: OnboardEmployee.personalData?.birthday || '',
+    gender: OnboardEmployee.personalData?.gender || '',
+    bloodType: OnboardEmployee.personalData?.bloodType || '',
+    phone: OnboardEmployee.personalData?.phone || '',
+    email: OnboardEmployee.personalData?.email || OnboardEmployee.email || '',
+    legalAddress: OnboardEmployee.personalData?.legalAddress || '',
+    contactAddress: OnboardEmployee.personalData?.contactAddress || '',
+    bankName: '中�?信�??��?(822)',
+    bankAccount: OnboardEmployee.personalData?.bankAccount || '',
+    dependentsCount: OnboardEmployee.personalData?.dependentsCount || '0 �?,
+    healthDependentsCount: OnboardEmployee.personalData?.healthDependentsCount || '0 �?,
+    healthDependents: OnboardEmployee.personalData?.healthDependents || [],
+    emergencyName: OnboardEmployee.personalData?.emergencyName || '',
+    emergencyRelationship: OnboardEmployee.personalData?.emergencyRelationship || '',
+    emergencyPhone: OnboardEmployee.personalData?.emergencyPhone || ''
   });
 
   // Expand state for task panels
@@ -116,29 +116,29 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
   // Career state
   const [experiences, setExperiences] = useState<CareerExperience[]>(
-    employee.careerData?.experiences || []
+    OnboardEmployee.careerData?.experiences || []
   );
   const [educations, setEducations] = useState<Education[]>(
-    employee.careerData?.educations || []
+    OnboardEmployee.careerData?.educations || []
   );
   const [licenses, setLicenses] = useState<ProfessionalLicense[]>(
-    employee.careerData?.licenses || [
+    OnboardEmployee.careerData?.licenses || [
       { licenseName: '', badgeLevel: '', issueDate: '', expiryDate: '' }
     ]
   );
   const [additionalNotes, setAdditionalNotes] = useState(
-    employee.careerData?.additionalNotes || ''
+    OnboardEmployee.careerData?.additionalNotes || ''
   );
   
   const [languages, setLanguages] = useState<LanguageSkill[]>(() => {
-    if (employee.careerData?.languages && employee.careerData.languages.length > 0) {
-      return employee.careerData.languages;
+    if (OnboardEmployee.careerData?.languages && OnboardEmployee.careerData.languages.length > 0) {
+      return OnboardEmployee.careerData.languages;
     }
     return [
-      { language: '英文', level: '' },
-      { language: '日文', level: '' },
-      { language: '韓文', level: '' },
-      { language: '其他', level: '', customName: '' }
+      { language: '?��?', level: '' },
+      { language: '?��?', level: '' },
+      { language: '?��?', level: '' },
+      { language: '?��?', level: '', customName: '' }
     ];
   });
   
@@ -154,17 +154,17 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
   });
 
   // Agreement states
-  const [rulesRead, setRulesRead] = useState(employee.rulesAgreed || false);
-  const [privacyRead, setPrivacyRead] = useState(employee.privacyAgreed || false);
+  const [rulesRead, setRulesRead] = useState(OnboardEmployee.rulesAgreed || false);
+  const [privacyRead, setPrivacyRead] = useState(OnboardEmployee.privacyAgreed || false);
   const [sameAddress, setSameAddress] = useState(false);
 
   // Tax declaration states
-  const [spouseName, setSpouseName] = useState(employee.taxDeclaration?.spouseName || '');
-  const [spouseBirthday, setSpouseBirthday] = useState(employee.taxDeclaration?.spouseBirthday || '');
-  const [spouseIdNumber, setSpouseIdNumber] = useState(employee.taxDeclaration?.spouseIdNumber || '');
-  const [taxDependents, setTaxDependents] = useState<TaxDependent[]>(employee.taxDeclaration?.dependents || []);
-  const [taxSigned, setTaxSigned] = useState(employee.taxDeclaration?.signed || false);
-  const [taxSignName, setTaxSignName] = useState(employee.taxDeclaration?.signName || '');
+  const [spouseName, setSpouseName] = useState(OnboardEmployee.taxDeclaration?.spouseName || '');
+  const [spouseBirthday, setSpouseBirthday] = useState(OnboardEmployee.taxDeclaration?.spouseBirthday || '');
+  const [spouseIdNumber, setSpouseIdNumber] = useState(OnboardEmployee.taxDeclaration?.spouseIdNumber || '');
+  const [taxDependents, setTaxDependents] = useState<TaxDependent[]>(OnboardEmployee.taxDeclaration?.dependents || []);
+  const [taxSigned, setTaxSigned] = useState(OnboardEmployee.taxDeclaration?.signed || false);
+  const [taxSignName, setTaxSignName] = useState(OnboardEmployee.taxDeclaration?.signName || '');
   
   // Temporary dependent additions
   const [tempDepName, setTempDepName] = useState('');
@@ -172,12 +172,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
   const [tempDepBirth, setTempDepBirth] = useState('');
   const [tempDepId, setTempDepId] = useState('');
   const [tempDepCond, setTempDepCond] = useState('');
-  const [tempDepType, setTempDepType] = useState('直系尊親屬');
+  const [tempDepType, setTempDepType] = useState('?�系尊親�?);
   const [showDepForm, setShowDepForm] = useState(false);
 
 
   // Contract specific states (to match physical image)
-  const [contractWorkLocation, setContractWorkLocation] = useState('君品酒店 (台北市中山區)');
+  const [contractWorkLocation, setContractWorkLocation] = useState('?��??��? (?��?市中山�?)');
   const [contractLeaveOption, setContractLeaveOption] = useState<string>('biweekly'); // 'monthly' or 'biweekly'
   const [contractLeavedays, setContractLeavedays] = useState('8-10');
   const [contractSalaryType, setContractSalaryType] = useState<string>('monthly'); // 'monthly', 'daily', 'hourly'
@@ -194,14 +194,11 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
   const [messages, setMessages] = useState<any[]>([
     {
       role: 'assistant',
-      content: `您好，**${employee.name}**！我是您的報到流程 AI秘書 🌸。恭喜您加入雲朗觀光！這裡將會回答您的疑問並能協助您迅速填寫流程。
+      content: `?�好�?*${OnboardEmployee.name}**！�??�您?�報?��?�?AI秘書 ?��?�恭?�您?�入?��?觀?��??�裡將�??��??��??��?並能?�助?��??�填寫�?程�?
+?�能?�您�??�?- ?��??�工?�哪些�?屬�??��?如�??��?）�??��?住宿�?- ?��?契�??�工作�??�中?�哪些�?要�??��?
+- ?��????�入?�報?�任?��??�麼完�??�核驗�?
 
-我能為您解答：
-- 集團員工有哪些專屬休假（如生日假）與特惠住宿？
-- 勞動契約或工作規則中有哪些需要留意？
-- 目前的8個入職報到任務要怎麼完成與核驗？
-
-歡迎隨時在此詢問我任何問題！`,
+歡�??��??�此詢�??�任何�?題�?`,
       timestamp: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -210,28 +207,28 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Dynamic status update
-  const syncWithServer = async (updatedFields: Partial<Employee>) => {
+  const syncWithServer = async (updatedFields: Partial<OnboardEmployee>) => {
     setLoading(true);
-    setSaveStatus('正在快取雲端檔案...');
+    setSaveStatus('�?��快�??�端檔�?...');
     try {
-      const response = await fetch('/api/employee/save', {
+      const response = await fetch('/api/OnboardEmployee/save', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: employee.id,
+          id: OnboardEmployee.id,
           ...updatedFields
         })
       });
       const data = await response.json();
       if (response.ok) {
-        setEmployee(data.employee);
-        setSaveStatus('進度儲存成功');
+        setEmployee(data.OnboardEmployee);
+        setSaveStatus('?�度?��??��?');
         setTimeout(() => setSaveStatus(''), 2000);
       } else {
-        setSaveStatus('快取失敗，請重新嘗試');
+        setSaveStatus('快�?失�?，�??�新?�試');
       }
     } catch {
-      setSaveStatus('網際網絡連線中中斷，自動啟用本機快取');
+      setSaveStatus('網�?網絡???中中?��??��??�用?��?快�?');
     } finally {
       setLoading(false);
     }
@@ -264,7 +261,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
     
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
-      alert('⚠️ 大頭照格式僅支援 JPG、JPEG 或 PNG 格式。');
+      alert('?��? 大頭?�格式�??�援 JPG?�JPEG ??PNG ?��???);
       return;
     }
     
@@ -292,7 +289,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
       !personalForm.bankAccount ||
       !personalForm.dependentsCount
     ) {
-      alert('請完整上傳個人大頭照、填寫姓名、身分證字號、出生日期、性別、聯絡電話、戶籍地址、匯款銀行帳號與所得扣繳親屬格！');
+      alert('請�??��??�個人大頭?�、填寫�??�、身?��?字�??�出?�日?�、性別?�聯絡電話、戶籍地?�?�匯款�?行帳?��??�得扣繳親屬格�?);
       return;
     }
     syncWithServer({ personalData: personalForm });
@@ -301,7 +298,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
   const addExperience = () => {
     if (!tempExp.companyName || !tempExp.jobTitle) {
-      alert('請輸入公司名稱與職位');
+      alert('請輸?�公?��?稱�??��?');
       return;
     }
     const newList = [...experiences, tempExp];
@@ -319,7 +316,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
   const addEducation = () => {
     if (!tempEdu.schoolName) {
-      alert('請輸入學校名稱');
+      alert('請輸?�學?��?�?);
       return;
     }
     const newList = [...educations, tempEdu];
@@ -378,7 +375,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      setFileError('⚠️ 請注意，證件及專業證照僅接受高解析度 PDF 檔案以供查驗。');
+      setFileError('?��? 請注?��?證件?��?業�??��??��?高解?�度 PDF 檔�?以�??��???);
       return;
     }
 
@@ -388,11 +385,11 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
       reader.readAsDataURL(file);
       reader.onloadend = async () => {
         const base64 = reader.result as string;
-        const res = await fetch('/api/employee/upload', {
+        const res = await fetch('/api/OnboardEmployee/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id: employee.id,
+            id: OnboardEmployee.id,
             fileName: file.name,
             fileSize: file.size,
             base64Data: base64
@@ -400,15 +397,15 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
         });
         const data = await res.json();
         if (res.ok) {
-          setEmployee(data.employee);
-          setSaveStatus('證件 PDF 上傳完畢並已就位');
+          setEmployee(data.OnboardEmployee);
+          setSaveStatus('證件 PDF 上傳完畢並已就�?');
           setTimeout(() => setSaveStatus(''), 2000);
         } else {
-          setFileError(data.error || '上傳失敗');
+          setFileError(data.error || '上傳失�?');
         }
       };
     } catch {
-      setFileError('檔案處理失敗');
+      setFileError('檔�??��?失�?');
     } finally {
       setLoading(false);
     }
@@ -417,22 +414,22 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
   const deleteUploadedFile = async (name: string) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/employee/upload', {
+      const res = await fetch('/api/OnboardEmployee/upload', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: employee.id,
+          id: OnboardEmployee.id,
           fileName: name
         })
       });
       const data = await res.json();
       if (res.ok) {
-        setEmployee(data.employee);
-        setSaveStatus('檔案已移除');
+        setEmployee(data.OnboardEmployee);
+        setSaveStatus('檔�?已移??);
         setTimeout(() => setSaveStatus(''), 2000);
       }
     } catch {
-      alert('刪除失敗');
+      alert('?�除失�?');
     } finally {
       setLoading(false);
     }
@@ -443,7 +440,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      alert('⚠️ 請注意，指定核驗文件格式僅接受 PDF 檔案。');
+      alert('?��? 請注?��??��??��??�件?��??�接??PDF 檔�???);
       return;
     }
 
@@ -453,11 +450,11 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
       reader.readAsDataURL(file);
       reader.onloadend = async () => {
         const base64 = reader.result as string;
-        const res = await fetch('/api/employee/upload', {
+        const res = await fetch('/api/OnboardEmployee/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            id: employee.id,
+            id: OnboardEmployee.id,
             fileName: file.name,
             fileSize: file.size,
             base64Data: base64,
@@ -466,15 +463,15 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
         });
         const data = await res.json();
         if (res.ok) {
-          setEmployee(data.employee);
-          setSaveStatus('文件上傳成功');
+          setEmployee(data.OnboardEmployee);
+          setSaveStatus('?�件上傳?��?');
           setTimeout(() => setSaveStatus(''), 2000);
         } else {
-          alert(data.error || '上傳失敗');
+          alert(data.error || '上傳失�?');
         }
       };
     } catch {
-      alert('檔案處理失敗');
+      alert('檔�??��?失�?');
     } finally {
       setLoading(false);
     }
@@ -491,7 +488,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
   const handleRulesSubmit = () => {
     if (!rulesRead || !privacyRead) {
-      alert('請先閱讀完兩項守則並勾選同意');
+      alert('請�??��?完兩?��??�並?�選?��?');
       return;
     }
     syncWithServer({ rulesAgreed: rulesRead, privacyAgreed: privacyRead });
@@ -508,7 +505,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
   const handleGuarantorSign = (andSubmit: boolean) => {
     if (andSubmit && !guarantorForm.guarantorName.trim()) {
-      alert('請填寫保證人姓名以進行數位連帶保證認證，謝謝。');
+      alert('請填寫�?證人姓�?以進�??��???��保�?認�?，�?謝�?);
       return;
     }
     syncWithServer({
@@ -552,7 +549,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
         body: JSON.stringify({
           prompt: textToSend,
           history: messages.map(m => ({ role: m.role, content: m.content })),
-          roleContext: 'employee'
+          roleContext: 'OnboardEmployee'
         })
       });
 
@@ -574,7 +571,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
         ...prev,
         {
           role: 'assistant',
-          content: '抱歉，祕書目前連線稍微雍塞，請稍後提問，您的資料皆已安全送達。',
+          content: '?��?，�??�目?��??稍微?��?，�?稍�??��?，您?��??��?已�??�送�???,
           timestamp: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -588,19 +585,19 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
   }, [messages, aiLoading]);
 
   useEffect(() => {
-    if (employee.taxDeclaration) {
-      setSpouseName(employee.taxDeclaration.spouseName || '');
-      setSpouseBirthday(employee.taxDeclaration.spouseBirthday || '');
-      setSpouseIdNumber(employee.taxDeclaration.spouseIdNumber || '');
-      setTaxDependents(employee.taxDeclaration.dependents || []);
-      setTaxSigned(employee.taxDeclaration.signed || false);
-      setTaxSignName(employee.taxDeclaration.signName || '');
+    if (OnboardEmployee.taxDeclaration) {
+      setSpouseName(OnboardEmployee.taxDeclaration.spouseName || '');
+      setSpouseBirthday(OnboardEmployee.taxDeclaration.spouseBirthday || '');
+      setSpouseIdNumber(OnboardEmployee.taxDeclaration.spouseIdNumber || '');
+      setTaxDependents(OnboardEmployee.taxDeclaration.dependents || []);
+      setTaxSigned(OnboardEmployee.taxDeclaration.signed || false);
+      setTaxSignName(OnboardEmployee.taxDeclaration.signName || '');
     }
-  }, [employee]);
+  }, [OnboardEmployee]);
 
   const addTaxDependent = () => {
     if (!tempDepName.trim()) {
-      alert('請輸入受扶養親屬姓名');
+      alert('請輸?��??��?親屬姓�?');
       return;
     }
     const newDep: TaxDependent = {
@@ -627,7 +624,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
       dependents: newList,
       signed: taxSigned,
       signName: taxSignName,
-      signedAt: employee.taxDeclaration?.signedAt
+      signedAt: OnboardEmployee.taxDeclaration?.signedAt
     };
     syncWithServer({ taxDeclaration: dec });
   };
@@ -643,14 +640,14 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
       dependents: newList,
       signed: taxSigned,
       signName: taxSignName,
-      signedAt: employee.taxDeclaration?.signedAt
+      signedAt: OnboardEmployee.taxDeclaration?.signedAt
     };
     syncWithServer({ taxDeclaration: dec });
   };
 
   const handleTaxSave = (andSubmit: boolean) => {
     if (andSubmit && !taxSignName.trim()) {
-      alert('請填寫 薪資受領人（簽章）以進行數位核對確認，謝謝。');
+      alert('請填�??��??��?人�?簽�?）以?��??��??��?確�?，�?謝�?);
       return;
     }
     const dec = {
@@ -660,7 +657,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
       dependents: taxDependents,
       signed: andSubmit ? true : taxSigned,
       signName: taxSignName,
-      signedAt: andSubmit ? new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }) : employee.taxDeclaration?.signedAt
+      signedAt: andSubmit ? new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }) : OnboardEmployee.taxDeclaration?.signedAt
     };
     syncWithServer({ taxDeclaration: dec });
     if (andSubmit) {
@@ -670,27 +667,27 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
   // Checklist computation helper
   const taskChecklist = [
-    { key: 'personal', title: '填寫個人資料', done: !!(employee.personalData && employee.personalData.phone) },
-    { key: 'career', title: '登錄學經歷與證照', done: !!(employee.careerData && (employee.careerData.experiences?.length > 0 || (employee.careerData.educations && employee.careerData.educations.length > 0) || employee.careerData.licenses?.length > 0)) },
+    { key: 'personal', title: '填寫?�人資�?', done: !!(OnboardEmployee.personalData && OnboardEmployee.personalData.phone) },
+    { key: 'career', title: '?��?學�?歷�?證照', done: !!(OnboardEmployee.careerData && (OnboardEmployee.careerData.experiences?.length > 0 || (OnboardEmployee.careerData.educations && OnboardEmployee.careerData.educations.length > 0) || OnboardEmployee.careerData.licenses?.length > 0)) },
     { 
       key: 'upload', 
-      title: '上傳指定文件影本驗查 (僅接受 PDF)', 
+      title: '上傳?��??�件影本驗查 (?�接??PDF)', 
       done: !!(
-        employee.uploadedFiles?.some(f => f.docType === 'idCard') &&
-        employee.uploadedFiles?.some(f => f.docType === 'degree') &&
-        employee.uploadedFiles?.some(f => f.docType === 'healthReport') &&
-        employee.uploadedFiles?.some(f => f.docType === 'bankCover')
-      ) || (employee.uploadedFiles?.length > 0 && !employee.uploadedFiles?.some(f => f.docType))
+        OnboardEmployee.uploadedFiles?.some(f => f.docType === 'idCard') &&
+        OnboardEmployee.uploadedFiles?.some(f => f.docType === 'degree') &&
+        OnboardEmployee.uploadedFiles?.some(f => f.docType === 'healthReport') &&
+        OnboardEmployee.uploadedFiles?.some(f => f.docType === 'bankCover')
+      ) || (OnboardEmployee.uploadedFiles?.length > 0 && !OnboardEmployee.uploadedFiles?.some(f => f.docType))
     },
-    { key: 'rules', title: '閱讀工作規程與個資蒐集利用告知', done: employee.rulesAgreed && employee.privacyAgreed },
-    { key: 'tax', title: '薪資受領人免稅額申報表', done: !!(employee.taxDeclaration && employee.taxDeclaration.signed) },
-    { key: 'contract', title: '確認並線上簽署「聘僱合約書」', done: employee.contractSigned },
-    { key: 'guarantor', title: '確認並線上簽署「職員保證書」', done: !!employee.guarantorSigned },
-    { key: 'service', title: '確認並線上簽署「職工服務約定」', done: !!employee.serviceSigned }
+    { key: 'rules', title: '?��?工�?規�??�個�??��??�用?�知', done: OnboardEmployee.rulesAgreed && OnboardEmployee.privacyAgreed },
+    { key: 'tax', title: '?��??��?人�?稅�??�報�?, done: !!(OnboardEmployee.taxDeclaration && OnboardEmployee.taxDeclaration.signed) },
+    { key: 'contract', title: '確�?並�?上簽署「�??��?約書??, done: OnboardEmployee.contractSigned },
+    { key: 'guarantor', title: '確�?並�?上簽署「職?��?證書??, done: !!OnboardEmployee.guarantorSigned },
+    { key: 'service', title: '確�?並�?上簽署「職工�??��?定�?, done: !!OnboardEmployee.serviceSigned }
   ];
 
   const totalFinished = taskChecklist.filter(t => t.done).length;
-  const overallProgress = employee.progress;
+  const overallProgress = OnboardEmployee.progress;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-stone-800">
@@ -701,10 +698,9 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
           <LdcLogo size="header" color="gold" className="bg-stone-50 p-1 px-2 rounded-lg border border-stone-200" />
           <div>
             <h2 className="text-base font-semibold text-slate-900 tracking-wide">
-              新進同仁入職報到平台
-            </h2>
+              ?�進�?仁入?�報?�平??            </h2>
             <p className="text-xs text-slate-500">
-              {employee.department}  •  {employee.title}  •  到職日：{employee.onboardDate}
+              {OnboardEmployee.department}  ?? {OnboardEmployee.title}  ?? ?�職?��?{OnboardEmployee.onboardDate}
             </p>
           </div>
         </div>
@@ -720,7 +716,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
             }`}
           >
             <ClipboardList className="w-3.5 h-3.5" />
-            我的報到任務 ({totalFinished}/{taskChecklist.length})
+            ?��??�到任�? ({totalFinished}/{taskChecklist.length})
           </button>
           <button
             onClick={() => setActiveTab('training')}
@@ -731,7 +727,18 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
-            教育訓練導讀
+            ?�育訓練導�?
+          </button>
+          <button
+            onClick={() => setActiveTab('ai')}
+            className={`px-4 py-2 text-xs font-medium tracking-wide rounded-lg flex items-center gap-1.5 transition-all ${
+              activeTab === 'ai'
+                ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                : 'text-stone-600 hover:bg-stone-50'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            ?��? AI 秘書
           </button>
 
           <div className="h-4 w-px bg-stone-200 mx-1"></div>
@@ -741,7 +748,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
             className="px-3 py-2 text-stone-500 hover:text-rose-600 text-xs font-medium flex items-center gap-1 rounded-lg hover:bg-rose-50 transition-all cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            登出
+            ?�出
           </button>
         </div>
       </nav>
@@ -753,16 +760,14 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
         <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex-1 space-y-1 text-center md:text-left">
             <h3 className="text-lg font-medium text-slate-900">
-              誠摯地歡迎您，{employee.name}！
-            </h3>
+              誠摯?�歡迎您，{OnboardEmployee.name}�?            </h3>
             <p className="text-xs text-stone-500 leading-relaxed max-w-xl">
-              這是為您量身準備的報到清單，完成 {taskChecklist.length} 大任務並至進度達 100% 後將自動發送至HR部門。如遇問題可點擊右上方「問問 AI 秘書」獲得協助。
-            </p>
+              ?�是?�您?�身準�??�報?��??��?完�? {taskChecklist.length} 大任?�並?�進度??100% 後�??��??�送至HR?��??��??��?題可點�??��??�「�???AI 秘書?�獲得�??��?            </p>
           </div>
           
           <div className="w-full md:w-80 space-y-2.5">
             <div className="flex justify-between text-xs font-medium">
-              <span className="text-stone-600">填寫進度統計</span>
+              <span className="text-stone-600">填寫?�度統�?</span>
               <span className="font-semibold text-indigo-600">{overallProgress}%</span>
             </div>
             <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
@@ -772,12 +777,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
               ></div>
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-400">
-              <span>完成全部欄位即可退出</span>
+              <span>完�??�部欄�??�可?�??/span>
               <span>
-                {employee.status === 'completed' ? (
-                  <span className="text-emerald-700 font-semibold">🎉 已完成 100% 隨時可關閉</span>
+                {OnboardEmployee.status === 'completed' ? (
+                  <span className="text-emerald-700 font-semibold">?? 已�???100% ?��??��???/span>
                 ) : (
-                  <span>目前待補辦</span>
+                  <span>?��?待�?�?/span>
                 )}
               </span>
             </div>
@@ -786,7 +791,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
         {saveStatus && (
           <div className="bg-[#1E293B] text-white px-4 py-2 rounded-lg text-center text-xs animate-bounce w-fit mx-auto shadow-sm">
-            ✨ {saveStatus}
+            ??{saveStatus}
           </div>
         )}
 
@@ -797,7 +802,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
             {/* Checklist Overview Side */}
             <div className="lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
               <h4 className="text-xs font-semibold text-stone-500 tracking-wider uppercase mb-2">
-                入職工作指引步驟
+                ?�職工�??��?步�?
               </h4>
               <div className="space-y-2">
                 {taskChecklist.map((task, i) => (
@@ -816,7 +821,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                       <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
                         task.done ? 'bg-[#0D9488]/10 text-[#0D9488]' : 'bg-stone-100 text-stone-600'
                       }`}>
-                        {task.done ? '✓' : i + 1}
+                        {task.done ? '?? : i + 1}
                       </div>
                       <span className="truncate">{task.title}</span>
                     </div>
@@ -825,12 +830,11 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                 ))}
               </div>
 
-              {employee.status === 'completed' && (
+              {OnboardEmployee.status === 'completed' && (
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-center space-y-2">
-                  <span className="text-emerald-800 font-bold text-sm block">🎊 太棒了，報到手續已全部完成！</span>
+                  <span className="text-emerald-800 font-bold text-sm block">?? 太�?了�??�到?��?已全?��??��?</span>
                   <p className="text-[11px] text-emerald-600 leading-relaxed">
-                    您的基本資料、工作經歷、核驗文件、讀畢宣告和勞僱合約均已由系統妥善保護。您現在可安心使用，不需再手動存擋。
-                  </p>
+                    ?��??�本資�??�工作�?歷、核驗�?件、�??�宣?��??�僱?��??�已?�系統妥?��?護。您?�在?��?心使?��?不�??��??��??��?                  </p>
                 </div>
               )}
             </div>
@@ -844,37 +848,36 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="flex items-center gap-2 pb-4 border-b border-stone-100">
                     <User className="w-5 h-5 text-indigo-600" />
                     <div>
-                      <h4 className="text-base font-semibold text-stone-900">1. 填寫個人基本資料表</h4>
-                      <p className="text-xs text-stone-500">為維護您的權益，煩請您填寫正確資料，因HR將依您填寫的資料進行相關手續並建立人事資料檔。</p>
+                      <h4 className="text-base font-semibold text-stone-900">1. 填寫?�人?�本資�?�?/h4>
+                      <p className="text-xs text-stone-500">?�維護您?��??��??��??�填寫正確�??��??�HR將�??�填寫�?資�??��??��??��?並建立人事�??��???/p>
                     </div>
                   </div>
 
                   <form onSubmit={handlePersonalSubmit} className="space-y-6">
-                    {/* 大頭照上傳區塊 */}
+                    {/* 大頭?��??��?�?*/}
                     <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
                       <div className="relative w-24 h-24 rounded-xl border border-stone-200 bg-white overflow-hidden flex items-center justify-center flex-shrink-0 group shadow-sm">
                         {personalForm.avatarUrl ? (
                           <img 
                             src={personalForm.avatarUrl} 
-                            alt="大頭照" 
+                            alt="大頭?? 
                             className="w-full h-full object-cover"
                             referrerPolicy="no-referrer"
                           />
                         ) : (
                           <div className="text-center p-2 text-stone-400">
-                            <span className="text-[10px] block leading-snug">未上傳<br />大頭照</span>
+                            <span className="text-[10px] block leading-snug">?��???br />大頭??/span>
                           </div>
                         )}
                       </div>
                       <div className="space-y-2 flex-grow text-center sm:text-left">
-                        <span className="block text-xs font-bold text-stone-800">上傳個人大頭照 <span className="text-rose-500">*</span></span>
+                        <span className="block text-xs font-bold text-stone-800">上傳?�人大頭??<span className="text-rose-500">*</span></span>
                         <p className="text-[10px] text-stone-500 leading-relaxed">
-                          格式限定為 JPG、JPEG 或 PNG 影像檔案。<br />
-                          此照片將用於新進員工識別證及門禁出入與人資系統建檔。
-                        </p>
+                          ?��??��???JPG?�JPEG ??PNG 影�?檔�???br />
+                          此照?��??�於?�進員工�??��??��?禁出?��?人�?系統建�???                        </p>
                         <div className="flex items-center gap-2 justify-center sm:justify-start">
                           <label className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-semibold hover:bg-indigo-700 cursor-pointer transition-colors shadow-sm">
-                            選擇照片
+                            ?��??��?
                             <input 
                               type="file" 
                               className="hidden" 
@@ -888,7 +891,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                               onClick={() => setPersonalForm(prev => ({ ...prev, avatarUrl: '' }))}
                               className="px-3 py-1.5 bg-white border border-stone-200 text-stone-500 rounded-lg text-[11px] font-semibold hover:bg-stone-50 hover:text-stone-700 transition"
                             >
-                              清除照片
+                              清除?��?
                             </button>
                           )}
                         </div>
@@ -898,7 +901,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                          中文姓名 <span className="text-rose-500">*</span>
+                          中�?姓�? <span className="text-rose-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -910,11 +913,11 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                          英文別名
+                          ?��??��?
                         </label>
                         <input
                           type="text"
-                          placeholder="例: David Lin"
+                          placeholder="�? David Lin"
                           value={personalForm.englishName || ''}
                           onChange={e => setPersonalForm({...personalForm, englishName: e.target.value})}
                           className="w-full text-stone-950 px-3 py-2 text-xs border border-stone-200 rounded-lg focus:border-indigo-500 focus:outline-none"
@@ -922,7 +925,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                          身分證字號 <span className="text-rose-500">*</span>
+                          身�?證�???<span className="text-rose-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -935,7 +938,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">出生日期 <span className="text-rose-500">*</span></label>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">?��??��? <span className="text-rose-500">*</span></label>
                         <input
                           type="date"
                           value={personalForm.birthday}
@@ -945,35 +948,35 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">性別 <span className="text-rose-500">*</span></label>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">?�別 <span className="text-rose-500">*</span></label>
                         <select
                           value={personalForm.gender}
                           onChange={e => setPersonalForm({...personalForm, gender: e.target.value})}
                           className="w-full text-stone-950 px-3 py-3 text-xs border border-stone-200 rounded-lg focus:border-indigo-500 focus:outline-none bg-white"
                           required
                         >
-                          <option value="">請選擇</option>
-                          <option value="男">男</option>
-                          <option value="女">女</option>
-                          <option value="其他">其他</option>
+                          <option value="">請選??/option>
+                          <option value="??>??/option>
+                          <option value="�?>�?/option>
+                          <option value="?��?">?��?</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">血型</label>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">血??/label>
                         <select
                           value={personalForm.bloodType || ''}
                           onChange={e => setPersonalForm({...personalForm, bloodType: e.target.value})}
                           className="w-full text-stone-950 px-3 py-3 text-xs border border-stone-200 rounded-lg focus:border-indigo-500 focus:outline-none bg-white"
                         >
-                          <option value="">請選擇</option>
-                          <option value="A型">A型</option>
-                          <option value="B型">B型</option>
-                          <option value="O型">O型</option>
-                          <option value="AB型">AB型</option>
+                          <option value="">請選??/option>
+                          <option value="A??>A??/option>
+                          <option value="B??>B??/option>
+                          <option value="O??>O??/option>
+                          <option value="AB??>AB??/option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">聯絡電話 <span className="text-rose-500">*</span></label>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">?�絡?�話 <span className="text-rose-500">*</span></label>
                         <input
                           type="tel"
                           placeholder="0911-222-333"
@@ -984,7 +987,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">電郵信箱 (預設)</label>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">?�郵信箱 (?�設)</label>
                         <input
                           type="email"
                           value={personalForm.email}
@@ -996,12 +999,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">戶籍地址 <span className="text-rose-500">*</span></label>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">?��??��? <span className="text-rose-500">*</span></label>
                         <div className="relative">
                           <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-stone-400" />
                           <input
                             type="text"
-                            placeholder="請填入身分證背面之法定戶籍地址"
+                            placeholder="請填?�身?��??�面之�?定戶籍地?�"
                             value={personalForm.legalAddress}
                             onChange={e => setPersonalForm({...personalForm, legalAddress: e.target.value})}
                             className="w-full text-stone-950 pl-9 pr-3 py-2 text-xs border border-stone-200 rounded-lg focus:border-indigo-500 focus:outline-none"
@@ -1028,17 +1031,16 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                           className="rounded text-indigo-600 focus:ring-indigo-500"
                         />
                         <label htmlFor="sameAddress" className="text-xs text-stone-500 select-none cursor-pointer">
-                          同上（通訊地址與戶籍地址相同）
-                        </label>
+                          ?��?（通�??��??�戶籍地?�?��?�?                        </label>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">通訊住址</label>
+                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">?��?住�?</label>
                         <div className="relative">
                           <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-stone-400" />
                           <input
                             type="text"
-                            placeholder="目前居住地址"
+                            placeholder="?��?居�??��?"
                             value={personalForm.contactAddress}
                             onChange={e => setPersonalForm({...personalForm, contactAddress: e.target.value})}
                             disabled={sameAddress}
@@ -1053,27 +1055,27 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                     <div className="border-t border-stone-100 pt-6 space-y-4">
                       <h5 className="text-xs font-semibold text-stone-900 flex items-center gap-2">
                         <CreditCard className="w-4 h-4 text-indigo-600" />
-                        公司撥薪、扶養親屬與健保眷屬設定
+                        ?�司?�薪?�扶養親屬�??��??�屬設�?
                       </h5>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="md:col-span-1">
                           <label className="block text-xs font-semibold text-indigo-900 mb-1.5 flex items-center gap-1">
-                            <span>撥款銀行 <span className="text-rose-500">*</span></span>
-                            <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded font-normal">指定撥薪行</span>
+                            <span>?�款?��?<span className="text-rose-500">*</span></span>
+                            <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded font-normal">?��??�薪�?/span>
                           </label>
                           <input
                             type="text"
                             readOnly
-                            value="中國信託銀行 (822)"
+                            value="中�?信�??��?(822)"
                             className="w-full text-stone-600 bg-stone-50 border border-stone-150 px-3 py-2 text-xs rounded-lg focus:outline-none font-semibold"
                             required
                           />
                         </div>
                         <div className="md:col-span-1">
-                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">匯款銀行帳號 <span className="text-rose-500">*</span></label>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">?�款?�行帳??<span className="text-rose-500">*</span></label>
                           <input
                             type="text"
-                            placeholder="請填入個人完整存摺帳號"
+                            placeholder="請填?�個人完整存摺帳�?"
                             value={personalForm.bankAccount}
                             onChange={e => setPersonalForm({...personalForm, bankAccount: e.target.value})}
                             className="w-full text-stone-950 px-3 py-2 text-xs border border-stone-200 rounded-lg focus:border-indigo-500 focus:outline-none font-mono"
@@ -1081,55 +1083,55 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                           />
                         </div>
                         <div className="md:col-span-1">
-                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">所得扣繳扶養親屬 <span className="text-rose-500">*</span></label>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">?�得扣繳扶養親�?<span className="text-rose-500">*</span></label>
                           <select
                             value={personalForm.dependentsCount}
                             onChange={e => setPersonalForm({...personalForm, dependentsCount: e.target.value})}
                             className="w-full text-stone-950 px-3 py-3 text-xs border border-stone-200 rounded-lg focus:border-indigo-500 focus:outline-none bg-white"
                             required
                           >
-                            <option>0 人</option>
-                            <option>1 人</option>
-                            <option>2 人</option>
-                            <option>3 人以上</option>
+                            <option>0 �?/option>
+                            <option>1 �?/option>
+                            <option>2 �?/option>
+                            <option>3 人以�?/option>
                           </select>
                         </div>
                         <div className="md:col-span-1">
-                          <label className="block text-xs font-semibold text-indigo-900 mb-1.5">健保眷屬投保</label>
+                          <label className="block text-xs font-semibold text-indigo-900 mb-1.5">?��??�屬?��?</label>
                           <select
-                            value={personalForm.healthDependentsCount || '0 人'}
+                            value={personalForm.healthDependentsCount || '0 �?}
                             onChange={e => handleHealthDependentsCountChange(e.target.value)}
                             className="w-full text-indigo-950 px-3 py-3 text-xs border border-indigo-200 rounded-lg focus:border-indigo-500 focus:outline-none bg-indigo-50/30 font-semibold"
                           >
-                            <option>0 人</option>
-                            <option>1 人</option>
-                            <option>2 人</option>
-                            <option>3 人</option>
+                            <option>0 �?/option>
+                            <option>1 �?/option>
+                            <option>2 �?/option>
+                            <option>3 �?/option>
                           </select>
                         </div>
                       </div>
 
-                      {/* 健保眷屬投保表格 */}
+                      {/* ?��??�屬?��?表格 */}
                       {parseInt(personalForm.healthDependentsCount || '0') > 0 && (
                         <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
                           <div className="flex items-center justify-between border-b border-stone-200 pb-2">
                             <h6 className="text-xs font-bold text-slate-800 flex items-center gap-2">
                               <Users className="w-4 h-4 text-indigo-600" />
-                              健保眷屬投保詳細資料填寫
+                              ?��??�屬?��?詳細資�?填寫
                             </h6>
-                            <span className="text-[10px] text-stone-500 font-medium">健保投保限直系血親或配偶</span>
+                            <span className="text-[10px] text-stone-500 font-medium">?��??��??�直系�?親�??�偶</span>
                           </div>
                           <div className="space-y-4">
                             {(personalForm.healthDependents || []).map((dep, idx) => (
                               <div key={idx} className="bg-white p-4 rounded-xl border border-stone-100 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div>
                                   <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                                    眷屬 {idx + 1} 姓名 <span className="text-rose-500">*</span>
+                                    ?�屬 {idx + 1} 姓�? <span className="text-rose-500">*</span>
                                   </label>
                                   <input
                                     type="text"
                                     required
-                                    placeholder="請填寫姓名"
+                                    placeholder="請填寫�???
                                     value={dep.name || ''}
                                     onChange={(e) => {
                                       const newDeps = [...(personalForm.healthDependents || [])];
@@ -1141,7 +1143,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                 </div>
                                 <div>
                                   <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                                    關係 <span className="text-rose-500">*</span>
+                                    ?��? <span className="text-rose-500">*</span>
                                   </label>
                                   <select
                                     required
@@ -1153,22 +1155,22 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     }}
                                     className="w-full text-stone-950 bg-white border border-stone-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 transition-colors bg-white select-none"
                                   >
-                                    <option value="">請選擇</option>
-                                    <option value="配偶">配偶</option>
+                                    <option value="">請選??/option>
+                                    <option value="?�偶">?�偶</option>
                                     <option value="子女">子女</option>
-                                    <option value="父母">父母</option>
-                                    <option value="祖父母及外祖父母">祖父母及外祖父母</option>
+                                    <option value="?��?">?��?</option>
+                                    <option value="祖父母�?外�??��?">祖父母�?外�??��?</option>
                                   </select>
                                 </div>
                                 <div>
                                   <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                                    眷屬身分證字號 <span className="text-rose-500">*</span>
+                                    ?�屬身�?證�???<span className="text-rose-500">*</span>
                                   </label>
                                   <input
                                     type="text"
                                     required
                                     maxLength={10}
-                                    placeholder="例: A123456789"
+                                    placeholder="�? A123456789"
                                     value={dep.idNumber || ''}
                                     onChange={(e) => {
                                       const newDeps = [...(personalForm.healthDependents || [])];
@@ -1180,7 +1182,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                 </div>
                                 <div>
                                   <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                                    眷屬生日 <span className="text-rose-500">*</span>
+                                    ?�屬?�日 <span className="text-rose-500">*</span>
                                   </label>
                                   <input
                                     type="date"
@@ -1203,14 +1205,13 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
                     <div className="border-t border-stone-100 pt-6 space-y-4">
                       <h5 className="text-xs font-semibold text-stone-900">
-                        🚨 緊急應變與聯絡人諮詢
-                      </h5>
+                        ?�� 緊急�?變�??�絡人諮�?                      </h5>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">聯絡人真實姓名 <span className="text-rose-500">*</span></label>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">?�絡人�?實�???<span className="text-rose-500">*</span></label>
                           <input
                             type="text"
-                            placeholder="與您關係密切者之姓名"
+                            placeholder="?�您?��?密�??��?姓�?"
                             value={personalForm.emergencyName}
                             onChange={e => setPersonalForm({...personalForm, emergencyName: e.target.value})}
                             className="w-full text-stone-950 px-3 py-2 text-xs border border-stone-200 rounded-lg focus:border-[#8D1B1B] focus:outline-none"
@@ -1218,20 +1219,20 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">關係說明</label>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">?��?說�?</label>
                           <input
                             type="text"
-                            placeholder="例：配偶、父母、手足"
+                            placeholder="例�??�偶?�父母、�?�?
                             value={personalForm.emergencyRelationship}
                             onChange={e => setPersonalForm({...personalForm, emergencyRelationship: e.target.value})}
                             className="w-full text-stone-950 px-3 py-2 text-xs border border-stone-200 rounded-lg focus:border-[#8D1B1B] focus:outline-none font-sans"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">聯絡電話 <span className="text-rose-500">*</span></label>
+                          <label className="block text-xs font-semibold text-stone-700 mb-1.5">?�絡?�話 <span className="text-rose-500">*</span></label>
                           <input
                             type="tel"
-                            placeholder="行動電話或室內電話"
+                            placeholder="行�??�話?�室?�電�?
                             value={personalForm.emergencyPhone}
                             onChange={e => setPersonalForm({...personalForm, emergencyPhone: e.target.value})}
                             className="w-full text-stone-950 px-3 py-2 text-xs border border-stone-200 rounded-lg focus:border-[#8D1B1B] focus:outline-none"
@@ -1247,14 +1248,13 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         onClick={() => syncWithServer({ personalData: personalForm })}
                         className="px-4 py-2 text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg cursor-pointer"
                       >
-                        暫存基本資料
+                        ?��??�本資�?
                       </button>
                       <button
                         type="submit"
                         className="px-5 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg cursor-pointer"
                       >
-                        儲存並前往下一步
-                      </button>
+                        ?��?並�?往下�?�?                      </button>
                     </div>
                   </form>
                 </div>
@@ -1266,20 +1266,18 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="flex items-center gap-2 pb-4 border-b border-stone-100">
                     <Briefcase className="w-5 h-5 text-indigo-600" />
                     <div>
-                      <h4 className="text-base font-semibold text-stone-900">2. 登錄經歷暨專業證照檔案</h4>
-                      <p className="text-xs text-stone-500">協助公司更完整瞭解您的經歷與專業技能</p>
+                      <h4 className="text-base font-semibold text-stone-900">2. ?��?經歷?��?業�??��?�?/h4>
+                      <p className="text-xs text-stone-500">?�助?�司?��??�瞭�?��?��?歷�?專業?�??/p>
                     </div>
                   </div>
 
                   {/* Experience List */}
                   <div className="space-y-3">
                     <span className="block text-xs font-semibold text-stone-500 uppercase tracking-widest">
-                      一、工作經歷
-                    </span>
+                      一?�工作�?�?                    </span>
                     {experiences.length === 0 ? (
                       <p className="text-xs text-stone-400 italic bg-stone-50/50 p-4 rounded-lg text-center">
-                        若無工作紀錄，您可以填入過往的工讀或社團經歷。
-                      </p>
+                        ?�無工�?紀?��??�可以填?��?往?�工讀?�社?��?歷�?                      </p>
                     ) : (
                       <div className="space-y-2">
                         {experiences.map((exp, val) => (
@@ -1287,8 +1285,8 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             <div>
                               <strong className="text-xs text-indigo-600 block">{exp.companyName}</strong>
                               <span className="text-[11px] text-stone-600 font-semibold block">{exp.jobTitle}</span>
-                              <span className="text-[10px] text-stone-400">{exp.startDate} ~ {exp.endDate || '至今'}</span>
-                              {exp.leaveReason && <p className="text-[10px] text-stone-500 mt-1">離職事由：{exp.leaveReason}</p>}
+                              <span className="text-[10px] text-stone-400">{exp.startDate} ~ {exp.endDate || '?��?'}</span>
+                              {exp.leaveReason && <p className="text-[10px] text-stone-500 mt-1">?�職事由：{exp.leaveReason}</p>}
                             </div>
                             <button
                               type="button"
@@ -1308,30 +1306,30 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                           <div>
                             <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                              服務公司名稱 <span className="text-rose-500">*</span>
+                              ?��??�司?�稱 <span className="text-rose-500">*</span>
                             </label>
                             <input
                               type="text"
                               value={tempExp.companyName}
                               onChange={e => setTempExp({...tempExp, companyName: e.target.value})}
-                              placeholder="例：君品酒店 / OO餐飲"
+                              placeholder="例�??��??��? / OO餐飲"
                               className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
                           <div>
                             <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                              擔當職位名稱 <span className="text-rose-500">*</span>
+                              ?�當?��??�稱 <span className="text-rose-500">*</span>
                             </label>
                             <input
                               type="text"
                               value={tempExp.jobTitle}
                               onChange={e => setTempExp({...tempExp, jobTitle: e.target.value})}
-                              placeholder="例：接待專員 / 主廚"
+                              placeholder="例�??��?專員 / 主�?"
                               className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-semibold text-stone-600 mb-1">任職起月</label>
+                            <label className="block text-[11px] font-semibold text-stone-600 mb-1">任職起�?</label>
                             <input
                               type="month"
                               value={tempExp.startDate}
@@ -1340,7 +1338,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-semibold text-stone-600 mb-1">離任年月（空白代表現職中）</label>
+                            <label className="block text-[11px] font-semibold text-stone-600 mb-1">?�任年�?（空?�代表現?�中�?/label>
                             <input
                               type="month"
                               value={tempExp.endDate}
@@ -1350,10 +1348,10 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                           </div>
                         </div>
                         <div>
-                          <label className="block text-[11px] font-semibold text-stone-600 mb-1">離職原因（選填）</label>
+                          <label className="block text-[11px] font-semibold text-stone-600 mb-1">?�職?��?（選填�?</label>
                           <input
                             type="text"
-                            placeholder="說明離職之事由 (例如: 合約期滿 / 個人生涯規劃)"
+                            placeholder="說�??�職之�???(例�?: ?��??�滿 / ?�人?�涯規�?)"
                             value={tempExp.leaveReason}
                             onChange={e => setTempExp({...tempExp, leaveReason: e.target.value})}
                             className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
@@ -1365,14 +1363,14 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             onClick={() => setExpShowForm(false)}
                             className="px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-slate-100 border border-stone-200 rounded cursor-pointer"
                           >
-                            取消
+                            ?��?
                           </button>
                           <button
                             type="button"
                             onClick={addExperience}
                             className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded cursor-pointer"
                           >
-                            確認
+                            確�?
                           </button>
                         </div>
                       </div>
@@ -1382,7 +1380,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         onClick={() => setExpShowForm(true)}
                         className="w-full border border-dashed border-stone-200 text-stone-500 p-3 rounded-lg text-xs hover:border-indigo-600 hover:text-indigo-600 transition-colors leading-relaxed block text-center cursor-pointer"
                       >
-                        + 點擊新增您的工作經歷
+                        + 點�??��??��?工�?經歷
                       </button>
                     )}
                   </div>
@@ -1390,20 +1388,19 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   {/* Education List */}
                   <div className="border-t border-stone-100 pt-6 space-y-3">
                     <span className="block text-xs font-semibold text-stone-500 uppercase tracking-widest">
-                      二、教育背景與學歷證明
+                      二、�??��??��?學歷證�?
                     </span>
                     {educations.length === 0 ? (
                       <p className="text-xs text-stone-400 italic bg-stone-50/50 p-4 rounded-lg text-center">
-                        尚無學歷紀錄，您可以填入過往的高中、大學、研究所以上學歷。
-                      </p>
+                        尚無學歷紀?��??�可以填?��?往?��?中、大學、�?究�?以�?學歷??                      </p>
                     ) : (
                       <div className="space-y-2">
                         {educations.map((edu, idx) => (
                           <div key={idx} className="flex justify-between items-start bg-stone-50 border border-stone-100 p-4 rounded-xl">
                             <div>
                               <strong className="text-xs text-indigo-600 block">{edu.schoolName}</strong>
-                              <span className="text-[11px] text-stone-600 font-semibold block">{edu.major ? `${edu.major} ` : ''}({edu.degree || '學位無填寫'})</span>
-                              <span className="text-[10px] text-stone-400">就讀期間：{edu.period || '無填'} ｜ 狀態：{edu.status || '未選擇'}</span>
+                              <span className="text-[11px] text-stone-600 font-semibold block">{edu.major ? `${edu.major} ` : ''}({edu.degree || '學�??�填�?})</span>
+                              <span className="text-[10px] text-stone-400">就�??��?：{edu.period || '?�填'} �??�?��?{edu.status || '?�選??}</span>
                             </div>
                             <button
                               type="button"
@@ -1423,13 +1420,13 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                           <div>
                             <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                              學校名稱 <span className="text-rose-500">*</span>
+                              學校?�稱 <span className="text-rose-500">*</span>
                             </label>
                             <input
                               type="text"
                               value={tempEdu.schoolName}
                               onChange={e => setTempEdu({...tempEdu, schoolName: e.target.value})}
-                              placeholder="例：台灣大學 / 台北商大"
+                              placeholder="例�??�灣大學 / ?��??�大"
                               className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
@@ -1441,43 +1438,43 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                               type="text"
                               value={tempEdu.major}
                               onChange={e => setTempEdu({...tempEdu, major: e.target.value})}
-                              placeholder="例：企業管理學系 / 觀光事業科"
+                              placeholder="例�?企業管�?學系 / 觀?��?業�?"
                               className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-semibold text-stone-600 mb-1">學位</label>
+                            <label className="block text-[11px] font-semibold text-stone-600 mb-1">學�?</label>
                             <input
                               type="text"
                               value={tempEdu.degree}
                               onChange={e => setTempEdu({...tempEdu, degree: e.target.value})}
-                              placeholder="例：學士 / 碩士 / 副學士 / 高中職"
+                              placeholder="例�?學士 / 碩士 / ?�學�?/ 高中??
                               className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-semibold text-stone-600 mb-1">就讀期間</label>
+                            <label className="block text-[11px] font-semibold text-stone-600 mb-1">就�??��?</label>
                             <input
                               type="text"
                               value={tempEdu.period}
                               onChange={e => setTempEdu({...tempEdu, period: e.target.value})}
-                              placeholder="例：2018年9月 ~ 2022年6月"
+                              placeholder="例�?2018�???~ 2022�???
                               className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
                           <div className="md:col-span-2">
                             <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                              是否畢業 <span className="text-rose-500">*</span>
+                              ?�否?�業 <span className="text-rose-500">*</span>
                             </label>
                             <select
                               value={tempEdu.status}
                               onChange={e => setTempEdu({...tempEdu, status: e.target.value as any})}
                               className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             >
-                              <option value="">-- 請選擇 --</option>
-                              <option value="畢業">畢業</option>
-                              <option value="肄業">肄業</option>
-                              <option value="就讀中">就讀中</option>
+                              <option value="">-- 請選??--</option>
+                              <option value="?�業">?�業</option>
+                              <option value="?�業">?�業</option>
+                              <option value="就�?�?>就�?�?/option>
                             </select>
                           </div>
                         </div>
@@ -1487,14 +1484,14 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             onClick={() => setEduShowForm(false)}
                             className="px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-slate-100 border border-stone-200 rounded cursor-pointer"
                           >
-                            取消
+                            ?��?
                           </button>
                           <button
                             type="button"
                             onClick={addEducation}
                             className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded cursor-pointer"
                           >
-                            確認
+                            確�?
                           </button>
                         </div>
                       </div>
@@ -1504,7 +1501,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         onClick={() => setEduShowForm(true)}
                         className="w-full border border-dashed border-stone-200 text-stone-500 p-3 rounded-lg text-xs hover:border-indigo-600 hover:text-indigo-600 transition-colors leading-relaxed block text-center cursor-pointer"
                       >
-                        + 點擊新增您的教育/學歷背景
+                        + 點�??��??��??�育/學歷?�景
                       </button>
                     )}
                   </div>
@@ -1512,16 +1509,16 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   {/* Licenses Rows */}
                   <div className="border-t border-stone-100 pt-6 space-y-4">
                     <span className="block text-xs font-semibold text-stone-500 uppercase tracking-widest">
-                      三、持有專業證照與國家資格申報
+                      三、�??��?業�??��??�家資格?�報
                     </span>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="border-b border-stone-100 text-[10px] text-stone-400 font-semibold uppercase tracking-wider">
-                            <th className="pb-2">證照/證書名稱</th>
-                            <th className="pb-2">等級/分數說明</th>
-                            <th className="pb-2">取得/生效期</th>
-                            <th className="pb-2">有效截止限（若無可不填）</th>
+                            <th className="pb-2">證照/證書?�稱</th>
+                            <th className="pb-2">等�?/?�數說�?</th>
+                            <th className="pb-2">?��?/?��???/th>
+                            <th className="pb-2">?��??�止?��??�無?��?填�?</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-50 text-xs">
@@ -1530,7 +1527,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                               <td className="py-2 pr-2">
                                 <input
                                   type="text"
-                                  placeholder="例：多益 (TOEIC) / 乙級中餐烹調"
+                                  placeholder="例�?多�? (TOEIC) / 乙�?中�??�調"
                                   value={lic.licenseName}
                                   onChange={e => updateLicense(val, 'licenseName', e.target.value)}
                                   className="w-full text-stone-950 px-2 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-5050 focus:outline-none bg-white font-sans"
@@ -1539,7 +1536,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                               <td className="py-2 pr-2">
                                 <input
                                   type="text"
-                                  placeholder="例：金級 / 850 分"
+                                  placeholder="例�??��? / 850 ??
                                   value={lic.badgeLevel}
                                   onChange={e => updateLicense(val, 'badgeLevel', e.target.value)}
                                   className="w-full text-stone-950 px-2 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-550 focus:outline-none bg-white font-sans"
@@ -1571,31 +1568,29 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                       onClick={addLicenseRow}
                       className="text-xs text-indigo-600 font-semibold hover:underline block"
                     >
-                      + 新增一列證書欄位
-                    </button>
+                      + ?��?一?��??��?�?                    </button>
                   </div>
 
                   {/* Languages Section */}
                   <div className="border-t border-stone-100 pt-6 space-y-4">
                     <span className="block text-xs font-semibold text-stone-500 uppercase tracking-widest font-sans">
-                      四、語言能力
+                      ?�、�?言?��?
                     </span>
                     <p className="text-[11px] text-stone-400 font-sans">
-                      請選取您具備的語言能力，若為「其他」請輸入語言名稱，程度區分為：「精通」、「優良」、「中等」、「略懂」（再次點選可取消選取）。
-                    </p>
+                      請選?�您?��??��?言?��?，若?�「其他」�?輸入語�??�稱，�?度�??�為：「精?�」、「優?�」、「中等」、「略?�」�??�次點選?��?消選?��???                    </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {languages.map((lang, idx) => {
-                        const isOther = lang.language === '其他';
+                        const isOther = lang.language === '?��?';
                         return (
                           <div key={idx} className="bg-stone-50 border border-stone-100 p-4 rounded-xl space-y-3">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-semibold text-stone-800">
-                                {isOther ? '其他語言' : `${lang.language}`}
+                                {isOther ? '?��?語�?' : `${lang.language}`}
                               </span>
                               {isOther && (
                                 <input
                                   type="text"
-                                  placeholder="請填寫語言名稱"
+                                  placeholder="請填寫�?言?�稱"
                                   value={lang.customName || ''}
                                   onChange={e => {
                                     const newList = [...languages];
@@ -1608,7 +1603,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                               )}
                             </div>
                             <div className="grid grid-cols-4 gap-1.5">
-                              {(['精通', '優良', '中等', '略懂'] as const).map(lev => {
+                              {(['精�?, '?�良', '中�?', '?��?'] as const).map(lev => {
                                 const active = lang.level === lev;
                                 return (
                                   <button
@@ -1640,10 +1635,10 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   {/* Additional notes */}
                   <div className="border-t border-stone-100 pt-6">
                     <label className="block text-xs font-semibold text-stone-700 mb-1.5">
-                      其餘專長、體檢狀況 or 備註事項補充說明
+                      ?��?專長?��?檢�?�?or ?�註事�?補�?說�?
                     </label>
                     <textarea
-                      placeholder="如有其餘特殊才能、外語證書、或是體格檢查之特別留言說明，請在此不拘格式自由補充輸入..."
+                      placeholder="如�??��??��??�能?��?語�??�、�??��??�檢?��??�別?��?說�?，�??�此不�??��??�由補�?輸入..."
                       value={additionalNotes}
                       onChange={e => setAdditionalNotes(e.target.value)}
                       className="w-full text-stone-950 px-3 py-2 text-xs border border-stone-200 rounded-lg focus:border-indigo-500 focus:outline-none min-h-[90px]"
@@ -1656,15 +1651,13 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                       onClick={() => syncWithServer({ careerData: { experiences, educations, licenses, languages, additionalNotes } })}
                       className="px-4 py-2 text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg cursor-pointer"
                     >
-                      暫存學經歷
-                    </button>
+                      ?��?學�?�?                    </button>
                     <button
                       type="button"
                       onClick={saveCareer}
                       className="px-5 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg cursor-pointer"
                     >
-                      儲存並前往下一步
-                    </button>
+                      ?��?並�?往下�?�?                    </button>
                   </div>
                 </div>
               )}
@@ -1675,23 +1668,23 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="flex items-center gap-2 pb-4 border-b border-stone-100">
                     <Upload className="w-5 h-5 text-indigo-600" />
                     <div>
-                      <h4 className="text-base font-semibold text-stone-900">3. 驗查並上傳報到文件 (限定 PDF)</h4>
+                      <h4 className="text-base font-semibold text-stone-900">3. 驗查並�??�報?��?�?(?��? PDF)</h4>
                       <p className="text-xs text-stone-500">
-                        依法配合加保與核驗，請分別點擊上傳下列文件 (限 PDF 格式，最大 10MB)
+                        依�??��??��??�核驗�?請�??��??��??��??��?�?(??PDF ?��?，�?�?10MB)
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     {[
-                      { id: 'idCard', label: '1. 身分證正反面影本', required: true, desc: '請提供清晰、無反光之身分證正反面合併影本影本 PDF。' },
-                      { id: 'degree', label: '2. 最高學歷證明影本', required: true, desc: '請提供最高學歷之畢業證書或同等學力證明 PDF。' },
-                      { id: 'military', label: '3. 退伍令', required: false, desc: '男性同仁需檢附，女性同仁免附。若為免役請附免役證明 PDF。', femaleExempt: true },
-                      { id: 'healthReport', label: '4. 體檢報告', required: true, desc: '依勞基法規定檢附之特約醫療機構入職體檢合格報告 PDF。' },
-                      { id: 'healthIns', label: '5. 原投保單位健保轉出單', required: false, desc: '若要在公司加保健保，請提供前一投保單位之健保轉出證明單 PDF。' },
-                      { id: 'bankCover', label: '6. 中國信託銀行帳戶封面影本', required: true, desc: '公司指定撥薪存摺封面 PDF (戶名與帳號必須清晰可辨)。' }
+                      { id: 'idCard', label: '1. 身�?證正?�面影本', required: true, desc: '請�?供�??�、無?��?之身?��?�???��?併影?�影??PDF?? },
+                      { id: 'degree', label: '2. ?�高學歷�??�影??, required: true, desc: '請�?供�?高學歷�??�業證書?��?等學?��???PDF?? },
+                      { id: 'military', label: '3. ?�伍令', required: false, desc: '?�性�?仁�?檢�?，女?��?仁�??�。若?��?役�??��?役�???PDF??, femaleExempt: true },
+                      { id: 'healthReport', label: '4. 體檢?��?', required: true, desc: '依�??��?規�?檢�?之特約醫?��?構入?��?檢�??�報??PDF?? },
+                      { id: 'healthIns', label: '5. ?��?保單位健保�??�單', required: false, desc: '?��??�公?��?保健保�?請�?供�?一?��??��?之健保�??��??�單 PDF?? },
+                      { id: 'bankCover', label: '6. 中�?信�??�行帳?��??�影??, required: true, desc: '?�司?��??�薪存摺封面 PDF (?��??�帳?��??��??�可�??? }
                     ].map((slot) => {
-                      const loadedFile = employee.uploadedFiles?.find(f => f.docType === slot.id);
+                      const loadedFile = OnboardEmployee.uploadedFiles?.find(f => f.docType === slot.id);
                       return (
                         <div key={slot.id} className="border border-stone-150 rounded-xl p-4 bg-stone-50/40 hover:bg-stone-50/70 transition-colors space-y-3">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1703,13 +1696,13 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                 </span>
                               ) : (
                                 <span className="bg-stone-200 text-stone-600 text-[10px] font-medium px-2 py-0.5 rounded border border-stone-300">
-                                  {slot.femaleExempt ? '選填 / 女性免附' : '選填'}
+                                  {slot.femaleExempt ? '?�填 / 女性�??? : '?�填'}
                                 </span>
                               )}
                             </div>
                             {loadedFile && (
                               <span className="text-[11px] text-[#0D9488] font-semibold bg-[#0D9488]/10 px-2.5 py-0.5 rounded-full flex items-center gap-1 self-start sm:self-auto">
-                                <span>● 已上傳</span>
+                                <span>??已�???/span>
                               </span>
                             )}
                           </div>
@@ -1728,7 +1721,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                   type="button"
                                   onClick={() => deleteUploadedFile(loadedFile.name)}
                                   className="text-stone-400 hover:text-rose-600 transition-colors p-1"
-                                  title="移除檔案"
+                                  title="移除檔�?"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -1738,7 +1731,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             <div>
                               <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100/50 rounded-lg cursor-pointer transition-colors">
                                 <Upload className="w-3.5 h-3.5" />
-                                選擇 PDF 檔案上傳
+                                ?��? PDF 檔�?上傳
                                 <input
                                   type="file"
                                   accept="application/pdf"
@@ -1761,14 +1754,13 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
                   <div className="border-t border-stone-100 pt-6 flex justify-between items-center">
                     <p className="text-[10px] text-stone-400">
-                      * 提醒：填妥 4 項必填文件後，該步驟即刻標記為完成。
-                    </p>
+                      * ?��?：填�?4 ?��?填�?件�?，該步�??�刻標�??��??��?                    </p>
                     <button
                       type="button"
                       onClick={() => setOpenSection('rules')}
                       className="px-5 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg cursor-pointer"
                     >
-                      前往下一步：閱讀規章
+                      ?��?下�?步�??��?規�?
                     </button>
                   </div>
                 </div>
@@ -1780,8 +1772,8 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="flex items-center gap-2 pb-4 border-b border-stone-100">
                     <FileText className="w-5 h-5 text-indigo-600" />
                     <div>
-                      <h4 className="text-base font-semibold text-stone-900">4. 閱讀工作規則及個資同意書</h4>
-                      <p className="text-xs text-stone-500">為謀求健全共同合作、明定勞資義務權益，請務必詳細瀏覽</p>
+                      <h4 className="text-base font-semibold text-stone-900">4. ?��?工�?規�??�個�??��???/h4>
+                      <p className="text-xs text-stone-500">?��?求健?�共?��?作、�?定�?資義?��??��?請�?必詳細瀏覽</p>
                     </div>
                   </div>
 
@@ -1793,11 +1785,9 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                       </div>
                       <div className="space-y-1">
                         <h5 className="text-sm font-bold text-stone-850">
-                          雲朗觀光《工作規程要點及附約說明書》全文
-                        </h5>
+                          ?��?觀?�《工作�?程�?點�??��?說�??�》全??                        </h5>
                         <p className="text-[11px] text-stone-500 leading-relaxed">
-                          為維護您的合法勞動與保密權事宜，我們已將全套 27 頁（含性騷擾防治及申訴管道辦法）之完整《工作規程》文件置於 Google 雲端安全空間。
-                        </p>
+                          ?�維護您?��?法�??��?保�?權�?宜�??�們已將全�?27 ?��??�性騷?�防治�??�訴管�?辦�?）�?完整?�工作�?程》�?件置??Google ?�端安全空�???                        </p>
                       </div>
                       <div>
                         <a
@@ -1806,7 +1796,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg active:translate-y-0 hover:-translate-y-0.5 cursor-pointer"
                         >
-                          <span>📖 點此於新分頁瀏覽完整規約 (共 27 頁 PDF)</span>
+                          <span>?? 點此?�新?��??�覽完整規�? (??27 ??PDF)</span>
                         </a>
                       </div>
                     </div>
@@ -1820,41 +1810,39 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
                       />
                       <label htmlFor="rulesCheckbox" className="text-xs text-stone-700 select-none cursor-pointer font-semibold leading-normal">
-                        我已詳讀並完全承諾遵守「本公司工作規程」之各項共同義務與規範
-                      </label>
+                        ?�已詳�?並�??�承諾遵守「本?�司工�?規�??��??��??��?義�??��?�?                      </label>
                     </div>
                   </div>
 
                   <div className="space-y-4 border-t border-stone-100 pt-7">
                     <label className="block text-xs font-semibold text-stone-700 uppercase tracking-widest text-center">
-                      個人資料蒐集處理與授權同意告知事項
-                    </label>
+                      ?�人資�??��??��??��?權�??��??��???                    </label>
                     <div className="h-100 overflow-y-auto border border-stone-100 rounded-xl p-4 text-[11px] text-stone-500 leading-relaxed space-y-4 bg-stone-50/50 select-none max-w-2xl mx-auto">
-                      <p>本公司依個人資料保護法（下稱個資法）第8條第1項規定，向  台端告知下列事項，請台端詳閱：</p>
-                      <p>一、 蒐集之目的：</p>
-                      <p>     ㄧ)	人事管理（包含甄選、離職及所屬員工基本資訊、現職、學經歷、考績獎懲、薪資待遇、蒐集之目的差勤、福利措施、特殊查核或其他人事措施）</p>
-                      <p>     二)	全民健康保險及勞工保險</p>
-                      <p>     三)	存款與匯款</p>
-                      <p>     四)	契約、類似契約或其他法律關係事務及僱用與服務管理</p>
-                      <p>     五)	稅務行政及會計與相關服務</p>
-                      <p>     六)	資通安全與管理及資(通)訊與資料庫管理</p>
-                      <p>     七)	觀光旅館業、旅館業經營管理業務及其他經營合於營業登記項目或組織章程所定之業務</p>
-                      <p>二、	蒐集之個人資料類別</p>
-                      <p>     一)	辨識個人者、財務者及政府資料中之辨識者</p>
-                      <p>     二)	個性及身體描述、職業、僱用經過、工作經驗、健康紀錄、學校紀錄、犯罪嫌疑資料、家庭情形與家庭成員之細節</p>
-                      <p>     三)	薪資與預扣款、健康與安全紀錄、津貼、福利、贈款、社會保險給付、就養給付及其他退休給付、與營業有關之執照、家庭情形與家庭成員之細節</p>
-                      <p>     四)	未分類之資料</p>
-                      <p>三、	個人資料利用之期間、地區、對象及方式：</p>
-                      <p>     一)	期間：個人資料蒐集之特定目的存續期間/依相關法令規定或契約約定之保存年限（如：勞動基準法等）/本公司營運或業務所必須之保存期間。</p>
-                      <p>     二)	地區：本國、本公司海外分支機構所在地、未受中央目的事業主管機關限制之國際傳輸個人資料之接收者所在地、本公司業務委外機構所在地、與本公司有業務往來之機構營業處所所在地。</p>
-                      <p>     三)	對象：本公司、與本公司有控制關係之母公司暨其分公司或集團關係之公司、未受中央目的事業主管機關限制之國際傳輸個人資料之接收者、其他與本公司或前述公司因業務需要訂有契約關係或有業務往來之機構（含共同行銷、合作推廣）。</p>
-                      <p>四、	依個資法第3條規定，台端就本公司保有台端之個人資料得行使下列權利，及行使權利之方式：</p>
-                      <p>     一)	得向本公司查詢、請求閱覽或請求製給複製本，而本公司依法得酌收必要成本費用。</p>
-                      <p>     二)	得向本公司請求補充或更正，惟依法台端應為適當之釋明。</p>
-                      <p>     三)	得向本公司請求停止蒐集、處理或利用及請求刪除，惟依法本公司因執行業務所必須者，得不依台端請求為之。</p>
-                      <p>五、	台端不提供個人資料所致權益之影響：</p>
-                      <p>     台端得自由選擇是否提供相關個人資料，惟台端若拒絕提供相關個人資料，本公司將無法進行必要之審核、處理、作業或其他相關事項，致可能影響台端權益或無法進行本公司新進人員之進用流程。</p>
-                      <p>六、	台端同意本公司有權修訂本告知條款內容，並同意本公司於修訂後，得以言詞、書面、電話、簡訊、電子郵件、傳真、電子文件或其他足以使台端知悉或可得知悉之方式（包括但不限於以前述方式告知提供詳載本告知條款內容之網站連結），告知 台端修訂要點及指定網頁。</p>
+                      <p>?�公?��??�人資�?保護法�?下稱?��?法�?�?條第1?��?定�??? ?�端?�知下�?事�?，�??�端詳閱�?/p>
+                      <p>一???��?之目?��?</p>
+                      <p>     ??	人�?管�?（�??��??�、離?��??�屬員工基?��?訊、現?�、學經歷?�考績?�懲?�薪資�??�、�??��??��?差勤?��??�措?�、特殊查?��??��?人�??�施�?/p>
+                      <p>     �?	?��??�康保險?��?工�???/p>
+                      <p>     �?	存款?�匯�?/p>
+                      <p>     ??	契�??��?似�?約�??��?法�??��?事�??�僱?��??��?管�?</p>
+                      <p>     �?	稅�?行政?��?計�??��??��?</p>
+                      <p>     ??	資通�??��?管�??��?(??訊�?資�?庫管??/p>
+                      <p>     �?	觀?��?館業?��?館業經�?管�?業�??�其他�??��??��?業登記�??��?組�?章�??�定�?業�?</p>
+                      <p>二�??��?之個人資�?類別</p>
+                      <p>     一)	辨�??�人?�、財?�者�??��?資�?中�?辨�???/p>
+                      <p>     �?	?�性�?身�??�述?�職業、僱?��??�、工作�?驗、健康�??�、學?��??�、犯罪�??��??�、家庭�?形�?家庭?�員之細節</p>
+                      <p>     �?	?��??��???��?�健康�?安全紀?�、津貼、�??�、�?款、社?��??�給付、就養給付�??��??�休給付、�??�業?��?之執?�、家庭�?形�?家庭?�員之細節</p>
+                      <p>     ??	?��?類�?資�?</p>
+                      <p>三�??�人資�??�用之�??�、地?�?��?象�??��?�?/p>
+                      <p>     一)	?��?：個人資�??��?之特定目?��?續�???依相?��?令�?定�?契�?約�?之�?存年?��?如�??��??��?法�?�??�公?��??��?業�??�必�?之�?存�??��?/p>
+                      <p>     �?	?��?：本?�、本?�司海�??�支機�??�?�地?�未?�中央目?��?業主管�??��??��??��??�輸?�人資�?之接?�者�??�地?�本?�司業�?委�?機�??�?�地?��??�公?��?業�?往來�?機�??�業?��??�?�地??/p>
+                      <p>     �?	對象：本?�司?��??�公?��??�制?��?之�??�司?�其?�公?��??��??��?之公?�、未?�中央目?��?業主管�??��??��??��??�輸?�人資�?之接?�者、其他�??�公?��??�述?�司?�業?��?要�??��?約�?係�??�業?��?來�?機�?（含?��?行銷?��?作推�????/p>
+                      <p>?��?依個�?法第3條�?定�??�端就本?�司保�??�端之個人資�?得�?使�??��??��??��?使�??��??��?�?/p>
+                      <p>     一)	得�??�公?�查詢、�?求閱覽�?請�?製給複製?��??�本?�司依�?得�??��?要�??�費?��?/p>
+                      <p>     �?	得�??�公?��?求�??��??�正，�?依�??�端?�為?�當之�??��?/p>
+                      <p>     �?	得�??�公?��?求�?止�??�、�??��??�用?��?求刪?��??��?法本?�司?�執行業?��?必�??��?得�?依台端�?求為之�?/p>
+                      <p>五�??�端不�?供個人資�??�?��??��?影響�?/p>
+                      <p>     ?�端得自?�選?�是?��?供相?�個人資�?，�??�端?��?絕�?供相?�個人資�?，本?�司將無法進�?必�?之審?�、�??�、�?業�??��??��?事�?，致?�能影響?�端權�??�無法進�??�公?�新?�人?��??�用流�???/p>
+                      <p>?��??�端?��??�公?��?權修訂本?�知條款?�容，並?��??�公?�於修�?後�?得以言詞、書?�、電話、簡訊、電子郵件、傳?�、電子�?件�??��?足以使台端知?��??��??��?之方式�??�括但�??�於以�?述方式�??��?供詳載本?�知條款?�容之網站�??）�??�知 ?�端修�?要�??��?定網?��?/p>
                     </div>
                     <div className="flex items-center gap-2.5 py-1 justify-center max-w-lg mx-auto">
                       <input
@@ -1865,8 +1853,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                         className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
                       />
                       <label htmlFor="privacyCheckbox" className="text-xs text-stone-700 select-none cursor-pointer font-semibold leading-normal">
-                        我已瞭解並同意上開事項，填寫蒐集、處理及利用個人資料告知條款及相關個人資料欄位暨同意本公司得以法令規定蒐集、處理及利用顧客之個人資料，資料處理地區涵蓋台灣與前述相關對象之所在地。本人已清楚瞭解貴公司蒐集、處理或利用本人個人資料之目的及用途。
-                      </label>
+                        ?�已?�解並�??��??��??��?填寫?��??��??��??�用?�人資�??�知條款?�相?�個人資�?欄�??��??�本?�司得以法令規�??��??��??��??�用顧客之個人資�?，�??��??�地?�涵�??�灣?��?述相?��?象�??�?�地?�本人已清�??�解貴公?��??�、�??��??�用?�人?�人資�?之目?��??�途�?                      </label>
                     </div>
                   </div>
 
@@ -1877,7 +1864,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                       onClick={handleRulesSubmit}
                       className="px-5 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50 cursor-pointer"
                     >
-                      確認並送出規章聲明
+                      確�?並送出規�??��?
                     </button>
                   </div>
                 </div>
@@ -1889,39 +1876,39 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="flex items-center gap-2 pb-4 border-b border-stone-100">
                     <FileText className="w-5 h-5 text-indigo-600" />
                     <div>
-                      <h4 className="text-base font-semibold text-stone-900">5. 薪資受領人免稅額申報表</h4>
-                      <p className="text-xs text-stone-500">此申報表關係到您每月薪資所得撥付時之預扣稅款計算，請詳實填列</p>
+                      <h4 className="text-base font-semibold text-stone-900">5. ?��??��?人�?稅�??�報�?/h4>
+                      <p className="text-xs text-stone-500">此申?�表?��??�您每�??��??�得撥付�?之�????款�?算�?請詳實填??/p>
                     </div>
                   </div>
 
                   {/* Prefilled payer info Linked from personal profile */}
                   <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 md:p-5 space-y-3 shadow-inner">
                     <span className="block text-[11px] font-bold text-indigo-700 uppercase tracking-wider">
-                      📋 薪資受領人基本資料 (同步自個人基本資料)
+                      ?? ?��??��?人基?��???(?�步?�個人?�本資�?)
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
-                        <span className="block text-[10px] font-semibold text-stone-500">薪資受領人姓名</span>
+                        <span className="block text-[10px] font-semibold text-stone-500">?��??��?人�???/span>
                         <span className="text-xs text-stone-850 font-bold bg-white px-2.5 py-1.5 rounded border border-stone-200 block mt-1">
-                          {personalForm.name || employee.personalData?.name || employee.name || '未填寫'}
+                          {personalForm.name || OnboardEmployee.personalData?.name || OnboardEmployee.name || '?�填�?}
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-semibold text-stone-500">出生年月日</span>
+                        <span className="block text-[10px] font-semibold text-stone-500">?��?年�???/span>
                         <span className="text-xs text-stone-850 font-medium bg-white px-2.5 py-1.5 rounded border border-stone-200 block mt-1">
-                          {personalForm.birthday || employee.personalData?.birthday || '未填寫'}
+                          {personalForm.birthday || OnboardEmployee.personalData?.birthday || '?�填�?}
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-semibold text-stone-500">國民身分證/統一證號</span>
+                        <span className="block text-[10px] font-semibold text-stone-500">?��?身�?�?統�?證�?</span>
                         <span className="text-xs text-stone-850 font-mono bg-white px-2.5 py-1.5 rounded border border-stone-200 block mt-1">
-                          {personalForm.idNumber || employee.personalData?.idNumber || '未填寫'}
+                          {personalForm.idNumber || OnboardEmployee.personalData?.idNumber || '?�填�?}
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-semibold text-stone-500">住址</span>
-                        <span className="text-xs text-stone-850 font-medium bg-white px-2.5 py-1.5 rounded border border-stone-200 block mt-1 truncate" title={personalForm.contactAddress || employee.personalData?.contactAddress || '未填寫'}>
-                          {personalForm.contactAddress || employee.personalData?.contactAddress || '未填寫'}
+                        <span className="block text-[10px] font-semibold text-stone-500">住�?</span>
+                        <span className="text-xs text-stone-850 font-medium bg-white px-2.5 py-1.5 rounded border border-stone-200 block mt-1 truncate" title={personalForm.contactAddress || OnboardEmployee.personalData?.contactAddress || '?�填�?}>
+                          {personalForm.contactAddress || OnboardEmployee.personalData?.contactAddress || '?�填�?}
                         </span>
                       </div>
                     </div>
@@ -1930,11 +1917,11 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   {/* Spouse section */}
                   <div className="border border-stone-200/80 rounded-2xl p-4 md:p-5 space-y-4">
                     <span className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider">
-                      👫 薪資受領人配偶資料 (無配偶者免填)
+                      ?�� ?��??��?人�??��???(?��??�者�?�?
                     </span>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-[11px] font-semibold text-stone-600 mb-1">配偶姓名</label>
+                        <label className="block text-[11px] font-semibold text-stone-600 mb-1">?�偶姓�?</label>
                         <input
                           type="text"
                           value={spouseName}
@@ -1942,12 +1929,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             setSpouseName(e.target.value);
                             syncWithServer({ taxDeclaration: { spouseName: e.target.value, spouseBirthday, spouseIdNumber, dependents: taxDependents, signed: taxSigned, signName: taxSignName } });
                           }}
-                          placeholder="請輸入姓名"
+                          placeholder="請輸?��???
                           className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-stone-600 mb-1">配偶出生年月日</label>
+                        <label className="block text-[11px] font-semibold text-stone-600 mb-1">?�偶?��?年�???/label>
                         <input
                           type="text"
                           value={spouseBirthday}
@@ -1955,12 +1942,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             setSpouseBirthday(e.target.value);
                             syncWithServer({ taxDeclaration: { spouseName, spouseBirthday: e.target.value, spouseIdNumber, dependents: taxDependents, signed: taxSigned, signName: taxSignName } });
                           }}
-                          placeholder="例：民國75年8月20日"
+                          placeholder="例�?民�?75�???0??
                           className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-stone-600 mb-1">配偶身分證號/統一證號</label>
+                        <label className="block text-[11px] font-semibold text-stone-600 mb-1">?�偶身�?證�?/統�?證�?</label>
                         <input
                           type="text"
                           value={spouseIdNumber}
@@ -1968,7 +1955,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             setSpouseIdNumber(e.target.value);
                             syncWithServer({ taxDeclaration: { spouseName, spouseBirthday, spouseIdNumber: e.target.value, dependents: taxDependents, signed: taxSigned, signName: taxSignName } });
                           }}
-                          placeholder="例：A234567890"
+                          placeholder="例�?A234567890"
                           className="w-full text-stone-950 px-2.5 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                         />
                       </div>
@@ -1979,21 +1966,21 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="border border-stone-200/80 rounded-2xl p-4 md:p-5 space-y-4">
                     <div className="flex justify-between items-center border-b border-stone-100 pb-2">
                       <span className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider">
-                        👨‍👩‍👧‍👦 合於減除扶養親屬免稅額之受扶養親屬 (共 {taxDependents.length} 員)
+                        ?��?��?�‍�?�‍�???�於減除?��?親屬?��?額�??�扶養親�?(??{taxDependents.length} ??
                       </span>
                       <button
                         type="button"
                         onClick={() => setShowDepForm(!showDepForm)}
                         className="px-2.5 py-1 text-[11px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-150 cursor-pointer"
                       >
-                        {showDepForm ? '✕ 關閉新增欄' : '＋ 新增受扶養親屬'}
+                        {showDepForm ? '???��??��?�? : '�??��??�扶養親�?}
                       </button>
                     </div>
 
                     {/* Add Dependent Form Inline */}
                     {showDepForm && (
                       <div className="bg-slate-50 border border-indigo-100 rounded-xl p-4 space-y-3.5">
-                        <strong className="block text-xs font-bold text-indigo-700">📌 新增受扶養親屬資料</strong>
+                        <strong className="block text-xs font-bold text-indigo-700">?? ?��??�扶養親屬�???/strong>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                           <div>
                             <label className="block text-[10px] font-semibold text-stone-600 mb-1">親屬類別</label>
@@ -2002,59 +1989,59 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                               onChange={e => setTempDepType(e.target.value)}
                               className="w-full text-stone-950 px-2 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white"
                             >
-                              <option value="直系尊親屬">一、直系尊親屬</option>
-                              <option value="子女">二、子女</option>
-                              <option value="同胞兄弟姊妹">三、同胞兄弟姊妹</option>
-                              <option value="其他親屬">四、其他親屬或家屬</option>
+                              <option value="?�系尊親�?>一?�直系�?親屬</option>
+                              <option value="子女">二、�?�?/option>
+                              <option value="?��??��?姊妹">三、�??��?弟�?�?/option>
+                              <option value="?��?親屬">?�、其他親屬�?家屬</option>
                             </select>
                           </div>
                           <div>
-                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">親屬姓名</label>
+                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">親屬姓�?</label>
                             <input
                               type="text"
                               value={tempDepName}
                               onChange={e => setTempDepName(e.target.value)}
-                              placeholder="家屬姓名"
+                              placeholder="家屬姓�?"
                               className="w-full text-stone-950 px-2 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">稱謂</label>
+                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">稱�?</label>
                             <input
                               type="text"
                               value={tempDepRel}
                               onChange={e => setTempDepRel(e.target.value)}
-                              placeholder="例：家嚴 / 次子"
+                              placeholder="例�?家嚴 / 次�?"
                               className="w-full text-stone-950 px-2 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">出生年月日</label>
+                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">?��?年�???/label>
                             <input
                               type="text"
                               value={tempDepBirth}
                               onChange={e => setTempDepBirth(e.target.value)}
-                              placeholder="例：民國40年3月1日"
+                              placeholder="例�?民�?40�?????
                               className="w-full text-stone-950 px-2 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">登錄身分證號</label>
+                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">?��?身�?證�?</label>
                             <input
                               type="text"
                               value={tempDepId}
                               onChange={e => setTempDepId(e.target.value)}
-                              placeholder="例：E123456789"
+                              placeholder="例�?E123456789"
                               className="w-full text-stone-950 px-2 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
                           <div className="md:col-span-2 lg:col-span-4">
-                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">符合條件之說明</label>
+                            <label className="block text-[10px] font-semibold text-stone-600 mb-1">符�?條件之說??/label>
                             <input
                               type="text"
                               value={tempDepCond}
                               onChange={e => setTempDepCond(e.target.value)}
-                              placeholder="例：年滿60歲 / 在校就學 / 無謀生能力並有共同生活事實"
+                              placeholder="例�?年滿60�?/ ?�校就學 / ?��??�能?�並?�共?��?活�?�?
                               className="w-full text-stone-950 px-2 py-1.5 text-xs border border-stone-200 rounded focus:border-indigo-500 focus:outline-none bg-white font-sans"
                             />
                           </div>
@@ -2064,7 +2051,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                               onClick={addTaxDependent}
                               className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded transition cursor-pointer"
                             >
-                              ＋ 新增申報亲属
+                              �??��??�報亲�?
                             </button>
                           </div>
                         </div>
@@ -2073,18 +2060,18 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
 
                     {/* Dependent Group Sections rendered */}
                     <div className="space-y-4">
-                      {['直系尊親屬', '子女', '同胞兄弟姊妹', '其他親屬'].map(type => {
+                      {['?�系尊親�?, '子女', '?��??��?姊妹', '?��?親屬'].map(type => {
                         const list = taxDependents.filter(d => d.type === type);
                         return (
                           <div key={type} className="bg-stone-50 rounded-xl p-3 border border-stone-100">
                             <span className="block text-[10px] font-bold text-[#8D1B1B] mb-2 font-mono">
-                              {type === '直系尊親屬' && '一、納稅義務人及其配偶之直系尊親屬 (如父母、祖父母，需滿60歲或無謀生能力者)'}
-                              {type === '子女' && '二、子女 (未成年，或已成年在學、身心障礙、無謀生能力者)'}
-                              {type === '同胞兄弟姊妹' && '三、同胞兄弟姊妹 (未成年，或已成年在學、身心障礙、無謀生能力者)'}
-                              {type === '其他親屬' && '四、其他親屬 or 家屬 (合於民法規定，未成年或已成年在學且具共同生活者)'}
+                              {type === '?�系尊親�? && '一?��?稅義?�人?�其?�偶之直系�?親屬 (如父母、�??��?，�?�?0歲�??��??�能?��?'}
+                              {type === '子女' && '二、�?�?(?��?年�??�已?�年?�學?�身心�?礙、無謀?�能?��?'}
+                              {type === '?��??��?姊妹' && '三、�??��?弟�?�?(?��?年�??�已?�年?�學?�身心�?礙、無謀?�能?��?'}
+                              {type === '?��?親屬' && '?�、其他親�?or 家屬 (?�於民�?規�?，未?�年?�已?�年?�學且具?��??�活??'}
                             </span>
                             {list.length === 0 ? (
-                              <p className="text-[10px] text-stone-400 italic pl-2">當前無申報此目指定受扶養親屬</p>
+                              <p className="text-[10px] text-stone-400 italic pl-2">?��??�申?�此?��?定�??��?親屬</p>
                             ) : (
                               <div className="space-y-1.5 animate-fade-in">
                                 {list.map((dep) => {
@@ -2093,23 +2080,23 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     <div key={actualIdx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 border border-stone-150 rounded-xl text-xs hover:border-stone-300 transition-colors">
                                       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 flex-grow font-sans">
                                         <div>
-                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">親屬姓名</span>
+                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">親屬姓�?</span>
                                           <span className="font-bold text-stone-800">{dep.name}</span>
                                         </div>
                                         <div>
-                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">關係/稱謂</span>
+                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">?��?/稱�?</span>
                                           <span className="text-stone-700 font-medium">{dep.relationship}</span>
                                         </div>
                                         <div>
-                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">出生年月日</span>
+                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">?��?年�???/span>
                                           <span className="text-stone-700 font-medium">{dep.birthday}</span>
                                         </div>
                                         <div>
-                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">身分證/統一證號</span>
+                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">身�?�?統�?證�?</span>
                                           <span className="text-stone-700 font-mono tracking-wider">{dep.idNumber}</span>
                                         </div>
                                         <div className="col-span-2 md:col-span-1">
-                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">符合撫養之法律要件原因</span>
+                                          <span className="text-[10px] text-stone-400 block font-semibold mb-0.5">符�??��?之�?律�?件�???/span>
                                           <span className="text-stone-500 font-medium truncate block max-w-[200px]" title={dep.condition}>{dep.condition}</span>
                                         </div>
                                       </div>
@@ -2117,7 +2104,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                         type="button"
                                         onClick={() => removeTaxDependent(actualIdx)}
                                         className="text-stone-400 hover:text-red-750 p-1.5 rounded-lg hover:bg-stone-50 transition-colors self-end sm:self-auto cursor-pointer"
-                                        title="移除此受扶養親屬"
+                                        title="移除此�??��?親屬"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </button>
@@ -2136,18 +2123,16 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="bg-[#FAF6F0] border-2 border-dashed border-[#8D1B1B]/20 rounded-2xl p-6 space-y-4 shadow-sm text-center">
                     <div className="space-y-1">
                       <strong className="block text-xs font-bold text-stone-850">
-                        聲明切結 ── 本人依所得稅法規定，證明以上填報事項均確實無訛
-                      </strong>
+                        ?��??��? ?�?� ?�人依�?得�?法�?定�?證�?以�?填報事�??�確實無�?                      </strong>
                       <p className="text-[10px] text-stone-500 leading-relaxed max-w-lg mx-auto">
-                        本表係依所得稅法第十七條第一項第一款規定申報免稅額之用。受領人填報之受扶養親屬，其身分、關係、生日及所得狀況等，如有不實、重複申報，願自負法律責任。
-                      </p>
+                        ?�表係�??�得�?法第?��?條第一?�第一款�?定申?��?稅�?之用?��??�人填報之�??��?親屬，其身�??��?係、�??��??�得�?況�?，�??��?實、�?複申?��?願自負�?律責任�?                      </p>
                     </div>
 
-                    {employee.taxDeclaration?.signed ? (
+                    {OnboardEmployee.taxDeclaration?.signed ? (
                       <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 p-4 rounded-xl text-center text-xs space-y-2 max-w-md mx-auto shadow-sm flex flex-col justify-center items-center">
-                        <p className="font-bold">🎉 免稅額申報表數位簽署已成功歸卷！</p>
+                        <p className="font-bold">?? ?��?額申?�表?��?簽署已�??�歸?��?</p>
                         <p className="text-[10px] text-emerald-600/90 font-mono">
-                          安全核對人：<strong>{employee.taxDeclaration.signName}</strong> ｜ 簽署時間：<strong>{employee.taxDeclaration.signedAt}</strong>
+                          安全?��?人�?<strong>{OnboardEmployee.taxDeclaration.signName}</strong> �?簽署?��?�?strong>{OnboardEmployee.taxDeclaration.signedAt}</strong>
                         </p>
                       </div>
                     ) : (
@@ -2160,7 +2145,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                               setTaxSignName(e.target.value);
                               syncWithServer({ taxDeclaration: { spouseName, spouseBirthday, spouseIdNumber, dependents: taxDependents, signed: taxSigned, signName: e.target.value } });
                             }}
-                            placeholder="請在此輸入您的姓名作為數位印鑑章"
+                            placeholder="請在此輸?�您?��??��??�數位印?��?"
                             className="w-full text-stone-950 px-3 py-2 text-xs border border-stone-200 rounded-xl focus:border-indigo-500 focus:outline-none bg-white font-semibold font-sans text-center"
                           />
                         </div>
@@ -2169,8 +2154,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                           onClick={() => handleTaxSave(true)}
                           className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 text-xs font-bold rounded-xl shadow-md transition whitespace-nowrap cursor-pointer hover:scale-105"
                         >
-                          簽署並儲存至下一步
-                        </button>
+                          簽署並儲存至下�?�?                        </button>
                       </div>
                     )}
                   </div>
@@ -2183,17 +2167,17 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="flex items-center gap-2 pb-4 border-b border-stone-100">
                     <FileText className="w-5 h-5 text-indigo-600" />
                     <div>
-                      <h4 className="text-base font-semibold text-stone-900">6. 簽署集團聘僱合約書</h4>
-                      <p className="text-xs text-stone-500">線上合約簽核，請確認合約條款與各項約定事項後，執行數位安全簽章</p>
+                      <h4 className="text-base font-semibold text-stone-900">6. 簽署?��??�僱?��???/h4>
+                      <p className="text-xs text-stone-500">線�??��?簽核，�?確�??��?條款?��??��?定�??��?，執行數位�??�簽�?/p>
                     </div>
                   </div>
 
                   {(() => {
-                    const dObj = employee.onboardDate ? new Date(employee.onboardDate) : new Date();
+                    const dObj = OnboardEmployee.onboardDate ? new Date(OnboardEmployee.onboardDate) : new Date();
                     const rocYear = isNaN(dObj.getTime()) ? 115 : dObj.getFullYear() - 1911;
                     const rocMonth = isNaN(dObj.getTime()) ? 6 : dObj.getMonth() + 1;
                     const rocDay = isNaN(dObj.getTime()) ? 15 : dObj.getDate();
-                    const companyDetails = getCompanyDetails(employee);
+                    const companyDetails = getCompanyDetails(OnboardEmployee);
                     return (
                       <div className="border border-stone-300 bg-[#FCFBF7] rounded-2xl p-6 md:p-8 space-y-6 max-h-[500px] overflow-y-auto text-stone-800 font-sans text-xs leading-relaxed shadow-inner border-t-4 border-t-amber-805">
                         <div className="space-y-2 text-center pb-2">
@@ -2201,159 +2185,141 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             {companyDetails.name}
                           </h2>
                           <h3 className="text-sm font-bold text-stone-850 tracking-widest border-b border-stone-300 pb-4">
-                            聘 僱 合 約 書
-                          </h3>
+                            ??????�???                          </h3>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-medium text-stone-900 leading-loose">
                           <div className="flex items-center gap-1.5 md:justify-end">
                             <div>
-                             立契約人：<span className="text-stone-900 font-bold border-b border-stone-500 px-2">{companyDetails.name}</span>(以下簡稱甲方)
+                             立�?約人�?span className="text-stone-900 font-bold border-b border-stone-500 px-2">{companyDetails.name}</span>(以�?簡稱?�方)
                             </div>
                           </div>
                           <div className="flex items-start gap-1.5 md:justify-end">
-                             立契約人：<span className="border-b border-stone-300 font-bold text-indigo-700 px-4 py-0.5 bg-slate-50 rounded"> {personalForm.name || employee.personalData?.name || employee.name || '未填寫'}</span>(以下簡稱乙方)
+                             立�?約人�?span className="border-b border-stone-300 font-bold text-indigo-700 px-4 py-0.5 bg-slate-50 rounded"> {personalForm.name || OnboardEmployee.personalData?.name || OnboardEmployee.name || '?�填�?}</span>(以�?簡稱乙方)
                           </div>
                         </div>
 
                         <p className="mt-4 font-semibold text-stone-900 leading-relaxed bg-[#FAF6F0] p-3 rounded-lg border border-dashed border-[#8D1B1B]/15">
-                          茲因甲方僱用乙方為員工，雙方同意訂立本契約，共同遵守約定條款如下：
-                        </p>
+                          ?��??�方?�用乙方?�員工�??�方?��?訂�??��?約�??��??��?約�?條款如�?�?                        </p>
 
                         <ol className="space-y-5 text-stone-800 text-[11px] leading-relaxed">
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">一、契約期間及試用期：</strong>
-                            本契約自中華民國 <strong>{rocYear}</strong> 年 <strong>{rocMonth}</strong> 月 <strong>{rocDay}</strong> 日起。試用期間為 
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">一?��?約�??��?試用?��?</strong>
+                            ?��?約自中華民�? <strong>{rocYear}</strong> �?<strong>{rocMonth}</strong> ??<strong>{rocDay}</strong> ?�起?�試?��??�為 
                             <span className="font-bold border-b border-stone-400 px-3 py-0.5 bg-stone-100 rounded text-stone-900 mx-1 inline-block selection:bg-indigo-200">
-                              {employee.contractProbationMonths || '三'}
+                              {OnboardEmployee.contractProbationMonths || '�?}
                             </span>
-                            個月，試用期間得隨時終止契約，試用期滿考核不合格者，依勞基法規定辦理。乙方於試用期間如欲離職，應於七日前預告。若有必要，試用期間可再展延一期。
-                          </li>
+                            ?��?，試?��??��??��?終止契�?，試?��?滿考核不�??�者�?依�??��?規�?辦�??��??�於試用?��?如欲?�職，�??��??��??��??�若?��?要�?試用?��??��?展延一?��?                          </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">二、工作項目：</strong>
-                            擔任 <strong>{employee.department || '餐飲服務'}</strong> 之 <strong>{employee.title || '服務專員'}</strong> 工作。
-                          </li>
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">二、工作�??��?</strong>
+                            ?�任 <strong>{OnboardEmployee.department || '餐飲?��?'}</strong> �?<strong>{OnboardEmployee.title || '?��?專員'}</strong> 工�???                          </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">三、工作規則：</strong>
-                            乙方同意遵守甲方制定之工作規則及規章制度。
-                          </li>
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">三、工作�??��?</strong>
+                            乙方?��??��??�方?��?之工作�??��?規�??�度??                          </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">四、工作地點：</strong>
-                            乙方接受在 <span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50">{employee.contractWorkLocation || '君品酒店 (台北) (台北市承德路一段3號)'}</span> 地方擔任約定之工作。
-                          </li>
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">?�、工作地點�?</strong>
+                            乙方?��???<span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50">{OnboardEmployee.contractWorkLocation || '?��??��? (?��?) (?��?市承德路一�???'}</span> ?�方?�任約�?之工作�?                          </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">五、工作轉換：</strong>
-                            甲方因營業或工作需要，得適當派任、兼任、轉調或輪調乙方至其他班別、職務或至各地分支機構，乙方同意接受甲方之調動。
-                          </li>
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">五、工作�??��?</strong>
+                            ?�方?��?業�?工�??�要�?得適?�派任、兼任、�?調�?輪調乙方?�其他班?�、職?��??��??��??��?構�?乙方?��??��??�方之調?��?                          </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">六、工作時間：</strong>
-                            乙方同意每日正常工作時間為依公司規定之起迄時間辦理。
-                            如因業務所需得採四週變形工時，甲方得彈性調整休假及工時之起迄，並得於事前公告周知。
-                            甲方因業務需要得延長乙方延長工作時間時，其延時工資之給付，依勞動基準法之規定辦理，惟應依甲方規定之加班程序辦理，並應加班前提出申請經核後始得計入加班費。出勤紀錄不實者應予註銷。若乙方為另行約定薪資給付方式人員，則依工作達成狀況，自行調整工作時間，不適用前揭之規定。
-                          </li>
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">?�、工作�??��?</strong>
+                            乙方?��?每日�?��工�??��??��??�司規�?之起迄�??�辦?��?                            如�?業�??�?�得採?�週�?形工?��??�方得�??�調?��??��?工�?之起迄�?並�??��??�公?�周?��?                            ?�方?�業?��?要�?延長乙方延長工�??��??��??�延?�工資�?給�?，�??��??��?法�?規�?辦�?，�??��??�方規�?之�??��?序辦?��?並�??�班?��??�申請�??��?始�?計入?�班費。出?��??��?實者�?予註?�。若乙方?�另行�?定薪資給付方式人?��??��?工�??��??�況�??��?調整工�??��?，�??�用?�揭之�?定�?                          </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">七、休假排定：</strong>
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">七、�??��?定�?</strong>
                             <div className="space-y-2.5 mt-2 bg-stone-50 border border-stone-150 rounded-xl p-3 text-[11px] text-stone-800">
-                              {(employee.contractLeaveOption || 'biweekly') === 'monthly' ? (
+                              {(OnboardEmployee.contractLeaveOption || 'biweekly') === 'monthly' ? (
                                 <div className="flex items-start gap-2">
                                   <span className="w-1.5 h-1.5 rounded-full bg-[#8D1B1B] mt-1.5 flex-shrink-0"></span>
                                   <span>
-                                    依雙方約定於符合法令規定範圍內，由甲方排定休假方式月排休 <span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50 font-mono">{employee.contractLeavedays || '8-10'}</span> 日。
-                                  </span>
+                                    依�??��?定於符�?法令規�?範�??��??�甲?��?定�??�方式�??��? <span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50 font-mono">{OnboardEmployee.contractLeavedays || '8-10'}</span> ?��?                                  </span>
                                 </div>
                               ) : (
                                 <div className="flex items-start gap-2">
                                   <span className="w-1.5 h-1.5 rounded-full bg-[#8D1B1B] mt-1.5 flex-shrink-0"></span>
-                                  <span>於符合法定工作時數規定之前提，採 <strong>週休二日制</strong>。</span>
+                                  <span>?�符?��?定工作�??��?定�??��?，採 <strong>?��?二日??/strong>??/span>
                                 </div>
                               )}
                               <p className="text-[10px] text-stone-500 border-t border-stone-200/60 pt-2 leading-relaxed">
-                                甲方因業務需要乙方配合採排班排休或畫夜輪班方式工作，且同意甲方得將休假日、國定假日與其他工作日挪移，挪移後之休假日、國定假日已成正常工作日，乙方於休假日出勤不生加倍工資。
-                              </p>
+                                ?�方?�業?��?要�??��??�採?�班?��??�畫夜輪?�方式工作�?且�??�甲?��?將�??�日?��?定�??��??��?工�??�挪移�??�移後�?休�??�、�?定�??�已?�正常工作日，�??�於休�??�出?��??��??�工資�?                              </p>
                             </div>
                           </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">八、工資議定：</strong>
-                            次月 5 日為發薪日 (如遇例假日則提前至前一工作日)。薪資作業採取保密制，不得討論或洩漏第三者。若乙方離職須完成離職交接手續，無法完成離職交接手續，離職當月薪資改依公司規定之日期及方式發放。
-                            <div className="space-y-2 mt-2 bg-stone-50 border border-stone-150 rounded-xl p-3 text-[11px] text-stone-800">
-                              {(employee.contractSalaryType || 'monthly') === 'monthly' && (
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">?�、工資議定�?</strong>
+                            次�? 5 ?�為?�薪??(如�?例�??��??��??��?一工�????�薪資�?業採?��?密制，�?得�?論�?洩�?第�??�。若乙方?�職?��??�離?�交?��?續�??��?完�??�職交接?��?，離?�當?�薪資改依公?��?定�??��??�方式發?��?                            <div className="space-y-2 mt-2 bg-stone-50 border border-stone-150 rounded-xl p-3 text-[11px] text-stone-800">
+                              {(OnboardEmployee.contractSalaryType || 'monthly') === 'monthly' && (
                                 <div className="flex items-center gap-1.5 font-sans">
                                   <span className="w-1.5 h-1.5 rounded-full bg-[#8D1B1B] flex-shrink-0"></span>
                                   <span>
-                                    雙方議定為<strong>月薪制</strong>，每月薪津為新台幣 <span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50 font-mono text-xs">{employee.contractSalaryAmount || '36,000'}</span> 元。
-                                  </span>
+                                    ?�方議�???strong>?�薪??/strong>，�??�薪津為?�台�?<span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50 font-mono text-xs">{OnboardEmployee.contractSalaryAmount || '36,000'}</span> ?��?                                  </span>
                                 </div>
                               )}
-                              {(employee.contractSalaryType || 'monthly') === 'daily' && (
+                              {(OnboardEmployee.contractSalaryType || 'monthly') === 'daily' && (
                                 <div className="flex items-center gap-1.5 font-sans">
                                   <span className="w-1.5 h-1.5 rounded-full bg-[#8D1B1B] flex-shrink-0"></span>
                                   <span>
-                                    雙方議定為<strong>日薪制</strong>，每日薪津為新台幣 <span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50 font-mono text-xs">{employee.contractSalaryAmount || '1,800'}</span> 元。
-                                  </span>
+                                    ?�方議�???strong>?�薪??/strong>，�??�薪津為?�台�?<span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50 font-mono text-xs">{OnboardEmployee.contractSalaryAmount || '1,800'}</span> ?��?                                  </span>
                                 </div>
                               )}
-                              {(employee.contractSalaryType || 'monthly') === 'hourly' && (
+                              {(OnboardEmployee.contractSalaryType || 'monthly') === 'hourly' && (
                                 <div className="flex items-center gap-1.5 font-sans">
                                   <span className="w-1.5 h-1.5 rounded-full bg-[#8D1B1B] flex-shrink-0"></span>
                                   <span>
-                                    雙方議定為<strong>時薪制</strong>，每小時薪津為新台幣 <span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50 font-mono text-xs">{employee.contractSalaryAmount || '190'}</span> 元。
-                                  </span>
+                                    ?�方議�???strong>?�薪??/strong>，�?小�??�津?�新?�幣 <span className="text-stone-950 font-bold border-b border-stone-300 px-2 bg-stone-50 font-mono text-xs">{OnboardEmployee.contractSalaryAmount || '190'}</span> ?��?                                  </span>
                                 </div>
                               )}
                             </div>
                           </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">九、智慧財產權約定：</strong>
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">九、智?�財?��?約�?�?/strong>
                             <div className="space-y-1.5 mt-1 pl-2">
-                              <p>（一） 乙方確認於任職期間提供之勞務、資訊絕無侵害前任公司或其他第三人之智慧財產權、營業秘密或應履行之保密義務（包括但不限於競業禁止）。</p>
-                              <p>（二） 乙方並保證於任職期間所提供或完成之智慧財產成果，均係由乙方自行創作，且絕無抄襲或仿冒他人之著作，並確實尊重他人之智慧財產權。</p>
-                              <p>（三） 於任職期間，於職務上所完成之著作，同意以甲方或其代表人為著作人，相關之著作人格權及著作財產權皆歸甲方自始所有。</p>
+                              <p>（�?�?乙方確�??�任?��??��?供�??��??��?訊�??�侵害�?任公?��??��?第�?人�??�慧財產權、�?業�?密�??�履行�?保�?義�?（�??��?不�??�競業�?止�???/p>
+                              <p>（�?�?乙方並�?證於任職?��??�?��??��??��??�慧財產?��?，�?係由乙方?��??��?，�?絕無?�襲?�仿?��?人�??��?，並確實尊�?他人之智?�財?��???/p>
+                              <p>（�?�??�任?��??��??�職?��??�完�?之�?作�??��?以甲?��??�代表人?��?作人，相?��??��?人格權�??��?財產權�?歸甲?�自始�??��?/p>
                             </div>
                           </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">十、保密條款：</strong>
-                            乙方保證任職或受僱研究期間不使用、利用、複製、保留因參與工作任務所取得、知悉之任何經營資訊、營業秘密、機密文件，亦不以任何形式，直接或間接對第三人洩露、移轉或評論，或提供第三人使用。離職後亦負有上述保密義務，並同意於離職時簽署「離職申請單」中之保密相關約定。如有違反致甲方發生損失，同意負擔賠償責任。
-                          </li>
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">?�、�?密�?款�?</strong>
+                            乙方保�?任職?��??��?究�??��?使用?�利?�、�?製、�??��??��?工�?任�??�?��??�知?��?任�?經�?資�??��?業�?密、�?密�?件�?亦�?以任何形式�??�接?��??��?第�?人洩?�、移轉�?評�?，�??��?第�?人使?�。離?��?亦�??��?述�?密義?��?並�??�於?�職?�簽署「離?�申請單?�中之�?密相?��?定。�??��??�致?�方?��??�失，�??��??��??�責任�?                          </li>
 
                           <li>
-                            <strong className="text-stone-950 text-xs font-bold block mb-1">十一、個資保護：</strong>
-                            乙方因職務涉及之職務涉及及蒐集、處理、利用個人資料之行為者，乙方擔保遵循我國「個人資料保護法」及歐盟「資料保護一般規則(General Data Protection Regulation, GDPR)」相關規定，並同意恪守職責遵守甲方關於個人資料保護所訂定之相關制度、辦法及措施。
-                          </li>
+                            <strong className="text-stone-950 text-xs font-bold block mb-1">?��??�個�?保護�?/strong>
+                            乙方?�職?��??��??��?涉�??��??�、�??�、利?�個人資�?之�??�者�?乙方?��??�循?��??�個人資�?保護法」�?歐�??��??��?護�??��???General Data Protection Regulation, GDPR)?�相?��?定�?並�??�恪守職責遵守甲?��??�個人資�?保護?�訂�?之相?�制度、辦法�??�施??                          </li>
                         </ol>
 
                         {/* Sigs area */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-stone-300 font-sans text-[10px] text-stone-600 mt-6 leading-loose">
                           <div className="space-y-1">
-                            <strong className="text-stone-900 text-xs font-bold block mb-1.5">甲方 (立契約人)</strong>
-                            <div>公司名稱：{companyDetails.name}</div>
-                            <div>統一編號：{companyDetails.taxId}</div>
-                            <div>負責人：{companyDetails.owner}</div>
-                            <div>公司地址：{companyDetails.address}</div>
+                            <strong className="text-stone-900 text-xs font-bold block mb-1.5">?�方 (立�?約人)</strong>
+                            <div>?�司?�稱：{companyDetails.name}</div>
+                            <div>統�?編�?：{companyDetails.taxId}</div>
+                            <div>負責人�?{companyDetails.owner}</div>
+                            <div>?�司?��?：{companyDetails.address}</div>
                           </div>
                           <div className="space-y-1 bg-indigo-50/20 border border-stone-150 p-3 rounded-xl">
-                            <strong className="text-stone-900 text-xs font-bold block mb-1.5">乙方 (立契約人)</strong>
-                            <div>乙方姓名：<strong className="text-indigo-700 font-bold text-xs">{personalForm.name || employee.personalData?.name || employee.name}</strong></div>
-                            <div>身分證號：<strong className="font-mono tracking-wider">{personalForm.idNumber || employee.personalData?.idNumber || '待補填個人基本資料'}</strong></div>
-                            <div>現設住址：{personalForm.contactAddress || employee.personalData?.contactAddress || '待補填個人基本資料'}</div>
-                            <div>簽署狀態：{employee.contractSigned ? (
+                            <strong className="text-stone-900 text-xs font-bold block mb-1.5">乙方 (立�?約人)</strong>
+                            <div>乙方姓�?�?strong className="text-indigo-700 font-bold text-xs">{personalForm.name || OnboardEmployee.personalData?.name || OnboardEmployee.name}</strong></div>
+                            <div>身�?證�?�?strong className="font-mono tracking-wider">{personalForm.idNumber || OnboardEmployee.personalData?.idNumber || '待�?填個人?�本資�?'}</strong></div>
+                            <div>?�設住�?：{personalForm.contactAddress || OnboardEmployee.personalData?.contactAddress || '待�?填個人?�本資�?'}</div>
+                            <div>簽署?�?��?{OnboardEmployee.contractSigned ? (
                               <span className="text-emerald-700 font-bold bg-emerald-100/60 px-1.5 py-0.5 rounded">
-                                已完成線上數位簽署 (生效)
+                                已�??��?上數位簽�?(?��?)
                               </span>
                             ) : (
-                              <span className="text-indigo-600 font-bold">待數位簽署</span>
+                              <span className="text-indigo-600 font-bold">待數位簽�?/span>
                             )}</div>
-                            {employee.contractSigned && (
+                            {OnboardEmployee.contractSigned && (
                               <div className="text-stone-400 mt-1">
-                                數位印鑑歸檔時間：{employee.contractDate}
+                                ?��??��?歸�??��?：{OnboardEmployee.contractDate}
                               </div>
                             )}
                           </div>
@@ -2362,29 +2328,28 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                     );
                   })()}
 
-                  {employee.contractSigned ? (
+                  {OnboardEmployee.contractSigned ? (
                     <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 p-5 rounded-2xl text-center text-xs space-y-3 flex flex-col items-center justify-center">
-                      <p className="font-bold">🎉 這是生效的網頁確認，您已在 <strong>{employee.contractDate}</strong> 執行合約確認簽署！</p>
+                      <p className="font-bold">?? ?�是?��??�網?�確認�??�已??<strong>{OnboardEmployee.contractDate}</strong> ?��??��?確�?簽署�?/p>
                       <button
                         type="button"
                         onClick={() => setPrintContractOpen(true)}
                         className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer"
                       >
                         <Printer className="w-3.5 h-3.5" />
-                        列印 / 匯出 A4 聘僱合約書 (PDF)
+                        ?�印 / ?�出 A4 ?�僱?��???(PDF)
                       </button>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-3 bg-stone-50 p-5 border border-stone-200 rounded-xl text-center">
                       <span className="text-xs text-stone-500">
-                        點擊下方進行確認，將以 <strong>{personalForm.name || employee.name}</strong> 的名義對合約進行數位認證並存檔。
-                      </span>
+                        點�?下方?��?確�?，�?�?<strong>{personalForm.name || OnboardEmployee.name}</strong> ?��?義�??��??��??��?認�?並�?檔�?                      </span>
                       <button
                         type="button"
                         onClick={handleContractSign}
                         className="px-6 py-3 bg-indigo-600 text-white hover:bg-indigo-700 font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
                       >
-                        我同意並完成聘僱合約簽署
+                        ?��??�並完�??�僱?��?簽署
                       </button>
                     </div>
                   )}
@@ -2397,13 +2362,13 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="flex items-center gap-2 pb-4 border-b border-stone-100">
                     <Users className="w-5 h-5 text-indigo-600" />
                     <div>
-                      <h4 className="text-base font-semibold text-stone-900">7. 簽署集團職員保證書 (人事聯保)</h4>
-                      <p className="text-xs text-stone-500">請填寫您的連帶保證人(聯保人)基本聯絡資訊，並完成數位特保認證</p>
+                      <h4 className="text-base font-semibold text-stone-900">7. 簽署?��??�員保�???(人�??��?)</h4>
+                      <p className="text-xs text-stone-500">請填寫您?��?��保�?�??��?�??�本?�絡資�?，並完�??��??��?認�?</p>
                     </div>
                   </div>
 
                   {(() => {
-                    const companyDetails = getCompanyDetails(employee);
+                    const companyDetails = getCompanyDetails(OnboardEmployee);
                     return (
                       <div className="space-y-6">
                         <div className="border border-stone-300 bg-[#FCFBF7] rounded-2xl p-6 md:p-8 max-h-[420px] overflow-y-auto text-stone-850 font-sans text-xs leading-relaxed shadow-inner border-t-4 border-t-amber-805 space-y-4">
@@ -2412,34 +2377,31 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                               {companyDetails.name}
                             </h2>
                             <h3 className="text-sm font-bold text-stone-850 tracking-widest border-b border-stone-300 pb-4">
-                              職 員 保 證 書
-                            </h3>
+                              ????�?�???                            </h3>
                           </div>
 
                           <p className="font-semibold text-stone-900 leading-relaxed bg-[#FAF6F0] p-3 rounded-lg border border-dashed border-[#8D1B1B]/15 text-justify">
-                            立保證書人茲保證 <strong>{personalForm.name || employee.name}</strong> 君（以下簡稱被保證人）在貴公司（<strong>{companyDetails.name}</strong>）擔任職務期間，遵守貴公司所訂定之一切規章。倘有違背情事或侵佔公款、財物及其他危害公司行為，致損害於貴公司時，除被保證人應受法律制裁及公司處分外，保證人同意放棄先訴抗辯權，對被保證人之債務負完全賠償責任。
-                          </p>
+                            立�?證書人茲保�? <strong>{personalForm.name || OnboardEmployee.name}</strong> ?��?以�?簡稱被�?證人）在貴公?��?<strong>{companyDetails.name}</strong>）�?任職?��??��??��?貴公?��?訂�?之�??��?章。倘�??��??��??�侵佔公款、財?��??��??�害?�司行為，致?�害?�貴?�司?��??�被保�?人�??��?律制裁�??�司?��?外�?保�?人�??�放棄�?訴�?辯�?，�?被�?證人之債?��?完全賠�?責任??                          </p>
 
                           <div className="space-y-3">
-                            <h4 className="font-bold text-stone-950 border-b border-stone-200 pb-1 text-xs">【保證規約摘要】</h4>
+                            <h4 className="font-bold text-stone-950 border-b border-stone-200 pb-1 text-xs">?��?證�?約�?要�?/h4>
                             <p className="text-[11px] text-stone-600 leading-normal pl-2">
-                              1. 保證人須為年滿二十歲以上有正當職業及固定住所之個人。<br />
-                              2. 被保證人之配偶與同公司職員不得互為保證人。<br />
-                              3. 保證期間如有住址變更、離職、退保需求，應第一時間以書面形式申報。
-                            </p>
+                              1. 保�?人�??�年滿�??�歲以�??�正?�職業�??��?住�?之個人??br />
+                              2. 被�?證人之�??��??�公?�職?��?得�??��?證人??br />
+                              3. 保�??��?如�?住�?變更?�離?�、退保�?求�??�第一?��?以書?�形式申?��?                            </p>
                           </div>
                         </div>
 
                         {/* Guarantor Info Inputs */}
-                        {!employee.guarantorSigned && (
+                        {!OnboardEmployee.guarantorSigned && (
                           <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 md:p-5 space-y-4">
                             <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 mb-1">
-                              <span className="text-xs font-bold text-slate-800">✍️ 填寫連帶保證人(聯保人)基本個資</span>
+                              <span className="text-xs font-bold text-slate-800">?��? 填寫??��保�?�??��?�??�本?��?</span>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div>
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保證人姓名 <span className="text-rose-500">*</span></label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保�?人�???<span className="text-rose-500">*</span></label>
                                 <input
                                   type="text"
                                   value={guarantorForm.guarantorName}
@@ -2447,12 +2409,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, guarantorName: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="請輸入姓名"
+                                  placeholder="請輸?��???
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保證人出生年月日 <span className="text-rose-500">*</span></label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保�?人出?�年?�日 <span className="text-rose-500">*</span></label>
                                 <input
                                   type="text"
                                   value={guarantorForm.birthday}
@@ -2460,12 +2422,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, birthday: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="例：民國70年5月20日"
+                                  placeholder="例�?民�?70�???0??
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保證人身分證號 <span className="text-rose-500">*</span></label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保�?人身?��???<span className="text-rose-500">*</span></label>
                                 <input
                                   type="text"
                                   value={guarantorForm.idNumber}
@@ -2473,12 +2435,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, idNumber: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="例：A123456789"
+                                  placeholder="例�?A123456789"
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                               <div className="md:col-span-2">
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保證人現住地址 <span className="text-rose-500">*</span></label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保�?人現住地?� <span className="text-rose-500">*</span></label>
                                 <input
                                   type="text"
                                   value={guarantorForm.address}
@@ -2486,12 +2448,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, address: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="請核實輸入完整地址"
+                                  placeholder="請核實輸?��??�地?�"
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保證人聯絡電話 <span className="text-rose-500">*</span></label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">保�?人聯絡電�?<span className="text-rose-500">*</span></label>
                                 <input
                                   type="text"
                                   value={guarantorForm.phone}
@@ -2499,12 +2461,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, phone: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="請輸入手機或住家電話"
+                                  placeholder="請輸?��?機�?住家?�話"
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">與被保證人關係 <span className="text-rose-500">*</span></label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">?�被保�?人�?�?<span className="text-rose-500">*</span></label>
                                 <input
                                   type="text"
                                   value={guarantorForm.relationship}
@@ -2512,12 +2474,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, relationship: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="如：父、母、兄弟、朋友..."
+                                  placeholder="如�??�、�??��?弟、�???.."
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">服務機構名稱</label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">?��?機�??�稱</label>
                                 <input
                                   type="text"
                                   value={guarantorForm.companyName}
@@ -2525,12 +2487,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, companyName: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="例：台灣水泥股份有限公司"
+                                  placeholder="例�??�灣水泥?�份?��??�司"
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">機構擔任職位</label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">機�??�任?��?</label>
                                 <input
                                   type="text"
                                   value={guarantorForm.companyTitle}
@@ -2538,12 +2500,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, companyTitle: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="例：經理、課員..."
+                                  placeholder="例�?經�??�課??.."
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                               <div className="md:col-span-2">
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">機構服務地址</label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">機�??��??��?</label>
                                 <input
                                   type="text"
                                   value={guarantorForm.companyAddress}
@@ -2551,12 +2513,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, companyAddress: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="請輸入保證人服務公司的地址"
+                                  placeholder="請輸?��?證人?��??�司?�地?�"
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">機構聯絡電話</label>
+                                <label className="block text-[11px] font-semibold text-stone-600 mb-1">機�??�絡?�話</label>
                                 <input
                                   type="text"
                                   value={guarantorForm.companyPhone}
@@ -2564,43 +2526,40 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                                     const updated = { ...guarantorForm, companyPhone: e.target.value };
                                     setGuarantorForm(updated);
                                   }}
-                                  placeholder="例：02-21234567"
+                                  placeholder="例�?02-21234567"
                                   className="w-full text-stone-950 px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded focus:border-indigo-500 focus:outline-none"
                                 />
                               </div>
                             </div>
                             <div className="flex justify-start text-[10px] text-stone-500 italic">
-                              * 保證規約：保證人應隨同本保證書交付身份證（影本一份）至人事單位核對留底存卷。
-                            </div>
+                              * 保�?規�?：�?證人?�隨?�本保�??�交付身份�?（影?��?份�??�人事單位核對�?底�??��?                            </div>
                           </div>
                         )}
                       </div>
                     );
                   })()}
 
-                  {employee.guarantorSigned ? (
+                  {OnboardEmployee.guarantorSigned ? (
                     <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 p-5 rounded-2xl text-center text-xs space-y-3 flex flex-col items-center justify-center">
-                      <p className="font-bold">🎉 這是生效的網頁確認，您已在 <strong>{employee.guarantorDate}</strong> 執行職員保證書簽署！</p>
+                      <p className="font-bold">?? ?�是?��??�網?�確認�??�已??<strong>{OnboardEmployee.guarantorDate}</strong> ?��??�員保�??�簽署�?</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-3 bg-stone-50 p-5 border border-stone-200 rounded-xl text-center">
                       <span className="text-xs text-stone-500">
-                        點擊下方進行正式確認，系統將建立加密的數位簽署存檔，並將該簽署生效職員保證書並留檔於HR資料庫中。
-                      </span>
+                        點�?下方?��?�??確�?，系統�?建�??��??�數位簽署�?檔�?並�?該簽署�??�職?��?證書並�?檔於HR資�?庫中??                      </span>
                       <div className="flex gap-3">
                         <button
                           type="button"
                           onClick={() => handleGuarantorSign(false)}
                           className="px-5 py-2.5 bg-stone-200 text-stone-700 hover:bg-stone-300 font-semibold text-xs rounded-xl transition cursor-pointer"
                         >
-                          暫存保證人資訊
-                        </button>
+                          ?��?保�?人�?�?                        </button>
                         <button
                           type="button"
                           onClick={() => handleGuarantorSign(true)}
                           className="px-6 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
                         >
-                          我同意並完成職員保證書簽署 (前往下一步)
+                          ?��??�並完�??�員保�??�簽�?(?��?下�?�?
                         </button>
                       </div>
                     </div>
@@ -2614,14 +2573,14 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <div className="flex items-center gap-2 pb-4 border-b border-stone-100">
                     <FileText className="w-5 h-5 text-indigo-600" />
                     <div>
-                      <h4 className="text-base font-semibold text-stone-900">8. 簽署職工服務約定</h4>
-                      <p className="text-xs text-stone-500">線上職工服務約定，承諾遵守以客為尊、試用期約定、個資守則及保密條款等規範</p>
+                      <h4 className="text-base font-semibold text-stone-900">8. 簽署?�工?��?約�?</h4>
+                      <p className="text-xs text-stone-500">線�??�工?��?約�?，承諾遵守以客為尊、試?��?約�??�個�?守�??��?密�?款�?規�?</p>
                     </div>
                   </div>
 
                   {(() => {
-                    const companyDetails = getCompanyDetails(employee);
-                    const dObj = employee.onboardDate ? new Date(employee.onboardDate) : new Date();
+                    const companyDetails = getCompanyDetails(OnboardEmployee);
+                    const dObj = OnboardEmployee.onboardDate ? new Date(OnboardEmployee.onboardDate) : new Date();
                     const rocYear = isNaN(dObj.getTime()) ? 115 : dObj.getFullYear() - 1911;
                     const rocMonth = isNaN(dObj.getTime()) ? 6 : dObj.getMonth() + 1;
                     const rocDay = isNaN(dObj.getTime()) ? 15 : dObj.getDate();
@@ -2632,49 +2591,45 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                             {companyDetails.name}
                           </h2>
                           <h3 className="text-sm font-bold text-stone-850 tracking-widest border-b border-stone-300 pb-4">
-                            職 工 服 務 約 定
-                          </h3>
+                            ??�?????�?�?                          </h3>
                         </div>
 
                         <div className="space-y-4 text-xs font-serif leading-relaxed text-justify">
-                          <p><strong>第一條：</strong>本公司職工任職期間須以客為尊，並遵守本公司各項規章。</p>
-                          <p><strong>第二條：</strong>職工同意自實際工作日起九十天內為試用期間，在此期間如工作能力不足或服務態度不滿意或為本公司評估無法勝任所應徵之職務，得依相關規定停止試用。</p>
-                          <p><strong>第三條：</strong>職工應依「個人資料保護法」不得將顧客或本公司員工之個人資料提供予無關之第三人。</p>
-                          <p><strong>第四條：</strong>就職工所填寫個人資料，本公司、分公司及關係企業（下稱本公司）將於職工聘僱期間，於中華民國地區，作為人事管理、組織調整、及與營運有關之使用。</p>
-                          <p><strong>第五條：</strong>本公司依「個人資料保護法」不會提供予無關之第三人。職工依「個人資料保護法」並可向本公司為個人資料查詢、請求閱覽、補充或更正或請求交付複製本。另，雖亦可請求停止蒐集、處理或利用及刪除，但於聘僱關係存續期間，或聘僱關係終止後，本公司因執行職務 or 業務所必須者，職工無權請求停止蒐集、處理或利用及刪除。</p>
+                          <p><strong>第�?條�?</strong>?�公?�職工任?��??��?以客?��?，並?��??�公?��??��?章�?/p>
+                          <p><strong>第�?條�?</strong>?�工?��??�實?�工作日起�??�天?�為試用?��?，在此�??��?工�??��?不足?��??��?度�?滿�??�為?�公?��?估無法�?任�??�徵之職?��?得�??��?規�??�止試用??/p>
+                          <p><strong>第�?條�?</strong>?�工?��??�個人資�?保護法」�?得�?顧客?�本?�司?�工之個人資�??��?予無?��?第�?人�?/p>
+                          <p><strong>第�?條�?</strong>就職工�?填寫?�人資�?，本?�司?��??�司?��?係�?業�?下稱?�公?��?將於?�工?�僱?��?，於中華民�??��?，�??�人事管?�、�?織調?�、�??��??��??��?使用??/p>
+                          <p><strong>第�?條�?</strong>?�公?��??�個人資�?保護法」�??��?供�??��?之第三人?�職工�??�個人資�?保護法」並?��??�公?�為?�人資�??�詢?��?求閱覽、�??��??�正?��?求交付�?製本?�另，�?亦可請�??�止?��??��??��??�用?�刪?��?但於?�僱?��?存�??��?，�??�僱?��?終止後�??�公?��??��??��? or 業�??�必�??��??�工?��?請�??�止?��??��??��??�用?�刪?��?/p>
                           
                           <div className="p-3 bg-stone-50 border border-stone-150 rounded-xl text-stone-900 font-bold mt-2 leading-relaxed">
-                            以上守則，經本人（{personalForm.name || employee.name}）逐條仔細閱讀並為同意。本人願意遵守，如有違反，願依照本公司員工手冊第十二條職工獎懲辦法處理，絕無異議。
-                          </div>
+                            以�?守�?，�??�人（{personalForm.name || OnboardEmployee.name}）逐�?仔細?��?並為?��??�本人�??�遵守�?如�??��?，�?依照?�公?�員工�??�第?��?條職工�??�辦法�??��?絕無?�議??                          </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 border-t border-stone-200 pt-4 text-[10px] text-stone-500">
                           <div>
-                            立同意書人：<strong className="text-indigo-700 text-xs border-b border-stone-300 px-3 pl-1 inline-block">{personalForm.name || employee.name}</strong>（簽章）
+                            立�??�書人�?<strong className="text-indigo-700 text-xs border-b border-stone-300 px-3 pl-1 inline-block">{personalForm.name || OnboardEmployee.name}</strong>（簽章�?
                           </div>
                           <div className="text-right font-bold mt-1.5 font-sans whitespace-nowrap">
-                            中華民國 {rocYear} 年 {rocMonth} 月 {rocDay} 日
-                          </div>
+                            中華民�? {rocYear} �?{rocMonth} ??{rocDay} ??                          </div>
                         </div>
                       </div>
                     );
                   })()}
 
-                  {employee.serviceSigned ? (
+                  {OnboardEmployee.serviceSigned ? (
                     <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 p-5 rounded-2xl text-center text-xs space-y-3 flex flex-col items-center justify-center">
-                      <p className="font-bold">🎉 這是生效的網頁確認，您已在 <strong>{employee.serviceDate}</strong> 職工服務約定簽署！</p>
+                      <p className="font-bold">?? ?�是?��??�網?�確認�??�已??<strong>{OnboardEmployee.serviceDate}</strong> ?�工?��?約�?簽署�?/p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-3 bg-stone-50 p-5 border border-stone-200 rounded-xl text-center">
                       <span className="text-xs text-stone-500">
-                        點擊下方進行確認，將以 <strong>{personalForm.name || employee.name}</strong> 的名義對本服務約定進行數位認證並備存檔案。
-                      </span>
+                        點�?下方?��?確�?，�?�?<strong>{personalForm.name || OnboardEmployee.name}</strong> ?��?義�??��??��?定進�??��?認�?並�?存�?案�?                      </span>
                       <button
                         type="button"
                         onClick={handleServiceSign}
                         className="px-6 py-3 bg-indigo-600 text-white hover:bg-indigo-700 font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
                       >
-                        我已詳細閱讀並同意遵守本職工服務約定
+                        ?�已詳細?��?並�??�遵守本?�工?��?約�?
                       </button>
                     </div>
                   )}
@@ -2686,11 +2641,10 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                 <div className="bg-white border border-[#E9E1D6] rounded-2xl p-12 text-center space-y-4">
                   <CheckCircle className="w-12 h-12 text-[#8D1B1B] mx-auto opacity-70 animate-pulse" />
                   <h4 className="text-sm font-semibold text-stone-800">
-                    {employee.status === 'completed' ? '任務均已大功告成！' : '請選擇一個任務開始填答'}
+                    {OnboardEmployee.status === 'completed' ? '任�??�已大�??��?�? : '請選?��??�任?��?始填�?}
                   </h4>
                   <p className="text-xs text-stone-500 leading-relaxed max-w-sm mx-auto">
-                    左側清單顯示目前報到資料的填寫進度，您可以點選其中一項以修改或是填寫您的資料。
-                  </p>
+                    左側清單顯示?��??�到資�??�填寫進度，您?�以點選?�中一?�以修改?�是填寫?��?資�???                  </p>
                 </div>
               )}
 
@@ -2705,26 +2659,25 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
             <div className="flex items-center gap-2 pb-4 border-b border-stone-100">
               <BookOpen className="w-5 h-5 text-[#8D1B1B]" />
               <div>
-                <h4 className="text-base font-semibold text-stone-900">雲朗觀光新進同仁入職教育訓練導讀</h4>
+                <h4 className="text-base font-semibold text-stone-900">?��?觀?�新?��?仁入?��??��?練�?讀</h4>
                 <p className="text-xs text-stone-500">
-                  幫助您快速跨越起步期，融入雲朗觀光的文化及環境
-                </p>
+                  幫助?�快?�跨越起步�?，�??�雲?��??��??��??�環�?                </p>
               </div>
             </div>
 
-            {/* 教學導覽 Section */}
+            {/* ?�學導覽 Section */}
             <div className="bg-[#FAF8F5] border border-[#E9E1D6] rounded-2xl p-5 md:p-6 space-y-4">
               <div className="flex items-center gap-2 select-none">
                 <span className="text-xs font-bold text-[#8D1B1B] px-2.5 py-0.5 bg-[#8D1B1B]/10 rounded-md font-sans">
-                  教學導覽
+                  ?�學導覽
                 </span>
-                <span className="text-xs font-medium text-stone-600">雲朗觀光培訓系統與人事請假系統操作說明</span>
+                <span className="text-xs font-medium text-stone-600">?��?觀?�培訓系統�?人�?請�?系統?��?說�?</span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                {/* 左側：雲朗知識庫 */}
+                {/* 左側：雲?�知識庫 */}
                 <div className="space-y-4 w-full max-w-md">
-                  {/* 雲朗知識庫連結 */}
+                  {/* ?��??��?庫�?? */}
                   <div className="w-full">
                     <a 
                       href="https://elearning.ldchotels.com/cltcms/" 
@@ -2737,45 +2690,43 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                           <BookOpen className="w-5 h-5 animate-pulse" />
                         </div>
                         <div className="text-left">
-                          <span className="block text-xs font-bold text-[#8D1B1B]">雲朗知識庫</span>
-                          <span className="block text-[10px] text-stone-400 font-mono">eHRD 線上培訓及學習平台↗</span>
+                          <span className="block text-xs font-bold text-[#8D1B1B]">?��??��?�?/span>
+                          <span className="block text-[10px] text-stone-400 font-mono">eHRD 線�??��??�學習平?��?</span>
                         </div>
                       </div>
-                      <span className="text-xs text-[#8D1B1B] font-bold group-hover:translate-x-1 transition-transform">→</span>
+                      <span className="text-xs text-[#8D1B1B] font-bold group-hover:translate-x-1 transition-transform">??/span>
                     </a>
                   </div>
 
-                  {/* 下面放置說明 */}
+                  {/* 下面?�置說�? */}
                   <div className="text-xs text-stone-600 bg-white border border-[#E9E1D6]/60 p-6 rounded-xl w-full space-y-2 font-sans shadow-sm">
                     <div className="flex items-center gap-1.5 font-bold text-stone-800 border-b border-stone-100 pb-1.5 mb-1.5 text-[11px] select-none">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#8D1B1B]"></span>
-                      學習平台登入資訊：
-                    </div>
+                      學�?平台?�入資�?�?                    </div>
                     <div className="font-mono flex flex-col gap-1.5">
                       <div className="flex items-start gap-1">
-                        <span className="w-4 text-[#8D1B1B] font-bold">▪</span>
+                        <span className="w-4 text-[#8D1B1B] font-bold">??/span>
                         <div>
-                          <span className="font-sans font-semibold text-stone-500">登入帳號：</span>
-                          <span className="font-semibold text-stone-800 font-sans">員工編號</span>
+                          <span className="font-sans font-semibold text-stone-500">?�入帳�?�?/span>
+                          <span className="font-semibold text-stone-800 font-sans">?�工編�?</span>
                         </div>
                       </div>
                       <div className="flex items-start gap-1">
-                        <span className="w-4 text-[#8D1B1B] font-bold">▪</span>
+                        <span className="w-4 text-[#8D1B1B] font-bold">??/span>
                         <div>
-                          <span className="font-sans font-semibold text-stone-500">密碼：</span>
-                          <span className="font-semibold text-stone-800 font-sans">您的身分證字號(初始密碼)</span>
+                          <span className="font-sans font-semibold text-stone-500">密碼�?/span>
+                          <span className="font-semibold text-stone-800 font-sans">?��?身�?證�????��?密碼)</span>
                         </div>
                       </div>
                     </div>
                     <p className="text-[10px] text-stone-400 font-sans italic pt-1 border-t border-stone-50 select-none">
-                      * 初始登入本系統後建議立即更改密碼，以確保您的個資安全。
-                    </p>
+                      * ?��??�入?�系統�?建議立即?�改密碼，以確�??��??��?安全??                    </p>
                   </div>
                 </div>
 
-                {/* 右側：德安Flow系統 */}
+                {/* ?�側：德安Flow系統 */}
                 <div className="space-y-4 w-full max-w-md">
-                  {/* 德安Flow系統連結 */}
+                  {/* 德�?Flow系統??? */}
                   <div className="w-full">
                     <a 
                       href="https://hrms.ldchotels.com/pms/node/api/callback/eip/305" 
@@ -2788,39 +2739,37 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                           <Layers className="w-5 h-5 animate-pulse" />
                         </div>
                         <div className="text-left">
-                          <span className="block text-xs font-bold text-[#8D1B1B]">德安Flow系統</span>
-                          <span className="block text-[10px] text-stone-400 font-mono">人事請假及出缺勤紀錄查詢平台↗</span>
+                          <span className="block text-xs font-bold text-[#8D1B1B]">德�?Flow系統</span>
+                          <span className="block text-[10px] text-stone-400 font-mono">人�?請�??�出缺勤紀?�查詢平?��?</span>
                         </div>
                       </div>
-                      <span className="text-xs text-[#8D1B1B] font-bold group-hover:translate-x-1 transition-transform">→</span>
+                      <span className="text-xs text-[#8D1B1B] font-bold group-hover:translate-x-1 transition-transform">??/span>
                     </a>
                   </div>
 
-                  {/* 下面放置說明 */}
+                  {/* 下面?�置說�? */}
                   <div className="text-xs text-stone-600 bg-white border border-[#E9E1D6]/60 p-6 rounded-xl w-full space-y-2 font-sans shadow-sm">
                     <div className="flex items-center gap-1.5 font-bold text-stone-800 border-b border-stone-100 pb-1.5 mb-1.5 text-[11px] select-none">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#8D1B1B]"></span>
-                      德安Flow登入資訊：
-                    </div>
+                      德�?Flow?�入資�?�?                    </div>
                     <div className="font-mono flex flex-col gap-1.5">
                       <div className="flex items-start gap-1">
-                        <span className="w-4 text-[#8D1B1B] font-bold">▪</span>
+                        <span className="w-4 text-[#8D1B1B] font-bold">??/span>
                         <div>
-                          <span className="font-sans font-semibold text-stone-500">登入帳號：</span>
-                          <span className="font-semibold text-stone-800 font-sans">員工編號</span>
+                          <span className="font-sans font-semibold text-stone-500">?�入帳�?�?/span>
+                          <span className="font-semibold text-stone-800 font-sans">?�工編�?</span>
                         </div>
                       </div>
                       <div className="flex items-start gap-1">
-                        <span className="w-4 text-[#8D1B1B] font-bold">▪</span>
+                        <span className="w-4 text-[#8D1B1B] font-bold">??/span>
                         <div>
-                          <span className="font-sans font-semibold text-stone-500">密碼：</span>
-                          <span className="font-semibold text-stone-800 font-sans">mis(初始密碼)</span>
+                          <span className="font-sans font-semibold text-stone-500">密碼�?/span>
+                          <span className="font-semibold text-stone-800 font-sans">mis(?��?密碼)</span>
                         </div>
                       </div>
                     </div>
                     <p className="text-[10px] text-stone-400 font-sans italic pt-1 border-t border-stone-50 select-none">
-                      * 初始密碼由系統自動配置，登入後建議立即進行安全性修改。
-                    </p>
+                      * ?��?密碼?�系統自?��?置�??�入後建議�??�進�?安全?�修?��?                    </p>
                   </div>
                 </div>
               </div>
@@ -2834,18 +2783,15 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                 className="group block border border-stone-200/60 p-5 rounded-2xl space-y-2.5 bg-white hover:border-[#8D1B1B]/40 hover:bg-[#8D1B1B]/5 transition-all shadow-sm"
               >
                 <div className="flex items-center justify-between">
-                   <span className="text-[10px] uppercase font-bold text-[#8D1B1B] tracking-widest block">課程一</span>
+                   <span className="text-[10px] uppercase font-bold text-[#8D1B1B] tracking-widest block">課�?一</span>
                    <span className="text-[10px] font-bold text-[#8D1B1B] bg-[#8D1B1B]/10 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:scale-105 transition-transform">
                      <FileText className="w-3 h-3" />
-                     開啟教學 ↗
-                   </span>
+                     ?��??�學 ??                   </span>
                 </div>
                 <strong className="text-sm block text-stone-900 font-bold group-hover:text-[#8D1B1B] transition-colors">
-                  雲朗觀光培訓系統教學步驟
-                </strong>
+                  ?��?觀?�培訓系統�?學步�?                </strong>
                 <p className="text-xs text-stone-500 leading-relaxed group-hover:text-stone-600 transition-colors">
-                  手把手教學，讓新進員工使用系統不孤單，也無須害怕陌生環境與同事不敢提問的窘境，看完教學一次就上手，更能快速瞭解集團組織與文化。
-                </p>
+                  ?��??��?學�?讓新?�員工使?�系統�?孤單，�??��?害怕�??�環境�??��?不敢?��??��?境�??��??�學一次就上�?，更?�快?�瞭�???��?織�??��???                </p>
               </a>
 
               <a 
@@ -2855,22 +2801,20 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                 className="group block border border-stone-200/60 p-5 rounded-2xl space-y-2.5 bg-white hover:border-[#8D1B1B]/40 hover:bg-[#8D1B1B]/5 transition-all shadow-sm"
               >
                 <div className="flex items-center justify-between">
-                   <span className="text-[10px] uppercase font-bold text-[#8D1B1B] tracking-widest block">課程二</span>
+                   <span className="text-[10px] uppercase font-bold text-[#8D1B1B] tracking-widest block">課�?�?/span>
                    <span className="text-[10px] font-bold text-[#8D1B1B] bg-[#8D1B1B]/10 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:scale-105 transition-transform">
                      <FileText className="w-3 h-3" />
-                     開啟教學 ↗
-                   </span>
+                     ?��??�學 ??                   </span>
                 </div>
                 <strong className="text-sm block text-stone-900 font-bold group-hover:text-[#8D1B1B] transition-colors">
-                  德安Flow系統教學步驟
+                  德�?Flow系統?�學步�?
                 </strong>
                 <p className="text-xs text-stone-500 leading-relaxed group-hover:text-stone-600 transition-colors">
-                  手把手教學，讓新進員工可以瞭解如何查詢自身出缺勤狀況以及如何獨立完成線上請假，讓架單不再卡關，也無須讓別人知道你請了什麼假，化解尷尬氛圍。
-                </p>
+                  ?��??��?學�?讓新?�員工可以瞭�??何查詢自身出缺勤?�況以?��?何獨立�??��?上�??��?讓架?��??�卡?��?也無?��??�人?��?你�?了�?麼�?，�?�?��尬�??��?                </p>
               </a>
             </div>
             
-            {/* LINE Employee Official Account Block */}
+            {/* LINE OnboardEmployee Official Account Block */}
             <div className="bg-[#FAF8F5] p-5 md:p-6 rounded-2xl border border-emerald-500/10 flex flex-col md:flex-row items-center gap-5">
               <div className="flex-shrink-0 bg-white p-2 rounded-xl border border-stone-150 shadow-xs flex flex-col items-center gap-1.5 select-none">
                 <img 
@@ -2884,31 +2828,28 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   rel="noopener noreferrer"
                   className="text-[10px] text-emerald-600 font-semibold hover:underline flex items-center gap-0.5"
                 >
-                  點擊加好友 ↗
-                </a>
+                  點�??�好????                </a>
               </div>
               <div className="space-y-2 text-center md:text-left flex-1">
                 <div className="flex flex-col md:flex-row md:items-center gap-2">
                   <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md w-fit mx-auto md:mx-0">
-                    LINE 官方帳號
+                    LINE 官方帳�?
                   </span>
                   <span className="text-[#8D1B1B] text-[12px] font-bold">
-                    帳號ID：@112hpdie
+                    帳�?ID：@112hpdie
                   </span>
                 </div>
                 <h4 className="text-sm font-bold text-stone-900">
-                  雲和你的藍天 <span className="text-stone-400 font-normal text-xs">(內部員工官方帳號)</span>
+                  ?��?你�??�天 <span className="text-stone-400 font-normal text-xs">(?�部?�工官方帳�?)</span>
                 </h4>
                 <div className="text-[11px] text-stone-600 leading-relaxed space-y-1.5">
                   <p className="font-semibold text-emerald-800">
-                    💡 啟用與身分驗證說明：
+                    ?�� ?�用?�身?��?證說?��?
                   </p>
                   <p>
-                    加入員工官方帳號後，<strong>請務必先發送您的「部門」、「員工編號」及「中文姓名」</strong>。管理員收到後將會識別與審核您的身分，核准後即可正式啟用與使用此官方帳號。
-                  </p>
+                    ?�入?�工官方帳�?後�?<strong>請�?必�??�送您?�「部?�?�、「員工編?�」�??�中?��??��?/strong>?�管?�員?�到後�??��??��?審核?��?身�?，核?��??�可�???�用?�使?�此官方帳�???                  </p>
                   <p className="text-stone-500 text-[10px]">
-                    ※ 此帳號內容將提供：<strong>員工相關福利、相關活動資訊、常用員工系統捷徑</strong>...等等新進同仁專屬內容。
-                  </p>
+                    ??此帳?�內容�??��?�?strong>?�工?��?福利?�相?�活?��?訊、常?�員工系統捷�?/strong>...等�??�進�?仁�?屬內容�?                  </p>
                 </div>
               </div>
             </div>
@@ -2916,10 +2857,9 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
             <div className="bg-amber-50/30 p-5 rounded-xl border border-amber-100 flex items-start gap-3">
               <Clock className="w-5 h-5 text-[#8D1B1B] flex-shrink-0 mt-0.5" />
               <div>
-                <strong className="text-xs text-[#8D1B1B] block">提醒：</strong>
+                <strong className="text-xs text-[#8D1B1B] block">?��?�?/strong>
                 <p className="text-[11px] text-stone-600 mt-1">
-                  後續的線上測驗及新人訓練，人資處將會在您完成報到後，另行通知。
-                </p>
+                  後�??��?上測驗�??�人訓練，人資�?將�??�您完�??�到後�??��??�知??                </p>
               </div>
             </div>
           </div>
@@ -2936,12 +2876,12 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-stone-900">雲朗觀光 AI 秘書</h4>
-                  <p className="text-[10px] text-stone-500">24H及時為您解答特休福利、工作時間及合約內容等相關問題</p>
+                  <h4 className="text-xs font-semibold text-stone-900">?��?觀??AI 秘書</h4>
+                  <p className="text-[10px] text-stone-500">24H?��??�您�???��?福利?�工作�??��??��??�容等相?��?�?/p>
                 </div>
               </div>
               <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded">
-                • 隨時在線
+                ???��??��?
               </span>
             </div>
 
@@ -2968,7 +2908,7 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
                     <span className="inline-block w-2.5 h-2.5 bg-stone-300 rounded-full animate-bounce"></span>
                     <span className="inline-block w-2.5 h-2.5 bg-stone-300 rounded-full animate-bounce [animation-delay:0.2s]"></span>
                     <span className="inline-block w-2.5 h-2.5 bg-stone-300 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                    <span className="text-stone-500">秘書正在為您查核公司規章...</span>
+                    <span className="text-stone-500">秘書�?��?�您?�核?�司規�?...</span>
                   </div>
                 </div>
               )}
@@ -2978,30 +2918,28 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
             {/* Quick recommendation prompts */}
             <div className="px-5 pb-3 pt-2 border-t border-stone-50 flex flex-wrap gap-1.5 select-none bg-stone-50/20">
               <button 
-                onClick={() => sendAIMessage('特別休假與生日假規定為何？')}
+                onClick={() => sendAIMessage('?�別休�??��??��?規�??��?�?)}
                 className="text-[10px] text-stone-600 bg-white border border-stone-200 px-2.5 py-1 rounded-full hover:border-[#8D1B1B] hover:text-[#8D1B1B] transition-colors cursor-pointer"
               >
-                🏝️ 生日假與特假規定？
+                ??�??�日?��??��?規�?�?              </button>
+              <button 
+                onClick={() => sendAIMessage('不�?供身?�基?��??��??��??��?什麼影?��?�?)}
+                className="text-[10px] text-stone-600 bg-white border border-stone-200 px-2.5 py-1 rounded-full hover:border-[#8D1B1B] hover:text-[#8D1B1B] transition-colors cursor-pointer"
+              >
+                ?? ?�於?��??�顧?��?
               </button>
               <button 
-                onClick={() => sendAIMessage('不提供身分基本資料或個資會有什麼影響嗎？')}
+                onClick={() => sendAIMessage('完�??�目?��? 8 ?�入?�報?�任?�步驟�??�怎樣�?)}
                 className="text-[10px] text-stone-600 bg-white border border-stone-200 px-2.5 py-1 rounded-full hover:border-[#8D1B1B] hover:text-[#8D1B1B] transition-colors cursor-pointer"
               >
-                🔐 關於個資的顧慮？
-              </button>
-              <button 
-                onClick={() => sendAIMessage('完成我目前的 8 個入職報到任務步驟後會怎樣？')}
-                className="text-[10px] text-stone-600 bg-white border border-stone-200 px-2.5 py-1 rounded-full hover:border-[#8D1B1B] hover:text-[#8D1B1B] transition-colors cursor-pointer"
-              >
-                📋 如何完成入職流程？
-              </button>
+                ?? 如�?完�??�職流�?�?              </button>
             </div>
 
             {/* Input form */}
             <div className="p-4 border-t border-stone-100 flex items-center gap-2">
               <input
                 type="text"
-                placeholder="在此輸入您對於入職、福利、契約等的問題..."
+                placeholder="?�此輸入?��??�入?�、�??�、�?約�??��?�?.."
                 value={inputMessage}
                 onChange={e => setInputMessage(e.target.value)}
                 onKeyDown={e => {
@@ -3027,25 +2965,25 @@ export default function EmployeeDashboard({ initialEmployee, onLogout }: Employe
       {/* A4 Print Modals */}
       {printTaxOpen && (
         <TaxDeclarationPrintModal
-          employee={employee}
+          OnboardEmployee={OnboardEmployee}
           onClose={() => setPrintTaxOpen(false)}
         />
       )}
       {printContractOpen && (
         <ContractPrintModal
-          employee={employee}
+          OnboardEmployee={OnboardEmployee}
           onClose={() => setPrintContractOpen(false)}
         />
       )}
       {printGuarantorOpen && (
         <GuarantorPrintModal
-          employee={employee}
+          OnboardEmployee={OnboardEmployee}
           onClose={() => setPrintGuarantorOpen(false)}
         />
       )}
       {printServiceOpen && (
         <ServicePrintModal
-          employee={employee}
+          OnboardEmployee={OnboardEmployee}
           onClose={() => setPrintServiceOpen(false)}
         />
       )}

@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import Login from './components/Login';
 import EmployeeDashboard from './components/EmployeeDashboard';
 import HrDashboard from './components/HrDashboard';
+import PlatformDashboard from './components/PlatformDashboard';
 import ResetPassword from './components/ResetPassword';
 import { Employee } from './types';
 import { AlertCircle, X } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState<{
-    role: 'hr' | 'employee' | null;
+    role: string | null;
     user: any;
     adminEmails: string[];
   }>({
@@ -91,7 +92,7 @@ export default function App() {
     setLoading(false);
   }, []);
 
-  const handleLoginSuccess = (role: 'hr' | 'employee', user: any, adminEmails?: string[]) => {
+  const handleLoginSuccess = (role: string, user: any, adminEmails?: string[]) => {
     try {
       localStorage.setItem('ldc_onboard_role', role);
       localStorage.setItem('ldc_onboard_user', JSON.stringify(user));
@@ -138,11 +139,10 @@ export default function App() {
         onBackToLogin={() => setResetToken(null)}
       />
     );
-  } else if (session.role === 'hr') {
+  } else if (session.role === 'hr' || session.role === 'HR_ADMIN' || session.role === 'EXECUTIVE' || session.role === 'SALES_LEADER') {
     mainContent = (
-      <HrDashboard
+      <PlatformDashboard
         currentUser={session.user}
-        initialEmployees={[]} // Will be loaded dynamically inside HrDashboard
         onLogout={handleLogout}
       />
     );
