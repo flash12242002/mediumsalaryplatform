@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Shield, User, Mail, AlertCircle, X, CheckCircle } from 'lucide-react';
 import LdcLogo from './LdcLogo';
-
-interface LoginProps {
+// @ts-ignore
+import officialLogo from '../assets/ldc_logo.svg';interface LoginProps {
   onLoginSuccess: (role: string, user: any, adminEmails?: string[]) => void;
 }
 

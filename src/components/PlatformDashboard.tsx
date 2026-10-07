@@ -12,7 +12,7 @@ import {
   Bot, ShieldAlert, History, User as UserIcon, RefreshCw, Key, Lock, Settings, Clock
 } from "lucide-react";
 // @ts-ignore
-import officialLogo from '../assets/images/ldc_logo_official.png';
+import officialLogo from '../assets/ldc_logo.svg';
 
 import HrDashboard from "./HrDashboard";
 export default function PlatformDashboard({ currentUser, onLogout }: any) {
