@@ -3406,12 +3406,25 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                   type="date"
                   value={settlementDate}
                   onChange={(e) => {
-                    const newDate = e.target.value;
-                    setSettlementDate(newDate);
-                    fetchStatsAndEmployees(newDate);
+                    setSettlementDate(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    fetchStatsAndEmployees(e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
                   }}
                   className="p-1.5 border border-slate-200 rounded-lg bg-slate-50 font-mono text-xs focus:ring-1 focus:ring-blue-500 text-slate-800 font-bold"
                 />
+                <button
+                  onClick={() => fetchStatsAndEmployees(settlementDate)}
+                  className="px-2 py-1.5 bg-blue-50 text-blue-600 border border-blue-150 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors"
+                  title="套用結算日"
+                >
+                  套用
+                </button>
               </div>
 
               {/* Import Excel File Action */}
