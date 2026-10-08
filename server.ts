@@ -1211,7 +1211,24 @@ app.get("/api/employees/statistics", async (req, res) => {
       return { ...e, department: (m && (m as any).department) ? (m as any).department : e.department };
     });
 
-    const isExcluded = (empId: string) => boardEmpIds.includes(empId) || insidersList.includes(empId);
+    const settlementDate = (req.query.settlementDate as string) || "2026-07-02";
+
+    const isNewbie = (empId: string) => {
+      const m = members.find((m: any) => m.emp_id === empId);
+      if (m && m.onboarding_date) {
+        const start = new Date(m.onboarding_date);
+        const end = new Date(settlementDate);
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+          start.setHours(0, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          const diffDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          return diffDays < 183;
+        }
+      }
+      return false;
+    };
+
+    const isExcluded = (empId: string) => boardEmpIds.includes(empId) || insidersList.includes(empId) || isNewbie(empId);
     const years: number[] = [...new Set(enrichedEmployees.map((e) => e.year as number))];
 
     const statsByYear: any = {};
@@ -1241,7 +1258,8 @@ app.get("/api/employees/statistics", async (req, res) => {
         excludedEmployees: excludedEmployees.map((e) => ({
           empId: e.emp_id, name: e.name, title: e.title, department: e.department,
           salary: e.salary, welfare: e.welfare,
-          isBoard: boardEmpIds.includes(e.emp_id), isInsider: insidersList.includes(e.emp_id)
+          isBoard: boardEmpIds.includes(e.emp_id), isInsider: insidersList.includes(e.emp_id),
+          isNewbie: isNewbie(e.emp_id)
         }))
       };
     }

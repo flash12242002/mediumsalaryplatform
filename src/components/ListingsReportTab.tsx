@@ -326,7 +326,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
     }
   };
 
-  const fetchStatsAndEmployees = async () => {
+  const fetchStatsAndEmployees = async (overrideDate?: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -337,7 +337,8 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
       setEmployees(empData);
 
       // Load dynamical MOPS computed statistics
-      const statsRes = await fetch(`/api/employees/statistics?role=${user.role}`);
+      const dateToUse = overrideDate || settlementDate;
+      const statsRes = await fetch(`/api/employees/statistics?role=${user.role}&settlementDate=${dateToUse}`);
       const statsData = await statsRes.json();
       setStats(statsData);
     } catch (err: any) {
@@ -619,6 +620,21 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
       return `${seniorityYears} 年`;
     } catch (err) {
       return "-";
+    }
+  };
+
+  const isUnderSixMonths = (onboardingStr: string, settlementStr: string) => {
+    if (!onboardingStr || !settlementStr) return false;
+    try {
+      const start = new Date(onboardingStr);
+      const end = new Date(settlementStr);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return false;
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return diffDays < 183;
+    } catch {
+      return false;
     }
   };
 
@@ -2919,6 +2935,10 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                           <span className="inline-block px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded">
                             👑 董事成員
                           </span>
+                        ) : e.isNewbie ? (
+                          <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded">
+                            🌱 未滿半年
+                          </span>
                         ) : (
                           <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded">
                             ★ 內部人
@@ -3394,7 +3414,11 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                 <input
                   type="date"
                   value={settlementDate}
-                  onChange={(e) => setSettlementDate(e.target.value)}
+                  onChange={(e) => {
+                    const newDate = e.target.value;
+                    setSettlementDate(newDate);
+                    fetchStatsAndEmployees(newDate);
+                  }}
                   className="p-1.5 border border-slate-200 rounded-lg bg-slate-50 font-mono text-xs focus:ring-1 focus:ring-blue-500 text-slate-800 font-bold"
                 />
               </div>
@@ -3453,10 +3477,11 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
               <div className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 font-sans font-semibold mt-2 sm:mt-0 flex gap-4">
                 <span>董事會名單: <strong className="font-mono text-sm">{members.filter(m => m.grade === "9").length}</strong> 人</span>
                 <span>手動內部人: <strong className="font-mono text-sm">{insiders.length}</strong> 人</span>
+                <span>未滿半年: <strong className="font-mono text-sm">{members.filter(m => isUnderSixMonths(m.onboardingDate, settlementDate)).length}</strong> 人</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Board List Card */}
               <div className="bg-white border border-slate-150 rounded-xl p-3.5 space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -3570,6 +3595,44 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                   </div>
                 )}
               </div>
+
+              {/* Newbies Card */}
+              <div className="bg-white border border-slate-150 rounded-xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span>未滿半年人員 (Under 6 Months)</span>
+                  </span>
+                  <span className="text-[9px] bg-slate-100 text-slate-500 font-medium px-1.5 py-0.5 rounded">
+                    依結算日自動判定
+                  </span>
+                </div>
+
+                {members.filter(m => isUnderSixMonths(m.onboardingDate, settlementDate)).length === 0 ? (
+                  <div className="text-center py-6 text-slate-400 text-xs border border-dashed border-slate-150 rounded-lg font-sans">
+                    目前暫無未滿半年的員工。
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto pr-1">
+                    {members.filter(m => isUnderSixMonths(m.onboardingDate, settlementDate)).map(m => (
+                      <div key={m.empId} className="py-2 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center font-bold font-sans text-[10px]">
+                            {m.name.substring(0, 1)}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-800">{m.name}</span>
+                            <span className="text-[9px] text-slate-400 font-mono ml-2">({m.empId})</span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-emerald-600 font-bold">
+                          {calculateSeniority(m.onboardingDate, settlementDate)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -3643,6 +3706,10 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                           {isBoard ? (
                             <span className="inline-block px-2 py-1 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-lg shadow-2xs">
                               👑 董事成員
+                            </span>
+                          ) : isUnderSixMonths(member.onboardingDate, settlementDate) ? (
+                            <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold rounded-lg shadow-2xs">
+                              🌱 未滿半年
                             </span>
                           ) : (
                             <button
