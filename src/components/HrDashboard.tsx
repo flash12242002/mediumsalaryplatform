@@ -193,79 +193,25 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
   const handleSendOnboardingEmail = async (emp: any) => {
     setSendingEmailId(emp.id);
     try {
-      if (googleToken) {
-        const companyName = getCompanyDetails(emp).name;
-        const subject = `【${companyName}】歡迎您的加入！新進人員入職報到系統登入引導`;
-        const htmlBody = `
-          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff; color: #333333;">
-            <div style="text-align: center; border-bottom: 2px solid #D4AF37; padding-bottom: 20px; margin-bottom: 25px;">
-              <h1 style="color: #8D1B1B; margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 1px;">${companyName}</h1>
-              <p style="color: #666666; margin: 5px 0 0 0; font-size: 13px;">LDC Hotels & Resorts</p>
-            </div>
-            
-            <p style="font-size: 15px; line-height: 1.6; margin-top: 0;">親愛的 <strong style="color: #111111; text-decoration: underline;">${emp.name}</strong> 同仁 您好：</p>
-            
-            <p style="font-size: 14px; line-height: 1.6; color: #555555;">
-              恭喜您錄取本公司！為了能順利為您辦理入職與投保手續，請您點擊下方平台連結，並使用您的電子郵件與專屬授權碼登入，填妥報到所需的個人與合約基本資料：
-            </p>
-            
-            <div style="background-color: #FAF9F6; border: 1px solid #D4AF37; border-left: 5px solid #D4AF37; border-radius: 8px; padding: 20px; margin: 25px 0; font-size: 13px; line-height: 1.8;">
-              <div style="margin-bottom: 8px;">💼 <strong style="color: #666666;">報到職稱：</strong><span style="color: #111111; font-weight: bold;">${emp.title}</span></div>
-              <div style="margin-bottom: 8px;">📅 <strong style="color: #666666;">報到日期：</strong><span style="color: #8D1B1B; font-weight: bold;">${emp.onboardDate}</span></div>
-              <div style="margin-bottom: 8px;">📍 <strong style="color: #666666;">報到地點：</strong><span style="color: #111111;">${emp.contractWorkLocation || '雲朗觀光 (台北市中山區中山北路二段96號8樓)'}</span></div>
-              <div style="margin-bottom: 8px;">💰 <strong style="color: #666666;">敘薪薪資：</strong>${emp.contractSalaryType === 'daily' ? '日薪' : emp.contractSalaryType === 'hourly' ? '時薪' : '月薪'} <strong style="color: #8D1B1B; font-weight: bold;">NT$ ${emp.contractSalaryAmount || '36,000'}</strong> 元</div>
-              <div style="margin-bottom: 15px; padding-top: 8px; border-top: 1px dashed #e0e0e0;">🔑 <strong style="color: #666666;">專屬授權碼：</strong><span style="background-color: #8D1B1B; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; font-size: 14px; letter-spacing: 0.5px;">${emp.authToken}</span></div>
-              
-              <div style="padding-top: 10px; border-top: 1px solid #e5e5e5;">
-                <strong style="color: #666666; display: block; margin-bottom: 5px;">🔗 平台連結：</strong>
-                <a href="https://ldc-onboarding-portal-554356081371.asia-east1.run.app" target="_blank" style="color: #0066cc; text-decoration: underline; font-family: monospace; word-break: break-all; font-weight: bold;">https://ldc-onboarding-portal-554356081371.asia-east1.run.app</a>
-              </div>
-            </div>
-            
-            <p style="font-size: 12px; color: #888888; line-height: 1.5; margin-bottom: 0; border-top: 1px solid #eeeeee; padding-top: 15px;">
-              ※ 本信件由系統透過公司信箱自動發送。若您有任何疑問，請直接與人力資源部聯繫，請勿直接回覆信件，謝謝。<br />
-            </p>
-          </div>
-        `;
-
-        await sendGmailEmail(googleToken, emp.email, subject, htmlBody);
-
-        // Also notify backend to log activity
-        await fetch(`/api/hr/employees/${emp.id}/send-onboarding-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-operator-email': encodeURIComponent(currentUser?.email || ''),
-            'x-operator-name': encodeURIComponent(currentUser?.name || currentUser?.email || '')
-          }
-        });
-
-        setInfoMsg(`📧 成功透過您的 Gmail 帳號發送報到通知信至 ${emp.name} 的信箱 (${emp.email})！`);
-      } else {
-        const res = await fetch(`/api/hr/employees/${emp.id}/send-onboarding-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-operator-email': encodeURIComponent(currentUser?.email || ''),
-            'x-operator-name': encodeURIComponent(currentUser?.name || currentUser?.email || '')
-          }
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setInfoMsg(`📧 [模擬發送] 成功發送報到通知信至 ${emp.name} 的信箱 (${emp.email})！若要發送郵件，請先連結您的 Google 帳號。`);
-        } else {
-          setErrorMsg(data.error || '發送報到通知信失敗');
+      const res = await fetch(`/api/hr/employees/${emp.id}/send-onboarding-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || currentUser?.email || '')
         }
-      }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '發送報到通知信失敗');
       
-      // Refresh activity logs in background
+      setInfoMsg(`📧 ${data.message || `成功發送報到通知信至 ${emp.name} 的信箱 (${emp.email})`}`);
+      
       fetch('/api/hr/activity-logs')
         .then(r => r.json())
         .then(logs => setActivityLogs(logs))
         .catch(() => {});
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg(`發送郵件失敗：${err.message || '未知錯誤'}`);
+      setErrorMsg(err.message || '連線異常，發送失敗');
     } finally {
       setSendingEmailId(null);
       setEmailPreviewEmp(null);
@@ -704,11 +650,6 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
       return;
     }
 
-    if (!googleToken) {
-      setErrorMsg('⚠️ 您尚未連結 Google 帳號。請先在下方「連結 Google 帳號 (啟用 Gmail 寄信)」進行授權，或點選「僅建立報到卡 (不寄通知信)」直接完成建立。');
-      return;
-    }
-
     setSubmitting(true);
     try {
       // Step 1: Create employee
@@ -723,70 +664,25 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '建立報到卡失敗');
+      
+      const createdId = data.employee.id;
 
-      // Update employees state
-      setEmployees(data.employees);
-      const createdId = data.employee?.id;
+      // Step 2: Send onboarding email via backend API
+      const mailRes = await fetch(`/api/hr/employees/${createdId}/send-onboarding-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operator-email': encodeURIComponent(currentUser?.email || ''),
+          'x-operator-name': encodeURIComponent(currentUser?.name || currentUser?.email || '')
+        }
+      });
+      
+      const mailData = await mailRes.json();
+      if (!mailRes.ok) throw new Error(mailData.error || '報到通知信發送失敗');
 
-      if (!createdId) {
-        throw new Error('建立報到卡成功，但未能取得同仁系統識別碼');
-      }
-
-      // Step 2: Send onboarding email via real Gmail API
-      const companyName = getCompanyDetails(newEmp).name;
-      const subject = `【${companyName}】歡迎您的加入！新進人員入職報到系統登入引導`;
-      const htmlBody = `
-        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff; color: #333333;">
-          <div style="text-align: center; border-bottom: 2px solid #D4AF37; padding-bottom: 20px; margin-bottom: 25px;">
-            <h1 style="color: #8D1B1B; margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 1px;">${companyName}</h1>
-            <p style="color: #666666; margin: 5px 0 0 0; font-size: 13px;">LDC Hotels & Resorts</p>
-          </div>
-          
-          <p style="font-size: 15px; line-height: 1.6; margin-top: 0;">親愛的 <strong style="color: #111111; text-decoration: underline;">${newEmp.name}</strong> 同仁 您好：</p>
-          
-          <p style="font-size: 14px; line-height: 1.6; color: #555555;">
-            恭喜您錄取本公司！為了能順利為您辦理入職與投保手續，請您點擊下方平台連結，並使用您的電子郵件與專屬授權碼登入，填妥報到所需的個人與合約基本資料：
-          </p>
-          
-          <div style="background-color: #FAF9F6; border: 1px solid #D4AF37; border-left: 5px solid #D4AF37; border-radius: 8px; padding: 20px; margin: 25px 0; font-size: 13px; line-height: 1.8;">
-            <div style="margin-bottom: 8px;">💼 <strong style="color: #666666;">報到職稱：</strong><span style="color: #111111; font-weight: bold;">${newEmp.title}</span></div>
-            <div style="margin-bottom: 8px;">📅 <strong style="color: #666666;">報到日期：</strong><span style="color: #8D1B1B; font-weight: bold;">${newEmp.onboardDate}</span></div>
-            <div style="margin-bottom: 8px;">📍 <strong style="color: #666666;">報到地點：</strong><span style="color: #111111;">${newEmp.contractWorkLocation || '總公司 (台北市中山區中山北路二段96號8樓)'}</span></div>
-            <div style="margin-bottom: 8px;">💰 <strong style="color: #666666;">敘薪薪資：</strong>${newEmp.contractSalaryType === 'daily' ? '日薪' : newEmp.contractSalaryType === 'hourly' ? '時薪' : '月薪'} <strong style="color: #8D1B1B; font-weight: bold;">NT$ ${newEmp.contractSalaryAmount || '36,000'}</strong> 元</div>
-            <div style="margin-bottom: 15px; padding-top: 8px; border-top: 1px dashed #e0e0e0;">🔑 <strong style="color: #666666;">專屬授權碼：</strong><span style="background-color: #8D1B1B; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; font-size: 14px; letter-spacing: 0.5px;">${newEmp.authToken}</span></div>
-            
-            <div style="padding-top: 10px; border-top: 1px solid #e5e5e5;">
-              <strong style="color: #666666; display: block; margin-bottom: 5px;">🔗 平台連結：</strong>
-              <a href="https://ldc-onboarding-portal-554356081371.asia-east1.run.app" target="_blank" style="color: #0066cc; text-decoration: underline; font-family: monospace; word-break: break-all; font-weight: bold;">https://ldc-onboarding-portal-554356081371.asia-east1.run.app</a>
-            </div>
-          </div>
-          
-          <p style="font-size: 12px; color: #888888; line-height: 1.5; margin-bottom: 0; border-top: 1px solid #eeeeee; padding-top: 15px;">
-            ※ 本信件由系統透過公司信箱自動發送。若您有任何疑問，請直接與人力資源部聯繫，請勿直接回覆信件，謝謝。<br />
-          </p>
-        </div>
-      `;
-
-      try {
-        await sendGmailEmail(googleToken, newEmp.email, subject, htmlBody);
-        
-        // Notify backend to log activity
-        await fetch(`/api/hr/employees/${createdId}/send-onboarding-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-operator-email': encodeURIComponent(currentUser?.email || ''),
-            'x-operator-name': encodeURIComponent(currentUser?.name || currentUser?.email || '')
-          }
-        });
-
-        setInfoMsg(`🎉 成功建立同仁「${newEmp.name}」之報到工作，並已成功透過您登入的 Gmail 帳戶 (${googleUser?.email || currentUser?.email}) 發送入職報到通知信！`);
-      } catch (emailErr: any) {
-        console.error('Real Gmail failed', emailErr);
-        setInfoMsg(`🎉 成功建立同仁「${newEmp.name}」之報到工作，但 Gmail 發送信件時發生異常：${emailErr.message || '未知錯誤'}。您可以稍後在追蹤清單中重新發送。`);
-      }
-
-      // Refresh activity logs in background
+      setInfoMsg(`📧 ${mailData.message || `已成功建立報到卡並發送通知信至 ${newEmp.email}`}`);
+      
+      fetchEmployees();
       fetchActivityLogs();
 
       // Clear newEmp form
@@ -2611,60 +2507,21 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
                         </div>
                       </div>
 
-                      {/* Google / Gmail Auth Connector Box */}
-                      <div className="bg-stone-50 border border-stone-200/60 rounded-2xl p-5 space-y-4 shadow-sm">
+                                            {/* Env Gmail Status Box */}
+                      <div className="bg-stone-50 border border-stone-200/60 rounded-2xl p-5 space-y-4 shadow-sm mb-4">
                         <div className="flex items-center justify-between select-none">
                           <div className="flex items-center gap-2.5">
-                            <div className={`w-3 h-3 rounded-full ${googleToken ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
                             <div>
                               <h4 className="text-xs font-bold text-stone-850">
-                                {googleToken ? '🟢 Google Gmail 傳送功能已就緒' : '🟡 Google Gmail 傳送功能未啟用'}
+                                🟢 系統已整合 Gmail 自動發送功能
                               </h4>
                               <p className="text-[11px] text-stone-500">
-                                {googleToken 
-                                  ? `系統將以您的管理者郵件帳戶發送入職導引通知` 
-                                  : '本系統支援透過 Google Auth 以您的管理員信箱發送信件，請先完成授權連結'}
+                                本系統已自動取得管理員信箱設定，將透過後端直接發送信件。
                               </p>
                             </div>
                           </div>
-                          
-                          {googleToken ? (
-                            <button
-                              type="button"
-                              onClick={handleGoogleSignOut}
-                              className="text-[10px] text-stone-500 hover:text-[#8D1B1B] hover:underline font-medium cursor-pointer"
-                            >
-                              中斷 Google 連結
-                            </button>
-                          ) : null}
                         </div>
-
-                        {!googleToken ? (
-                          <div className="pt-1 flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={handleGoogleSignIn}
-                              disabled={isGoogleConnecting}
-                              className="flex items-center gap-2.5 px-4 py-2 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 active:bg-stone-100 shadow-sm text-xs font-semibold text-stone-700 cursor-pointer transition-all"
-                            >
-                              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                                <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.59 5.59 0 0 1 8.4 12.915a5.59 5.59 0 0 1 5.591-5.6a5.54 5.54 0 0 1 3.844 1.5l3.24-3.24A10.12 10.12 0 0 0 14.001 2a10.08 10.08 0 0 0-10.08 10.08A10.08 10.08 0 0 0 14.001 22.16c5.736 0 10.16-4.032 10.16-10.16 0-.615-.054-1.2-.16-1.715H12.24z"/>
-                              </svg>
-                              <span>{isGoogleConnecting ? '正在連結 Google...' : '連結 Google 帳號 (啟用 Gmail 寄信)'}</span>
-                            </button>
-                            <span className="text-[10px] text-stone-400 select-none">登入後將授權本系統傳送報到信件</span>
-                          </div>
-                        ) : (
-                          <div className="bg-white border border-stone-150 rounded-xl px-4 py-3 flex items-center gap-3 text-xs text-stone-700">
-                            <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center font-bold text-[#8D1B1B] text-sm shadow-xs select-none">
-                              {googleUser?.displayName ? googleUser.displayName[0] : 'HR'}
-                            </div>
-                            <div>
-                              <div className="font-semibold text-stone-850">{googleUser?.displayName || '管理者'}</div>
-                              <div className="text-[11px] font-mono text-stone-500">{googleUser?.email}</div>
-                            </div>
-                          </div>
-                        )}
                       </div>
 
                       {/* Onboarding Notification Email Box */}
@@ -4373,59 +4230,21 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
               </button>
             </div>
 
-            {/* Google / Gmail Auth Connector Box inside the modal */}
-            <div className="bg-stone-50 border border-stone-200/60 rounded-xl p-4 space-y-3.5 shadow-sm">
+                        {/* Env Gmail Status Box inside the modal */}
+            <div className="bg-stone-50 border border-stone-200/60 rounded-xl p-4 space-y-3.5 shadow-sm mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className={`w-2.5 h-2.5 rounded-full ${googleToken ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                   <div>
                     <h4 className="text-xs font-bold text-stone-850">
-                      {googleToken ? '🟢 Google Gmail 傳送功能已就緒' : '🟡 Google Gmail 傳送功能未啟用'}
+                      🟢 系統已整合 Gmail 自動發送功能
                     </h4>
                     <p className="text-[11px] text-stone-500">
-                      {googleToken 
-                        ? `系統將以您的管理者郵件帳戶發送入職導引通知` 
-                        : '本系統支援透過 Google Auth 以您的管理員信箱發送信件，請先完成授權連結'}
+                      本系統已自動取得管理員信箱設定，將透過後端直接發送信件。
                     </p>
                   </div>
                 </div>
-                
-                {googleToken && (
-                  <button
-                    type="button"
-                    onClick={handleGoogleSignOut}
-                    className="text-[10px] text-stone-500 hover:text-[#8D1B1B] hover:underline font-medium cursor-pointer"
-                  >
-                    中斷 Google 連結
-                  </button>
-                )}
               </div>
-
-              {!googleToken ? (
-                <div className="pt-1 flex flex-col sm:flex-row sm:items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleGoogleSignIn}
-                    disabled={isGoogleConnecting}
-                    className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-stone-200 rounded-lg hover:bg-stone-50 active:bg-stone-100 shadow-xs text-xs font-semibold text-stone-750 cursor-pointer transition-all"
-                  >
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                      <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.59 5.59 0 0 1 8.4 12.915a5.59 5.59 0 0 1 5.591-5.6a5.54 5.54 0 0 1 3.844 1.5l3.24-3.24A10.12 10.12 0 0 0 14.001 2a10.08 10.08 0 0 0-10.08 10.08A10.08 10.08 0 0 0 14.001 22.16c5.736 0 10.16-4.032 10.16-10.16 0-.615-.054-1.2-.16-1.715H12.24z"/>
-                    </svg>
-                    <span>{isGoogleConnecting ? '正在連結 Google...' : '連結 Google 帳號 (啟用 Gmail 寄信)'}</span>
-                  </button>
-                  <span className="text-[10px] text-stone-400">登入後將授權本系統安全傳送報到信件</span>
-                </div>
-              ) : (
-                <div className="bg-white border border-stone-150 rounded-lg px-3.5 py-2 flex items-center gap-2.5 text-xs text-stone-700">
-                  <div className="w-7 h-7 rounded-full bg-stone-100 flex items-center justify-center font-bold text-[#8D1B1B] text-xs shadow-xs select-none">
-                    {googleUser?.displayName ? googleUser.displayName[0] : 'HR'}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-stone-850">{googleUser?.displayName || '管理者'} ({googleUser?.email})</div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Email Metadata Details */}
@@ -4492,11 +4311,7 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
                 className="px-5 py-2 bg-[#8D1B1B] text-[#D4AF37] hover:bg-[#721515] font-bold text-xs rounded-lg shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
-                {sendingEmailId === emailPreviewEmp.id 
-                  ? '寄送中...' 
-                  : googleToken 
-                    ? '透過 Gmail 發送' 
-                    : '發送測試'}
+                {sendingEmailId === emailPreviewEmp.id ? '寄送中...' : '確認並發送信件'}
               </button>
             </div>
 

@@ -2015,7 +2015,7 @@ app.put('/api/hr/employees/:id/probation', (req, res) => {
 });
 
 // Send onboarding notification email (simulated)
-app.post('/api/hr/employees/:id/send-onboarding-email', (req, res) => {
+app.post('/api/hr/employees/:id/send-onboarding-email', async (req, res) => {
   const { id } = req.params;
   const empIndex = employees.findIndex(emp => emp.id === id);
   if (empIndex === -1) {
@@ -2023,15 +2023,77 @@ app.post('/api/hr/employees/:id/send-onboarding-email', (req, res) => {
   }
 
   const emp = employees[empIndex];
-  emp.updatedAt = new Date().toISOString();
-  logActivity(
-    req, 
-    emp.name, 
-    'SEND_ONBOARDING_EMAIL', 
-    `發送入職報到通知信至: ${emp.email} (包含姓名: ${emp.name}、職稱: ${emp.title}、日期: ${emp.onboardDate}、地點: ${emp.contractWorkLocation || '君品酒店'}、薪資: ${emp.contractSalaryAmount || '36,000'}與驗證碼: ${emp.authToken})`
-  );
-  saveDatabase();
-  return res.json({ message: '報到通知信發送成功', employee: emp, employees });
+  
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_PASS;
+
+  if (gmailUser && gmailPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailPass
+        }
+      });
+
+      const host = req.get('host') || 'localhost:3000';
+      const protocol = req.protocol || 'http';
+      const loginLink = `${protocol}://${host}/`;
+
+      await transporter.sendMail({
+        from: `"雲朗集團人事系統" <${gmailUser}>`,
+        to: emp.email,
+        subject: `【雲朗觀光集團】新進同仁 ${emp.name} 報到通知`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: #4f46e5;">新進同仁報到通知</h2>
+            <p>親愛的 <strong>${emp.name}</strong> (${emp.title})，您好：</p>
+            <p>歡迎您加入雲朗觀光集團！請於報到日 <strong>${emp.onboardDate}</strong> 前完成線上報到手續。</p>
+            <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #334155;">報到登入資訊</h3>
+              <ul style="list-style-type: none; padding: 0;">
+                <li style="margin-bottom: 8px;">登入帳號(Email): <strong>${emp.email}</strong></li>
+                <li style="margin-bottom: 8px;">專屬驗證碼(Token): <strong>${emp.authToken}</strong></li>
+              </ul>
+            </div>
+            <div style="margin: 30px 0;">
+              <a href="${loginLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">前往線上報到系統</a>
+            </div>
+            <p style="color: #64748b; font-size: 12px; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+              若有任何問題，請聯絡您的所屬人資主管。<br>
+              雲朗觀光集團 HR 管理團隊 敬上
+            </p>
+          </div>
+        `
+      });
+
+      emp.updatedAt = new Date().toISOString();
+      logActivity(
+        req, 
+        emp.name, 
+        'SEND_ONBOARDING_EMAIL', 
+        `發送入職報到通知信至: ${emp.email} (包含姓名: ${emp.name}、職稱: ${emp.title}、日期: ${emp.onboardDate}、地點: ${emp.contractWorkLocation || '君品酒店'}、薪資: ${emp.contractSalaryAmount || '36,000'}與驗證碼: ${emp.authToken})`
+      );
+      saveDatabase();
+      return res.json({ message: '報到通知信已成功發送！', employee: emp, employees });
+    } catch (err: any) {
+      console.error('發送郵件失敗:', err);
+      return res.status(500).json({ error: '郵件發送失敗，請檢查系統 Gmail 設定。錯誤訊息: ' + err.message });
+    }
+  } else {
+    // Fallback if .env not set
+    console.log(`[模擬發送報到信] To: ${emp.email}`);
+    emp.updatedAt = new Date().toISOString();
+    logActivity(
+      req, 
+      emp.name, 
+      'SEND_ONBOARDING_EMAIL', 
+      `發送入職報到通知信至: ${emp.email} (模擬發送)`
+    );
+    saveDatabase();
+    return res.json({ message: '【模擬發送】系統未設定 Gmail，報到通知信已模擬發送', employee: emp, employees });
+  }
 });
 
 // Update onboarding progress and checklists manually by HR
