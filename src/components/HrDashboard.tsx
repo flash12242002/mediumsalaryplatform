@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Users, 
@@ -4011,7 +4011,8 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Custom confirmation dialog for deleting an employee (Safe modal) */}
@@ -4276,8 +4277,7 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
             </div>
 
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
       {/* 薪資扣繳免稅額申報表 A4 Print Modal */}
