@@ -265,9 +265,7 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
               return (
                 <>
                   
-                  {getHasPermission('onboarding_portal') && (
-                    <>
-                      {/* Tab 6: Onboarding */}
+                  {/* Tab 6: Onboarding */}
                   <button
                     onClick={() => setActiveTab("onboarding")}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
@@ -280,30 +278,10 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
                       <UserIcon className="w-4 h-4 shrink-0" />
                       <span className="text-left">新進同仁報到追蹤 <span className="block text-[9px] font-normal opacity-70 text-left">Onboarding Portal</span></span>
                     </div>
+                    {!getHasPermission("onboarding_portal") && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                   </button>
 
-                  
-                  {activeTab === "onboarding" && (
-                    <div className="ml-6 mt-1 flex flex-col gap-1 border-l-2 border-blue-100 pl-3 py-1">
-                      <button
-                        onClick={() => setOnboardingSubMenu('tracker')}
-                        className={`text-left text-xs px-2 py-1.5 rounded transition-all ${onboardingSubMenu === 'tracker' ? 'text-blue-700 font-bold bg-blue-50/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-                      >
-                        資料填寫追蹤
-                      </button>
-                      <button
-                        onClick={() => setOnboardingSubMenu('add')}
-                        className={`text-left text-xs px-2 py-1.5 rounded transition-all ${onboardingSubMenu === 'add' ? 'text-blue-700 font-bold bg-blue-50/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-                      >
-                        建立報到工作
-                      </button>
-                    </div>
-                  )}
-                    </>
-                  )}
-
-                  
-                  {activeTab === "onboarding" && (
+                  {activeTab === "onboarding" && getHasPermission("onboarding_portal") && (
                     <div className="ml-6 mt-1 flex flex-col gap-1 border-l-2 border-blue-100 pl-3 py-1">
                       <button
                         onClick={() => setOnboardingSubMenu('tracker')}
