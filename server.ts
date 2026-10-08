@@ -387,6 +387,23 @@ app.post("/api/auth/login", async (req, res) => {
     }
   }
 
+  // Free Room Login Path
+  if (loginRole === 'freeroom') {
+    if (loginIdentifier.trim() === 'admin' && loginSecret.trim() === 'mis') {
+      await addAuditLog('測試管理員', 'freeroom', "免費房間登入", "使用測試帳號登入免費房間系統");
+      return res.json({ success: true, user: { name: '測試管理員', empId: 'admin' }, role: 'freeroom' });
+    }
+    const employee = employees.find(
+      (emp) => emp.empId === loginIdentifier.trim() && emp.personalData?.idNumber === loginSecret.trim()
+    );
+    if (employee) {
+      await addAuditLog(employee.name, 'freeroom', "免費房間登入", "使用身分證字號登入免費房間系統");
+      return res.json({ success: true, user: employee, role: 'freeroom' });
+    } else {
+      return res.status(401).json({ success: false, message: "登入失敗，員編或身分證字號不正確" });
+    }
+  }
+
   // HR / Admin Login Path
   try {
     const db = await getDb();
@@ -861,8 +878,17 @@ app.post("/api/employees/import", async (req, res) => {
       const existing = await db.get(
         `SELECT id FROM employees WHERE emp_id = ? AND year = ?`, [emp.empId, targetYear]
       );
+      const existingMember = await db.get(`SELECT id, department FROM members WHERE emp_id = ?`, [emp.empId]);
+      let finalDepartment = emp.department || "研發部";
+      if (finalDepartment === "." || finalDepartment.trim() === "") {
+        finalDepartment = "研發部";
+      }
+      if (existingMember && existingMember.department && existingMember.department.trim() !== "." && existingMember.department.trim() !== "") {
+        finalDepartment = existingMember.department;
+      }
+
       const empValues = [
-        emp.name, emp.title || "全時人員", emp.department || "研發部",
+        emp.name, emp.title || "全時人員", finalDepartment,
         Math.max(0, Number(emp.salary || 0)), Math.max(0, Number(emp.welfare || 70000)), targetYear,
         emp.months !== undefined ? Number(emp.months) : null,
         emp.originalAnnualSalary !== undefined ? Number(emp.originalAnnualSalary) : null,
@@ -906,13 +932,15 @@ app.post("/api/employees/import", async (req, res) => {
         addedCount++;
       }
       // Sync with members table
-      const existingMember = await db.get(`SELECT id FROM members WHERE emp_id = ?`, [emp.empId]);
       if (existingMember) {
-        await db.run(`UPDATE members SET department=? WHERE emp_id=?`, [emp.department || "研發部", emp.empId]);
+        // Only update member department if we have a valid one and member's is empty
+        if ((!existingMember.department || existingMember.department.trim() === "" || existingMember.department === ".") && finalDepartment !== "研發部" && finalDepartment !== ".") {
+          await db.run(`UPDATE members SET department=? WHERE emp_id=?`, [finalDepartment, emp.empId]);
+        }
       } else {
         await db.run(
           `INSERT INTO members (emp_id, name, grade, onboarding_date, department) VALUES (?, ?, ?, ?, ?)`,
-          [emp.empId, emp.name, "一般", "", emp.department || "研發部"]
+          [emp.empId, emp.name, "一般", "", finalDepartment]
         );
       }
     }

@@ -249,3 +249,36 @@ export interface Message {
   content: string;
   timestamp: string;
 }
+
+export type EmploymentStatus = '在職' | '試用期' | '留職停薪' | '育嬰留停' | '已離職';
+
+export interface RoomUsageRecord {
+  id: string;
+  hotelName: string;
+  checkInDate: string;
+  checkOutDate: string;
+  nights: number;
+  roomType: string;
+  bookingCode: string;
+  notes?: string;
+  registeredDate: string;
+}
+
+export interface RoomBenefit {
+  year: number;
+  totalQuota: number;
+  usedNights: number;
+  eligibleHotels: string[];
+  history: RoomUsageRecord[];
+}
+
+export type UserViewMode = 'EMPLOYEE' | 'HR_ADMIN';
+
+export interface FilterState {
+  searchQuery: string;
+  company: string;
+  department: string;
+  status: string;
+  viewType: 'card' | 'table';
+  sortBy: 'department' | 'name' | 'id';
+}

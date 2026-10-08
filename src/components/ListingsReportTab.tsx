@@ -512,10 +512,10 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
     if (stats.length === 0) return;
 
     let csvContent = "\ufeff"; // BOM for Excel
-    csvContent += "申報年度,全時員工人數 (名),薪資總額 (NTD),薪資平均數 (NTD),薪資中位數 (NTD),員工變動率,平均薪資變動率,中位數變動率,福利費用總額 (NTD),福利費用平均數 (NTD)\n";
+    csvContent += "申報年度,全時員工人數 (名),薪資總額 (NTD),薪資平均數 (NTD),薪資中位數 (NTD),員工變動率,平均薪資變動率,中位數變動率\n";
 
     stats.forEach(s => {
-      csvContent += `${s.year}年,${s.employeeCount},${s.totalSalary},${s.avgSalary},${s.medianSalary},${s.yoySalaryCount},${s.yoySalaryAvg},${s.yoySalaryMedian},${s.totalWelfare},${s.avgWelfare}\n`;
+      csvContent += `${s.year}年,${s.employeeCount},${s.totalSalary},${s.avgSalary},${s.medianSalary},${s.yoySalaryCount},${s.yoySalaryAvg},${s.yoySalaryMedian}\n`;
     });
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -2707,22 +2707,13 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                 />
               </div>
               <div>
-                <label className="block text-slate-500 font-medium mb-1">全年福利費用 (NT$ - 含三節、保險、健檢等)</label>
-                <input
-                  type="number"
-                  required
-                  value={welfare}
-                  onChange={(e) => setWelfare(Number(e.target.value))}
-                  className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 font-mono"
-                />
-              </div>
-              <div>
                 <label className="block text-slate-500 font-medium mb-1">申報年度</label>
                 <select
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value))}
                   className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 font-mono"
                 >
+                  <option value={2026}>2026 年度</option>
                   <option value={2025}>2025 年度 (最新)</option>
                   <option value={2024}>2024 年度 (歷史對比)</option>
                 </select>
@@ -2850,7 +2841,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
               <span className="text-xs font-normal text-slate-400">/ Board & Insiders Excluded Details & Stats</span>
             </h3>
             <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-              依據證交所申報規範，<strong>董事會成員（職等 9）與手動設定之內部人經理人</strong>之薪酬應自「非擔任主管職務之全時員工」中位數與平均數中<strong>剔除不予合併計算</strong>。以下依法單獨列示其個人薪資金額、福利金額，並進行獨立統計。
+              依據證交所申報規範，<strong>董事會成員（職等 9）與手動設定之內部人經理人</strong>之薪酬應自「非擔任主管職務之全時員工」中位數與平均數中<strong>剔除不予合併計算</strong>。以下依法單獨列示其個人薪資金額，並進行獨立統計。
             </p>
           </div>
 
@@ -3135,25 +3126,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
           </div>
         </div>
 
-        {/* Chart 2: Welfare expenses Trend */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-5">
-          <h4 className="font-bold text-slate-800 text-sm mb-4">
-            全時人員福利費用趨勢圖 <span className="text-xs text-slate-400 font-normal">/ Employee Welfare Trend Chart (萬元)</span>
-          </h4>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={11} tickLine={false} unit="萬" />
-                <Tooltip formatter={(value) => [`${value} 萬`, ""]} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
-                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Line type="monotone" dataKey="平均福利費用 (萬元)" stroke="#f59e0b" strokeWidth={3} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="員工人數 (人)" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="4 4" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+
       </div>
       )}
 
@@ -3380,22 +3353,25 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                 <label className="text-xs font-semibold text-slate-600 shrink-0">設定日期 (結算日):</label>
                 <input
                   type="date"
-                  value={settlementDate}
-                  onChange={(e) => {
-                    setSettlementDate(e.target.value);
-                  }}
-                  onBlur={(e) => {
-                    fetchStatsAndEmployees(e.target.value);
-                  }}
+                  id="settlement-date-input"
+                  defaultValue={settlementDate}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.currentTarget.blur();
+                      setSettlementDate(e.currentTarget.value);
+                      fetchStatsAndEmployees(e.currentTarget.value);
                     }
                   }}
                   className="p-1.5 border border-slate-200 rounded-lg bg-slate-50 font-mono text-xs focus:ring-1 focus:ring-blue-500 text-slate-800 font-bold"
                 />
                 <button
-                  onClick={() => fetchStatsAndEmployees(settlementDate)}
+                  onClick={() => {
+                    const input = document.getElementById('settlement-date-input') as HTMLInputElement;
+                    if (input) {
+                      setSettlementDate(input.value);
+                      fetchStatsAndEmployees(input.value);
+                    }
+                  }}
                   className="px-2 py-1.5 bg-blue-50 text-blue-600 border border-blue-150 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors"
                   title="套用結算日"
                 >

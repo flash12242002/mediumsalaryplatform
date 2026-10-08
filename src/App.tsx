@@ -3,6 +3,7 @@ import Login from './components/Login';
 import EmployeeDashboard from './components/EmployeeDashboard';
 import HrDashboard from './components/HrDashboard';
 import PlatformDashboard from './components/PlatformDashboard';
+import FreeroomPortal from './components/FreeroomPortal';
 import ResetPassword from './components/ResetPassword';
 import { Employee } from './types';
 import { AlertCircle, X } from 'lucide-react';
@@ -150,6 +151,13 @@ export default function App() {
     mainContent = (
       <EmployeeDashboard
         initialEmployee={session.user}
+        onLogout={handleLogout}
+      />
+    );
+  } else if (session.role === 'freeroom') {
+    mainContent = (
+      <FreeroomPortal
+        currentUser={session.user}
         onLogout={handleLogout}
       />
     );

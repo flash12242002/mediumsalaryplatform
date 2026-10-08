@@ -531,6 +531,38 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                         />
                       </td>
                     </tr>
+                    
+                    {/* Free Room Management Permission */}
+                    <tr className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-slate-800 block">免費房間設定 (freeroom_management)</span>
+                        <span className="text-[10px] text-slate-400">管理員工免費房配額與使用紀錄</span>
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={rolePermissions["HR_ADMIN"]?.freeroom_management || false}
+                          onChange={() => handleTogglePermission("HR_ADMIN", "freeroom_management")}
+                          className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={rolePermissions["EXECUTIVE"]?.freeroom_management || false}
+                          onChange={() => handleTogglePermission("EXECUTIVE", "freeroom_management")}
+                          className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={rolePermissions["SALES_LEADER"]?.freeroom_management || false}
+                          onChange={() => handleTogglePermission("SALES_LEADER", "freeroom_management")}
+                          className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                        />
+                      </td>
+                    </tr>
 
                     {/* Permission Row 5 */}
                     <tr className="hover:bg-slate-50/50 transition-colors">

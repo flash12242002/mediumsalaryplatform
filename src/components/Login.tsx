@@ -7,7 +7,7 @@ import officialLogo from '../assets/ldc_logo.svg';interface LoginProps {
 }
 
 export default function Login({ onLoginSuccess }: LoginProps) {
-  const [role, setRole] = useState<'employee' | 'hr'>('employee');
+  const [role, setRole] = useState<'employee' | 'hr' | 'freeroom'>('employee');
   const [email, setEmail] = useState('');
   const [authToken, setAuthToken] = useState('');
   const [error, setError] = useState('');
@@ -104,10 +104,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         </div>
 
         {/* Tab Selection */}
-        <div className="flex border border-slate-150 mb-8 p-1 bg-slate-50 rounded-xl">
+        <div className="flex border border-slate-150 mb-8 p-1 bg-slate-50 rounded-xl overflow-x-auto whitespace-nowrap hide-scrollbar">
           <button
             type="button"
-            className={`flex-1 py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all duration-200 ${
+            className={`flex-1 min-w-[100px] px-2 py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 ${
               role === 'employee'
                 ? 'bg-white text-indigo-700 shadow-sm'
                 : 'text-slate-500 hover:text-slate-800'
@@ -119,11 +119,27 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             }}
           >
             <User className="w-3.5 h-3.5" />
-            新進同仁報到
+            新進報到
           </button>
           <button
             type="button"
-            className={`flex-1 py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all duration-200 ${
+            className={`flex-1 min-w-[100px] px-2 py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 ${
+              role === 'freeroom'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+            onClick={() => {
+              setRole('freeroom');
+              setAuthToken('');
+              setError('');
+            }}
+          >
+            <CheckCircle className="w-3.5 h-3.5" />
+            免費客房
+          </button>
+          <button
+            type="button"
+            className={`flex-1 min-w-[100px] px-2 py-2.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 ${
               role === 'hr'
                 ? 'bg-white text-indigo-700 shadow-sm'
                 : 'text-slate-500 hover:text-slate-800'
@@ -135,7 +151,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             }}
           >
             <Shield className="w-3.5 h-3.5" />
-            HR管理後台
+            HR後台
           </button>
         </div>
 
@@ -143,13 +159,13 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-              電子信箱
+              {role === 'freeroom' ? '員工編號' : '電子信箱'}
             </label>
             <input
-              type="email"
+              type={role === 'freeroom' ? 'text' : 'email'}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@example.com"
+              placeholder={role === 'freeroom' ? "請輸入您的員編 (例: E001)" : "example@example.com"}
               className="w-full text-slate-950 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-xs"
               disabled={loading}
               required
@@ -204,6 +220,28 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 onChange={(e) => setAuthToken(e.target.value)}
                 placeholder="請輸入密碼"
                 className="w-full text-slate-950 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-xs"
+                disabled={loading}
+                required
+              />
+            </div>
+          )}
+
+          {role === 'freeroom' && (
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  身分證字號
+                </label>
+                <span className="text-[10px] text-slate-400">
+                  首字大寫
+                </span>
+              </div>
+              <input
+                type="password"
+                value={authToken}
+                onChange={(e) => setAuthToken(e.target.value)}
+                placeholder="請輸入您的身分證字號"
+                className="w-full text-slate-950 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all text-xs tracking-wide font-mono"
                 disabled={loading}
                 required
               />

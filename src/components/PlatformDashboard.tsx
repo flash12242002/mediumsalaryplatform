@@ -15,6 +15,9 @@ import {
 import officialLogo from '../assets/ldc_logo.svg';
 
 import HrDashboard from "./HrDashboard";
+import { HrAdminPortal } from "./HrAdminPortal";
+import { INITIAL_EMPLOYEES } from "../data/roomMockData";
+
 export default function PlatformDashboard({ currentUser, onLogout }: any) {
   
   const [activeTab, setActiveTab] = useState<string>("onboarding");
@@ -351,6 +354,22 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
                     {!getHasPermission("manage_backups") && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                   </button>
 
+                  {/* Tab 4: Freeroom Management */}
+                  <button
+                    onClick={() => setActiveTab("freeroom_management")}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
+                      activeTab === "freeroom_management" 
+                        ? "bg-blue-50 text-blue-600 border-blue-100 shadow-xs" 
+                        : "text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 text-left">
+                      <Bot className="w-4 h-4 shrink-0" />
+                      <span className="text-left">免費房間管理 <span className="block text-[9px] font-normal opacity-70 text-left">Room Benefit</span></span>
+                    </div>
+                    {!getHasPermission("freeroom_management") && <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+                  </button>
+
                   {/* Tab 5: Security Trail / Logs */}
                   <button
                     onClick={() => setActiveTab("audit_trail")}
@@ -468,6 +487,17 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
                 return renderLockedScreen("雲端備份與稽核 (Cloud Backups & Auditing)", "對系統統計結果進行雲端快照備份、刪除或還原之功能目前已被關閉。");
               }
               return <CloudBackupsTab user={currentUser} onLogAction={handleLogAction} />;
+            }
+
+            if (activeTab === "freeroom_management") {
+              if (!getHasPermission("freeroom_management")) {
+                return renderLockedScreen("免費房間管理 (Free Room Management)", "查詢與管理員工免費房配額與使用紀錄之功能目前已被關閉。");
+              }
+              return (
+                <div className="w-full h-full overflow-y-auto">
+                  <HrAdminPortal employees={INITIAL_EMPLOYEES as any} />
+                </div>
+              );
             }
 
             if (activeTab === "audit_trail") {

@@ -1,0 +1,115 @@
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, 'src', 'index.css');
+let content = fs.readFileSync(filePath, 'utf-8');
+
+// We will replace the entire @media print block
+const mediaPrintStart = content.indexOf('@media print {');
+if (mediaPrintStart !== -1) {
+  content = content.substring(0, mediaPrintStart) + 
+`@media print {
+  /* Hide the main app root since print modals are now portaled to document.body */
+  #root {
+    display: none !important;
+  }
+  
+  /* Reset body and html */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+    visibility: visible !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    width: auto !important;
+  }
+  
+  /* Reset all elements overflow just in case */
+  * {
+    overflow: visible !important;
+  }
+  
+  /* Modal Overlay acts as the new body */
+  .print-modal-overlay {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    overflow: visible !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    transform: none !important;
+  }
+  
+  .print-modal-card {
+    position: static !important;
+    display: block !important;
+    visibility: visible !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    transform: none !important;
+  }
+
+  .print-paper-container {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  
+  /* Hide elements we do not want to print */
+  .no-print-el, .no-print-el *, button, svg {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
+  /* A4 page styles */
+  .print-page-a4 {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    padding: 20mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+  
+  /* specific fix for inputs */
+  input, textarea {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: black !important;
+    -webkit-appearance: none !important;
+  }
+}`;
+}
+
+fs.writeFileSync(filePath, content, 'utf-8');
+console.log('Successfully updated index.css print logic');
