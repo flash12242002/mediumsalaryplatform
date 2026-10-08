@@ -21,6 +21,7 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
   const [onboardingSubMenu, setOnboardingSubMenu] = useState<'tracker' | 'add' | 'admins' | 'logs'>('tracker');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<EmployeeStats[]>([]);
+  const [activePermissions, setActivePermissions] = useState<any>(currentUser?.permissions || null);
   
   // 倒數計時狀態與時間紀錄
   const [timeLeft, setTimeLeft] = useState(1800);
@@ -65,18 +66,21 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
         if (found) {
           const currentRolePermissions = data.rolePermissions[found.role] || {};
           
+          setActivePermissions(currentRolePermissions);
+          
           // Check if there's any actual change in role or permissions before setting state
           const hasRoleChanged = currentUser.role !== found.role;
           const hasPermissionsChanged = JSON.stringify(currentUser.permissions) !== JSON.stringify(currentRolePermissions);
           
-          if (hasRoleChanged || hasPermissionsChanged) {
+          if (hasRoleChanged || hasPermissionsChanged || !currentUser.permissions) {
             const updatedUser = {
               ...currentUser,
               role: found.role,
               permissions: currentRolePermissions
             };
             
-            localStorage.setItem("hr_currentUser", JSON.stringify(updatedUser));
+            localStorage.setItem("ldc_onboard_user", JSON.stringify(updatedUser));
+            localStorage.setItem("hr_currentUser", JSON.stringify(updatedUser)); // Keep for legacy if needed
           }
         }
       }
@@ -246,8 +250,9 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
             {(() => {
               const getHasPermission = (permKey: string) => {
                 if (!currentUser) return false;
-                if (currentUser.permissions) {
-                  return !!currentUser.permissions[permKey];
+                const perms = activePermissions || currentUser.permissions;
+                if (perms) {
+                  return !!perms[permKey];
                 }
                 // Fallbacks only if permissions object is entirely missing
                 if (currentUser.role === "HR_ADMIN") return true;
