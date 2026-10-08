@@ -17,6 +17,8 @@ import officialLogo from '../assets/ldc_logo.svg';
 import HrDashboard from "./HrDashboard";
 import { HrAdminPortal } from "./HrAdminPortal";
 import { INITIAL_EMPLOYEES } from "../data/roomMockData";
+import { AddEmployeeModal } from "./AddEmployeeModal";
+import { EditEmployeeModal } from "./EditEmployeeModal";
 
 export default function PlatformDashboard({ currentUser, onLogout }: any) {
   
@@ -26,6 +28,11 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
   const [stats, setStats] = useState<EmployeeStats[]>([]);
   const [activePermissions, setActivePermissions] = useState<any>(currentUser?.permissions || null);
   
+  // Free room management state
+  const [roomEmployees, setRoomEmployees] = useState<any[]>(INITIAL_EMPLOYEES as any);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editEmployee, setEditEmployee] = useState<any | null>(null);
+
   // 倒數計時狀態與時間紀錄
   const [timeLeft, setTimeLeft] = useState(1800);
   const lastActivityTime = useRef(Date.now());
@@ -495,7 +502,14 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
               }
               return (
                 <div className="w-full h-full overflow-y-auto">
-                  <HrAdminPortal employees={INITIAL_EMPLOYEES as any} />
+                  <HrAdminPortal 
+                    employees={roomEmployees} 
+                    onUpdateEmployees={setRoomEmployees}
+                    onOpenAddModal={() => setIsAddModalOpen(true)}
+                    onOpenEditModal={(emp) => setEditEmployee(emp)}
+                    onDeleteEmployee={(id) => setRoomEmployees(prev => prev.filter(e => e.id !== id))}
+                    onExitAdmin={() => setActiveTab("onboarding")}
+                  />
                 </div>
               );
             }
@@ -534,6 +548,21 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
         </p>
       </footer>
 
+      {/* Add / Edit Modals for Free Room Management */}
+      {isAddModalOpen && (
+        <AddEmployeeModal
+          onClose={() => setIsAddModalOpen(false)}
+          onAdd={(newEmp) => setRoomEmployees(prev => [newEmp, ...prev])}
+        />
+      )}
+
+      {editEmployee && (
+        <EditEmployeeModal
+          employee={editEmployee}
+          onClose={() => setEditEmployee(null)}
+          onUpdate={(updated) => setRoomEmployees(prev => prev.map(e => e.id === updated.id ? updated : e))}
+        />
+      )}
     </div>
   );
 }
