@@ -2705,20 +2705,25 @@ async function bootstrap() {
     });
   }
 
-  const startServer = (port: number) => {
-    app.listen(port, "0.0.0.0", () => {
-      console.log(`🚀 Server running on http://localhost:${port}`);
-    }).on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        console.log(`Port ${port} is busy, trying ${port + 1}...`);
-        startServer(port + 1);
-      } else {
-        console.error(err);
-      }
-    });
-  };
-
-  startServer(PORT);
+  // Strict port: never silently hop to another port.
+  // Hopping caused the old server to keep serving stale UI behind ngrok.
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log("==================================================");
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📁 Working directory: ${process.cwd()}`);
+    console.log("==================================================");
+  }).on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error("==================================================");
+      console.error(`❌ Port ${PORT} 已被其他程式佔用（很可能是舊版伺服器還在跑）`);
+      console.error(`   請先執行以下指令關掉舊程式，再重新 npm run dev：`);
+      console.error(`   kill $(ss -ltnp | grep ':${PORT} ' | grep -oP 'pid=\\K[0-9]+')`);
+      console.error("==================================================");
+    } else {
+      console.error(err);
+    }
+    process.exit(1);
+  });
 }
 
 bootstrap().catch(err => {
