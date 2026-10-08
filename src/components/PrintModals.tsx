@@ -1,4 +1,6 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
+// from 'react';
 import { X, Printer, FileText, CheckCircle2 } from 'lucide-react';
 import { Employee, TaxDependent, PersonalData, TaxDeclaration } from '../types';
 import { getCompanyDetails } from './EmployeeDashboard';
@@ -78,7 +80,7 @@ export function TaxDeclarationPrintModal({ employee, onClose }: PrintModalProps)
     window.print();
   };
 
-  return (
+  return typeof document !== 'undefined' ? createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm p-4 md:p-8 flex items-start justify-center print-modal-overlay">
       <div className="bg-stone-50 max-w-4xl w-full rounded-2xl shadow-2xl border border-stone-200 overflow-hidden my-4 text-left print-modal-card">
         
@@ -422,8 +424,9 @@ export function TaxDeclarationPrintModal({ employee, onClose }: PrintModalProps)
         </div>
       </div>
     </div>
-  </div>
-  );
+  </div>,
+    document.body
+  ) : null;
 }
 
 export function ContractPrintModal({ employee, onClose }: { employee: Employee; onClose: () => void }) {
@@ -439,7 +442,7 @@ export function ContractPrintModal({ employee, onClose }: { employee: Employee; 
     window.print();
   };
 
-  return (
+  return typeof document !== 'undefined' ? createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm p-4 md:p-8 flex items-start justify-center print-modal-overlay">
       <div className="bg-stone-50 max-w-4xl w-full rounded-2xl shadow-2xl border border-stone-200 overflow-hidden my-4 text-left print-modal-card">
         
@@ -642,8 +645,9 @@ export function ContractPrintModal({ employee, onClose }: { employee: Employee; 
         </div>
 
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ) : null;
 }
 
 export function ConsentPrintModal({ employee, onClose }: { employee: Employee; onClose: () => void }) {
@@ -659,7 +663,7 @@ export function ConsentPrintModal({ employee, onClose }: { employee: Employee; o
     window.print();
   };
 
-  return (
+  return typeof document !== 'undefined' ? createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm p-4 md:p-8 flex items-start justify-center print-modal-overlay">
       <div className="bg-stone-50 max-w-4xl w-full rounded-2xl shadow-2xl border border-stone-200 overflow-hidden my-4 text-left print-modal-card">
         
@@ -861,8 +865,9 @@ export function ConsentPrintModal({ employee, onClose }: { employee: Employee; o
         </div>
 
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ) : null;
 }
 export function GuarantorPrintModal({ employee, onClose }: { employee: Employee; onClose: () => void }) {
   const companyDetails = getCompanyDetails(employee);
@@ -881,7 +886,7 @@ export function GuarantorPrintModal({ employee, onClose }: { employee: Employee;
     window.print();
   };
 
-  return (
+  return typeof document !== 'undefined' ? createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm p-4 md:p-8 flex items-start justify-center print-modal-overlay">
       <div className="bg-stone-50 max-w-4xl w-full rounded-2xl shadow-2xl border border-stone-200 overflow-hidden my-4 text-left print-modal-card">
         
@@ -1177,8 +1182,9 @@ export function GuarantorPrintModal({ employee, onClose }: { employee: Employee;
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ) : null;
 }
 
 export function ServicePrintModal({ employee, onClose }: { employee: Employee; onClose: () => void }) {
@@ -1194,7 +1200,7 @@ export function ServicePrintModal({ employee, onClose }: { employee: Employee; o
     window.print();
   };
 
-  return (
+  return typeof document !== 'undefined' ? createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm p-4 md:p-8 flex items-start justify-center print-modal-overlay">
       <div className="bg-stone-50 max-w-4xl w-full rounded-2xl shadow-2xl border border-stone-200 overflow-hidden my-4 text-left print-modal-card">
         
@@ -1301,6 +1307,7 @@ export function ServicePrintModal({ employee, onClose }: { employee: Employee; o
 
         </div>
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ) : null;
 }

@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { createPortal } from 'react-dom';
+//, { useState, useEffect } from 'react';
 import { 
   Users, 
   UserPlus, 
@@ -3432,8 +3434,8 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
       </main>
 
       {/* Custom print overlay modal */}
-      {printingEmp && printFields && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-sm p-4 md:p-8 flex items-start justify-center print-modal-overlay">
+      {printingEmp && printFields && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[999999] overflow-y-auto bg-stone-900/60 p-4 md:p-8 flex items-start justify-center print-modal-overlay">
           <div className="bg-stone-100 max-w-4xl w-full rounded-2xl shadow-2xl border border-stone-200 overflow-hidden my-4 text-left print-modal-card">
             {/* Modal headers - strictly non-printing */}
             <div className="bg-stone-900 text-[#D4AF37] px-6 py-4 flex items-center justify-between sticky top-0 z-10 border-b border-[#D4AF37]/30 no-print-el">
@@ -4275,7 +4277,8 @@ export default function HrDashboard({ currentUser, initialEmployees, onLogout, a
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 薪資扣繳免稅額申報表 A4 Print Modal */}
