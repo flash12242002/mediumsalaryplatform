@@ -295,18 +295,6 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
                       >
                         建立報到工作
                       </button>
-                      <button
-                        onClick={() => setOnboardingSubMenu('admins')}
-                        className={`text-left text-xs px-2 py-1.5 rounded transition-all ${onboardingSubMenu === 'admins' ? 'text-blue-700 font-bold bg-blue-50/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-                      >
-                        系統帳號管理
-                      </button>
-                      <button
-                        onClick={() => setOnboardingSubMenu('logs')}
-                        className={`text-left text-xs px-2 py-1.5 rounded transition-all ${onboardingSubMenu === 'logs' ? 'text-blue-700 font-bold bg-blue-50/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-                      >
-                        異動紀錄追蹤
-                      </button>
                     </div>
                   )}
 
