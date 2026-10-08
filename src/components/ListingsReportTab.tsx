@@ -217,7 +217,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
     parsedEmployeesRef.current = parsedEmployees;
   }, [parsedEmployees]);
   const [dragActive, setDragActive] = useState(false);
-  const [importYear, setImportYear] = useState(2025);
+  const [importYear, setImportYear] = useState(2026);
   const [importing, setImporting] = useState(false);
 
   // Google Drive Sync states
@@ -253,7 +253,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
   const [driveSelectedFile1, setDriveSelectedFile1] = useState<string | null>(null);
   const [driveSelectedFile2, setDriveSelectedFile2] = useState<string | null>(null);
   const [driveSelectedFile3, setDriveSelectedFile3] = useState<string | null>(null);
-  const [overviewYear, setOverviewYear] = useState<number>(2025);
+  const [overviewYear, setOverviewYear] = useState<number>(2026);
 
   // Row Expand State
   const [expandedEmpIds, setExpandedEmpIds] = useState<Record<string, boolean>>({});
@@ -2496,7 +2496,9 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
               onChange={(e) => setOverviewYear(Number(e.target.value))}
               className="bg-transparent border-none p-0 focus:ring-0 text-slate-800 font-bold font-sans text-xs cursor-pointer focus:outline-hidden"
             >
-              <option value={2025}>2025 年 (申報期)</option>
+              <option value={2027}>2027 年 (未來預留)</option>
+              <option value={2026}>2026 年 (本期最新)</option>
+              <option value={2025}>2025 年 (前期對比)</option>
               <option value={2024}>2024 年 (歷史對比)</option>
             </select>
           </div>
@@ -2987,8 +2989,9 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                 onChange={(e) => setOverviewYear(Number(e.target.value))}
                 className="p-1.5 border border-slate-200 rounded-lg bg-white text-slate-800 font-mono text-xs focus:ring-1 focus:ring-blue-500"
               >
-                <option value={2026}>2026 年度</option>
-                <option value={2025}>2025 年度 (本期最新)</option>
+                <option value={2027}>2027 年度 (未來預留)</option>
+                <option value={2026}>2026 年度 (本期最新)</option>
+                <option value={2025}>2025 年度 (前期對比)</option>
                 <option value={2024}>2024 年度 (歷史對比)</option>
               </select>
             </div>
@@ -3893,6 +3896,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                         onChange={(e) => setImportYear(Number(e.target.value))}
                         className="p-1.5 border border-slate-200 rounded-lg bg-white text-slate-800 font-mono text-xs focus:ring-1 focus:ring-blue-500"
                       >
+                        <option value={2027}>2027 年度 (未來預留)</option>
                         <option value={2026}>2026 年度 (即將申報)</option>
                         <option value={2025}>2025 年度 (本期最新申報)</option>
                         <option value={2024}>2024 年度 (歷史資料)</option>
