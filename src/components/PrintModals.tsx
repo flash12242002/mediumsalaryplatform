@@ -1,6 +1,5 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-// from 'react';
 import { X, Printer, FileText, CheckCircle2 } from 'lucide-react';
 import { Employee, TaxDependent, PersonalData, TaxDeclaration } from '../types';
 import { getCompanyDetails } from './EmployeeDashboard';
