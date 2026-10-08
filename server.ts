@@ -393,12 +393,12 @@ app.post("/api/auth/login", async (req, res) => {
       await addAuditLog('測試管理員', 'freeroom', "免費房間登入", "使用測試帳號登入免費房間系統");
       return res.json({ success: true, user: { name: '測試管理員', empId: 'admin' }, role: 'freeroom' });
     }
-    const employee = employees.find(
-      (emp) => emp.empId === loginIdentifier.trim() && emp.personalData?.idNumber === loginSecret.trim()
+    const frEmployee = freeroomEmployees.find(
+      (emp) => (emp.id === loginIdentifier.trim() || emp.empId === loginIdentifier.trim()) && emp.nationalId === loginSecret.trim().toUpperCase()
     );
-    if (employee) {
-      await addAuditLog(employee.name, 'freeroom', "免費房間登入", "使用身分證字號登入免費房間系統");
-      return res.json({ success: true, user: employee, role: 'freeroom' });
+    if (frEmployee) {
+      await addAuditLog(frEmployee.nameZh, 'freeroom', "免費房間登入", "使用身分證字號登入免費房間系統");
+      return res.json({ success: true, user: frEmployee, role: 'freeroom' });
     } else {
       return res.status(401).json({ success: false, message: "登入失敗，員編或身分證字號不正確" });
     }
@@ -443,6 +443,28 @@ app.post("/api/auth/login", async (req, res) => {
     console.error("Login error:", err);
     return res.status(500).json({ success: false, message: "伺服器錯誤: " + err.message });
   }
+});
+
+// Freeroom Endpoints
+app.get("/api/freeroom/employees", (req, res) => {
+  res.json(freeroomEmployees);
+});
+
+app.post("/api/freeroom/employees", (req, res) => {
+  freeroomEmployees = req.body;
+  saveFreeroomDb();
+  res.json({ success: true });
+});
+
+// Freeroom Endpoints
+app.get("/api/freeroom/employees", (req, res) => {
+  res.json(freeroomEmployees);
+});
+
+app.post("/api/freeroom/employees", (req, res) => {
+  freeroomEmployees = req.body;
+  saveFreeroomDb();
+  res.json({ success: true });
 });
 
 // Permissions API Endpoints
@@ -1487,6 +1509,28 @@ interface Employee {
   serviceDate?: string;
   updatedAt: string;
 }
+// --- Freeroom Employees DB ---
+const FREEROOM_DB_FILE = path.join(__dirname, "freeroom_db.json");
+let freeroomEmployees: any[] = [];
+if (!fs.existsSync(FREEROOM_DB_FILE)) {
+  try {
+    const mockDataCode = fs.readFileSync(path.join(__dirname, 'src/data/roomMockData.ts'), 'utf8');
+    // Extract the array using simple regex for demo purposes (assuming INITIAL_EMPLOYEES is an array)
+    const match = mockDataCode.match(/export const INITIAL_EMPLOYEES: Employee\[\] = (\[[\s\S]*?\]);/);
+    if (match) {
+       freeroomEmployees = eval(match[1].replace(/Date\.now\(\)/g, "1711200000000"));
+    }
+    fs.writeFileSync(FREEROOM_DB_FILE, JSON.stringify(freeroomEmployees, null, 2));
+  } catch(e) {
+    console.error("Could not parse roomMockData.ts", e);
+  }
+} else {
+  freeroomEmployees = JSON.parse(fs.readFileSync(FREEROOM_DB_FILE, "utf-8"));
+}
+
+const saveFreeroomDb = () => {
+  fs.writeFileSync(FREEROOM_DB_FILE, JSON.stringify(freeroomEmployees, null, 2));
+};
 
 let employees: Employee[] = [
   {

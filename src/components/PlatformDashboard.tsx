@@ -29,9 +29,40 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
   const [activePermissions, setActivePermissions] = useState<any>(currentUser?.permissions || null);
   
   // Free room management state
-  const [roomEmployees, setRoomEmployees] = useState<any[]>(INITIAL_EMPLOYEES as any);
+  const [roomEmployees, setRoomEmployees] = useState<any[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editEmployee, setEditEmployee] = useState<any | null>(null);
+
+  // Fetch freeroom employees on mount
+  useEffect(() => {
+    fetch("/api/freeroom/employees")
+      .then(res => res.json())
+      .then(data => {
+         if (data && data.length > 0) {
+           setRoomEmployees(data);
+         } else {
+           setRoomEmployees(INITIAL_EMPLOYEES as any);
+         }
+      })
+      .catch(err => {
+         console.error("Failed to fetch freeroom employees", err);
+         setRoomEmployees(INITIAL_EMPLOYEES as any);
+      });
+  }, []);
+
+  // Sync to server whenever roomEmployees changes
+  const syncRoomEmployees = async (newEmployees: any[]) => {
+    setRoomEmployees(newEmployees);
+    try {
+      await fetch("/api/freeroom/employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newEmployees)
+      });
+    } catch(err) {
+      console.error("Failed to sync freeroom employees", err);
+    }
+  };
 
   // 倒數計時狀態與時間紀錄
   const [timeLeft, setTimeLeft] = useState(1800);
@@ -504,10 +535,10 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
                 <div className="w-full h-full overflow-y-auto">
                   <HrAdminPortal 
                     employees={roomEmployees} 
-                    onUpdateEmployees={setRoomEmployees}
+                    onUpdateEmployees={syncRoomEmployees}
                     onOpenAddModal={() => setIsAddModalOpen(true)}
                     onOpenEditModal={(emp) => setEditEmployee(emp)}
-                    onDeleteEmployee={(id) => setRoomEmployees(prev => prev.filter(e => e.id !== id))}
+                    onDeleteEmployee={(id) => syncRoomEmployees(roomEmployees.filter(e => e.id !== id))}
                     onExitAdmin={() => setActiveTab("onboarding")}
                   />
                 </div>
@@ -554,7 +585,7 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
           isOpen={isAddModalOpen}
           existingCompanies={["雲朗觀光集團總部", "君品酒店", "雲品溫泉酒店", "翰品酒店", "兆品酒店", "品文旅"]}
           onClose={() => setIsAddModalOpen(false)}
-          onAddEmployee={(newEmp) => setRoomEmployees(prev => [newEmp, ...prev])}
+          onAddEmployee={(newEmp) => syncRoomEmployees([newEmp, ...roomEmployees])}
         />
       )}
 
@@ -563,9 +594,9 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
           isOpen={!!editEmployee}
           employee={editEmployee}
           onClose={() => setEditEmployee(null)}
-          onSave={(updated) => setRoomEmployees(prev => prev.map(e => e.id === updated.id ? updated : e))}
+          onSave={(updated) => syncRoomEmployees(roomEmployees.map(e => e.id === updated.id ? updated : e))}
           onDelete={(id) => {
-            setRoomEmployees(prev => prev.filter(e => e.id !== id));
+            syncRoomEmployees(roomEmployees.filter(e => e.id !== id));
             setEditEmployee(null);
           }}
         />
