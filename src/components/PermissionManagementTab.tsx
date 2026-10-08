@@ -503,30 +503,30 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                     {/* Permission Row 4 */}
                     <tr className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-3 px-4">
-                        <span className="font-bold text-slate-800 block">AI 智慧諮詢 (ai_compliance)</span>
-                        <span className="text-[10px] text-slate-400">存取上市櫃法規合規智慧助理與產出說明書</span>
+                        <span className="font-bold text-slate-800 block">新人報到資訊 (onboarding_portal)</span>
+                        <span className="text-[10px] text-slate-400">管理與檢視新人報到流程與審核</span>
                       </td>
                       <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
-                          checked={rolePermissions["HR_ADMIN"]?.ai_compliance || false}
-                          onChange={() => handleTogglePermission("HR_ADMIN", "ai_compliance")}
+                          checked={rolePermissions["HR_ADMIN"]?.onboarding_portal || false}
+                          onChange={() => handleTogglePermission("HR_ADMIN", "onboarding_portal")}
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
                       <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
-                          checked={rolePermissions["EXECUTIVE"]?.ai_compliance || false}
-                          onChange={() => handleTogglePermission("EXECUTIVE", "ai_compliance")}
+                          checked={rolePermissions["EXECUTIVE"]?.onboarding_portal || false}
+                          onChange={() => handleTogglePermission("EXECUTIVE", "onboarding_portal")}
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
                       <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
-                          checked={rolePermissions["SALES_LEADER"]?.ai_compliance || false}
-                          onChange={() => handleTogglePermission("SALES_LEADER", "ai_compliance")}
+                          checked={rolePermissions["SALES_LEADER"]?.onboarding_portal || false}
+                          onChange={() => handleTogglePermission("SALES_LEADER", "onboarding_portal")}
                           className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
