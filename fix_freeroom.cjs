@@ -1,4 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+const fs = require('fs');
+
+const appTsx = fs.readFileSync('C:/Users/gordon.huang/Desktop/Test2/comp-rm-checking/src/App.tsx', 'utf8');
+
+// We will construct the FreeroomPortal component
+let newPortal = `import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Building2, ChevronDown, FilterX, HelpCircle, 
   LayoutGrid, List, Plus, Search, Users, LogOut, ArrowUpDown 
@@ -218,13 +223,13 @@ export default function FreeroomPortal({ currentUser, onLogout }: any) {
               <div className="flex items-center bg-white p-0.5 rounded-lg border border-slate-300">
                 <button
                   onClick={() => setFilter((p) => ({ ...p, viewType: 'card' }))}
-                  className={`p-1.5 rounded transition ${filter.viewType === 'card' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-400'}`}
+                  className={\`p-1.5 rounded transition \${filter.viewType === 'card' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-400'}\`}
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setFilter((p) => ({ ...p, viewType: 'table' }))}
-                  className={`p-1.5 rounded transition ${filter.viewType === 'table' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-400'}`}
+                  className={\`p-1.5 rounded transition \${filter.viewType === 'table' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-400'}\`}
                 >
                   <List className="w-3.5 h-3.5" />
                 </button>
@@ -237,7 +242,7 @@ export default function FreeroomPortal({ currentUser, onLogout }: any) {
             <span className="text-slate-400 text-[11px] shrink-0 font-medium">館別快速切換：</span>
             <button
               onClick={() => handleSelectCategory('', '')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition shrink-0 ${filter.company === '' ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
+              className={\`px-2.5 py-1 rounded-lg text-xs font-medium transition shrink-0 \${filter.company === '' ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}\`}
             >
               全部館別 ({employees.length})
             </button>
@@ -247,7 +252,7 @@ export default function FreeroomPortal({ currentUser, onLogout }: any) {
                 <button
                   key={comp}
                   onClick={() => handleSelectCategory(comp, '')}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition shrink-0 ${filter.company === comp ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
+                  className={\`px-2.5 py-1 rounded-lg text-xs transition shrink-0 \${filter.company === comp ? 'bg-blue-600 text-white font-bold shadow-2xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}\`}
                 >
                   {comp} ({count})
                 </button>
@@ -335,7 +340,7 @@ export default function FreeroomPortal({ currentUser, onLogout }: any) {
                         <td className="py-2.5 px-4 text-slate-600">{emp.company}</td>
                         <td className="py-2.5 px-4 text-slate-600">{emp.department}</td>
                         <td className="py-2.5 px-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${emp.status === '在職' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                          <span className={\`px-2 py-0.5 rounded text-[10px] font-bold border \${emp.status === '在職' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'}\`}>
                             {emp.status}
                           </span>
                         </td>
@@ -371,3 +376,6 @@ export default function FreeroomPortal({ currentUser, onLogout }: any) {
     </div>
   );
 }
+`;
+
+fs.writeFileSync('C:/Users/gordon.huang/Desktop/Test2/bonus-salary-platform/src/components/FreeroomPortal.tsx', newPortal);
