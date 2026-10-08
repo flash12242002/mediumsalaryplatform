@@ -551,16 +551,23 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
       {/* Add / Edit Modals for Free Room Management */}
       {isAddModalOpen && (
         <AddEmployeeModal
+          isOpen={isAddModalOpen}
+          existingCompanies={["雲朗觀光集團總部", "君品酒店", "雲品溫泉酒店", "翰品酒店", "兆品酒店", "品文旅"]}
           onClose={() => setIsAddModalOpen(false)}
-          onAdd={(newEmp) => setRoomEmployees(prev => [newEmp, ...prev])}
+          onAddEmployee={(newEmp) => setRoomEmployees(prev => [newEmp, ...prev])}
         />
       )}
 
       {editEmployee && (
         <EditEmployeeModal
+          isOpen={!!editEmployee}
           employee={editEmployee}
           onClose={() => setEditEmployee(null)}
-          onUpdate={(updated) => setRoomEmployees(prev => prev.map(e => e.id === updated.id ? updated : e))}
+          onSave={(updated) => setRoomEmployees(prev => prev.map(e => e.id === updated.id ? updated : e))}
+          onDelete={(id) => {
+            setRoomEmployees(prev => prev.filter(e => e.id !== id));
+            setEditEmployee(null);
+          }}
         />
       )}
     </div>
