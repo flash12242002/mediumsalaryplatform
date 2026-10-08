@@ -17,6 +17,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const [empId, setEmpId] = useState('');
   const [nameZh, setNameZh] = useState('');
   const [nameEn, setNameEn] = useState('');
   const [nationalId, setNationalId] = useState('');
@@ -32,14 +33,15 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nameZh || !nameEn || !extension || !email || !nationalId) {
-      alert('請填寫完整必填欄位 (中文姓名、英文姓名、身分證字號、分機、Email)！');
+    if (!empId || !nameZh || !nameEn || !extension || !email || !nationalId) {
+      alert('請填寫完整必填欄位 (員工編號、中文姓名、英文姓名、身分證字號、分機、Email)！');
       return;
     }
 
-    const randomId = Math.floor(1000 + Math.random() * 9000);
+    const cleanEmpId = empId.trim().toUpperCase();
     const newEmployee: Employee = {
-      id: `LDC-${randomId}`,
+      id: cleanEmpId,
+      empId: cleanEmpId,
       nameZh,
       nameEn,
       extension,
@@ -88,6 +90,18 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-3.5 text-xs">
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">員工編號 *</label>
+            <input
+              type="text"
+              placeholder="例：LDC-001082"
+              value={empId}
+              onChange={(e) => setEmpId(e.target.value)}
+              className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-hidden focus:border-blue-500 uppercase font-mono text-slate-900 font-bold"
+              required
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">中文姓名 *</label>
