@@ -3778,7 +3778,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                     <button
                       type="button"
                       onClick={() => dragMembersInputRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-650 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-colors"
                     >
                       <Upload className="w-4 h-4" />
                       <span>點選此處上傳 Excel 檔案</span>
