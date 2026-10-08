@@ -675,17 +675,6 @@ export default function PermissionManagementTab({ user, onLogAction }: Permissio
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-slate-600 mb-1">系統帳號名稱 (Username) <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    value={newUserUsername}
-                    onChange={(e) => setNewUserUsername(e.target.value)}
-                    placeholder="例如: mayday"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-xs font-mono"
-                  />
-                </div>
 
                 <div>
                   <label className="block text-slate-600 mb-1">預設登入密碼 <span className="text-red-500">*</span></label>

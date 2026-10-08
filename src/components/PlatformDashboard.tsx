@@ -494,7 +494,7 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
       {/* Platform Footer (no-print) */}
       <footer className="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500 space-y-1 no-print">
         <p className="font-bold text-slate-700">
-          HR 獎金與上市櫃全時人員申報系統 (HR Bonus and Listings Report System)
+          HR平台 (HR Platform)
         </p>
         <p>
           伺服器連線狀態：<span className="text-emerald-500 font-bold">● 連線正常 (Online)</span> | 安全驗證核心：OAuth / ABAC Fortified | 版本：v2.1.0-TS
