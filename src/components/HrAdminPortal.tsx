@@ -468,70 +468,8 @@ function doGet(e) {
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-800 flex flex-col font-sans">
-      {/* Top Admin Navigation Header */}
-      <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md">
-        <div className="max-w-[1680px] mx-auto px-6 py-3.5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 border-r border-slate-700 pr-3">
-              <span className="text-[9px] font-serif tracking-widest text-amber-400 font-bold uppercase">
-                LDC ADMIN
-              </span>
-              <span className="font-serif font-black text-xl text-amber-400">HOTELS</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-tight">HR 後端管理系統</h1>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                  Admin 權限已登入
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                員工資料庫維護 • 免費客房配額匯入 • Google 雲端 GAS 串接
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onExitAdmin}
-              className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
-              <span>返回員工通訊錄前端</span>
-            </button>
-
-            <button
-              onClick={onExitAdmin}
-              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
-              title="登出後台"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
-
       {/* Main Body */}
       <main className="max-w-[1680px] w-full mx-auto p-4 sm:p-6 flex-1 flex flex-col gap-5">
-        {/* Statistics Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-            <span className="text-slate-400 text-xs font-medium">資料庫總員工數</span>
-            <p className="text-2xl font-black text-slate-900 mt-1 font-mono">{totalEmployees} <span className="text-xs font-normal text-slate-500">人</span></p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-            <span className="text-emerald-600 text-xs font-medium">在職員工數</span>
-            <p className="text-2xl font-black text-emerald-700 mt-1 font-mono">{activeCount} <span className="text-xs font-normal text-slate-500">人</span></p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-            <span className="text-blue-600 text-xs font-medium">2026 集團總發放配額</span>
-            <p className="text-2xl font-black text-blue-700 mt-1 font-mono">{totalRoomQuota} <span className="text-xs font-normal text-slate-500">晚</span></p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-            <span className="text-slate-500 text-xs font-medium">已入住折抵晚數</span>
-            <p className="text-2xl font-black text-slate-700 mt-1 font-mono">{totalUsedNights} <span className="text-xs font-normal text-slate-500">晚</span></p>
-          </div>
-        </div>
 
         {/* Navigation Tabs */}
         <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden flex flex-col flex-1">
