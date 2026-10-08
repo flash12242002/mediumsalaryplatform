@@ -3232,9 +3232,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                 <th className="py-2.5 px-2 w-8"></th>
                 <th className="py-2.5 px-3">員工編號</th>
                 <th className="py-2.5 px-3">姓名</th>
-                <th className="py-2.5 px-3">部門</th>
                 <th className="py-2.5 px-3 text-right">全年薪資總額 (NT$)</th>
-                <th className="py-2.5 px-3 text-right">福利費用 (NT$)</th>
                 <th className="py-2.5 px-3 text-center">年度</th>
                 {isHR && <th className="py-2.5 px-3 text-right">稽核操作</th>}
               </tr>
@@ -3273,9 +3271,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                           )}
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-500">{emp.department}</td>
                       <td className="py-2.5 px-3 text-right font-mono text-slate-800 font-semibold">{emp.salary.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-500">{emp.welfare.toLocaleString()}</td>
                       <td className="py-2.5 px-3 text-center font-mono">{emp.year}年</td>
                       {isHR && (
                         <td className="py-2.5 px-3 text-right">
@@ -3300,7 +3296,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                     </tr>
                     {expandedEmpIds[emp.id] && hasDetails && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={isHR ? 9 : 8} className="p-4 border-t border-b border-slate-200">
+                        <td colSpan={isHR ? 6 : 5} className="p-4 border-t border-b border-slate-200">
                           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3 max-w-4xl mx-auto">
                             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                               <h5 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
