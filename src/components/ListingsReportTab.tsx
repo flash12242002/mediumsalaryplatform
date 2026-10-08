@@ -195,7 +195,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
   const [department, setDepartment] = useState(".");
   const [salary, setSalary] = useState(900000);
   const [welfare, setWelfare] = useState(70000);
-  const [year, setYear] = useState(2025);
+  const [year, setYear] = useState(2026);
 
   const [editingEmpId, setEditingEmpId] = useState<string | null>(null);
 
@@ -2768,8 +2768,8 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
             <thead>
               <tr className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
                 <th className="py-3 px-4 border-r border-slate-200">申報項目 (Filing Items)</th>
-                <th className="py-3 px-4 border-r border-slate-200 text-right font-mono">2024年度 (前年)</th>
-                <th className="py-3 px-4 border-r border-slate-200 text-right font-mono bg-blue-50/30">2025年度 (申報年)</th>
+                <th className="py-3 px-4 border-r border-slate-200 text-right font-mono">{overviewYear - 1}年度 (前年)</th>
+                <th className="py-3 px-4 border-r border-slate-200 text-right font-mono bg-blue-50/30">{overviewYear}年度 (申報年)</th>
                 <th className="py-3 px-4 text-center font-mono">變動比率 (YoY %)</th>
               </tr>
             </thead>
@@ -2822,30 +2822,6 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                   {activeYearStats.yoySalaryMedian}
                 </td>
               </tr>
-              <tr>
-                <td className="py-3 px-4 font-semibold border-r border-slate-200 bg-slate-50/30">5. 員工福利費用總額 (NT$ 千元)</td>
-                <td className="py-3 px-4 text-right border-r border-slate-200 font-mono">
-                  {Math.round(prevYearStats.totalWelfare / 1000).toLocaleString()}
-                </td>
-                <td className="py-3 px-4 text-right border-r border-slate-200 font-mono bg-blue-50/10">
-                  {Math.round(activeYearStats.totalWelfare / 1000).toLocaleString()}
-                </td>
-                <td className="py-3 px-4 text-center font-mono">
-                  {activeYearStats.yoySalaryAvg}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-3 px-4 font-semibold border-r border-slate-200 bg-slate-50/30">6. 員工福利費用平均數 (NT$ 元)</td>
-                <td className="py-3 px-4 text-right border-r border-slate-200 font-mono">
-                  {prevYearStats.avgWelfare.toLocaleString()}
-                </td>
-                <td className="py-3 px-4 text-right border-r border-slate-200 font-mono bg-blue-50/10">
-                  {activeYearStats.avgWelfare.toLocaleString()}
-                </td>
-                <td className="py-3 px-4 text-center font-mono">
-                  {activeYearStats.yoySalaryAvg}
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -2855,7 +2831,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
           <p className="font-semibold text-slate-700">📌 上市櫃警示合規查核 (Filing Inspection Result)：</p>
           <ul className="list-disc pl-4 space-y-0.5">
             <li>警示指標1 (平均低於50萬)：該公司非主管平均年薪為 <span className="font-semibold">NT$ {activeYearStats.avgSalary.toLocaleString()} 元</span>，高於法規黃標限制，<span className="text-emerald-600 font-semibold">符合法規標準</span>。</li>
-            <li>警示指標2 (營業利益增、平均薪未增)：2025年非主管薪資平均數 YoY 變動為 <span className="font-semibold text-emerald-600">{activeYearStats.yoySalaryAvg}</span>，無不合理減薪或未合理分配利潤之虞。</li>
+            <li>警示指標2 (營業利益增、平均薪未增)：{overviewYear}年非主管薪資平均數 YoY 變動為 <span className="font-semibold text-emerald-600">{activeYearStats.yoySalaryAvg}</span>，無不合理減薪或未合理分配利潤之虞。</li>
             <li>警示指標3 (中位數低於同業)：目前台灣資訊與電子服務同業中位數平均為 92 萬元。本公司中位數為 <span className="font-semibold text-indigo-700">NT$ {activeYearStats.medianSalary.toLocaleString()} 元</span>，處於領先區段。</li>
           </ul>
         </div>
@@ -3195,12 +3171,12 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
             {isHR && employees.length > 0 && (
               <div className="flex gap-2">
                 <button
-                  onClick={() => setBulkDeleteConfirm({ type: "year", year: 2025 })}
+                  onClick={() => setBulkDeleteConfirm({ type: "year", year: overviewYear })}
                   className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg border border-red-200 transition-colors shadow-2xs"
-                  title="刪除 2025 年度的所有申報資料"
+                  title={`刪除 ${overviewYear} 年度的所有申報資料`}
                 >
                   <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                  <span>一鍵刪除 2025 資料</span>
+                  <span>一鍵刪除 {overviewYear} 資料</span>
                 </button>
                 <button
                   onClick={() => setBulkDeleteConfirm({ type: "all" })}
