@@ -402,8 +402,9 @@ export default function PlatformDashboard({ currentUser, onLogout }: any) {
           {(() => {
             const getHasPermission = (permKey: string) => {
               if (!currentUser) return false;
-              if (currentUser.permissions) {
-                return !!currentUser.permissions[permKey];
+              const perms = activePermissions || currentUser.permissions;
+              if (perms) {
+                return !!perms[permKey];
               }
               if (currentUser.role === "HR_ADMIN") return true;
               if (currentUser.role === "EXECUTIVE") {
