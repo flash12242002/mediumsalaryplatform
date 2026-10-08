@@ -1510,11 +1510,11 @@ interface Employee {
   updatedAt: string;
 }
 // --- Freeroom Employees DB ---
-const FREEROOM_DB_FILE = path.join(__dirname, "freeroom_db.json");
+const FREEROOM_DB_FILE = path.join(process.cwd(), "freeroom_db.json");
 let freeroomEmployees: any[] = [];
 if (!fs.existsSync(FREEROOM_DB_FILE)) {
   try {
-    const mockDataCode = fs.readFileSync(path.join(__dirname, 'src/data/roomMockData.ts'), 'utf8');
+    const mockDataCode = fs.readFileSync(path.join(process.cwd(), 'src/data/roomMockData.ts'), 'utf8');
     // Extract the array using simple regex for demo purposes (assuming INITIAL_EMPLOYEES is an array)
     const match = mockDataCode.match(/export const INITIAL_EMPLOYEES: Employee\[\] = (\[[\s\S]*?\]);/);
     if (match) {
