@@ -655,7 +655,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
       const idxName = findColumnIndex(rows, ["pers_nam", "姓名"]);
       const idxGrade = findColumnIndex(rows, ["grade_cod", "職等"]);
       const idxOnboarding = findColumnIndex(rows, ["enter_dat", "到職日"]);
-      const idxDept = findColumnIndex(rows, ["dept_nam", "部門", "科別", "單位", "處", "組", "部門名稱", "Department", "Dept"]);
+      const idxDept = findColumnIndex(rows, ["dept_nam", "部門", "科別", "單位", "處", "組", "部門名稱", "Department", "Dept", "主辦單位", "所屬單位", "單位名稱", "所屬部門"]);
       
       if (idxEmpId < 0 || idxName < 0) {
         alert(`檔案解析失敗！未能找到必要的「員編」與「姓名」欄位。\n請確認表格標頭。`);
@@ -769,7 +769,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
   };
 
   const findColumnIndex = (rows: any[][], keywords: string[]): number => {
-    const maxSearchRows = Math.min(6, rows.length);
+    const maxSearchRows = Math.min(20, rows.length);
     
     // Pass 1: Exact matches (case-insensitive, trimmed)
     for (const kw of keywords) {
@@ -2879,7 +2879,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
           </div>
 
           {/* Independent Statistical Metrics Dashboard */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
             <div className="bg-white border border-amber-100 p-3 rounded-lg shadow-2xs">
               <span className="text-[10px] text-slate-400 font-bold block">排除人員合計總數</span>
               <span className="text-lg font-bold text-amber-850 font-mono">
@@ -2898,12 +2898,6 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                 {activeYearStats.excludedAvgSalary.toLocaleString()} <span className="text-xs font-normal text-slate-400">元/年</span>
               </span>
             </div>
-            <div className="bg-white border border-amber-100 p-3 rounded-lg shadow-2xs">
-              <span className="text-[10px] text-slate-400 font-bold block">排除人員平均福利</span>
-              <span className="text-lg font-bold text-emerald-800 font-mono">
-                {activeYearStats.excludedAvgWelfare.toLocaleString()} <span className="text-xs font-normal text-slate-400">元/年</span>
-              </span>
-            </div>
           </div>
 
           {/* Table display */}
@@ -2917,7 +2911,6 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                     <th className="py-2.5 px-4 text-center border-r border-slate-100 w-[30%]">部門</th>
                     <th className="py-2.5 px-4 text-center border-r border-slate-100 w-[15%]">排除身分</th>
                     <th className="py-2.5 px-4 text-center border-r border-slate-100 text-right pr-6 w-[14%]">全年薪資 (元)</th>
-                    <th className="py-2.5 px-4 text-center text-right pr-6 w-[14%]">全年福利 (元)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700 font-mono">
@@ -2949,9 +2942,6 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                       </td>
                       <td className="py-2.5 px-4 border-r border-slate-100 text-right pr-6 font-bold text-amber-900">
                         {e.salary.toLocaleString()}
-                      </td>
-                      <td className="py-2.5 px-4 text-right pr-6 text-slate-600">
-                        {e.welfare.toLocaleString()}
                       </td>
                     </tr>
                   ))}
@@ -3232,6 +3222,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                 <th className="py-2.5 px-2 w-8"></th>
                 <th className="py-2.5 px-3">員工編號</th>
                 <th className="py-2.5 px-3">姓名</th>
+                <th className="py-2.5 px-3">部門</th>
                 <th className="py-2.5 px-3 text-right">全年薪資總額 (NT$)</th>
                 <th className="py-2.5 px-3 text-center">年度</th>
                 {isHR && <th className="py-2.5 px-3 text-right">稽核操作</th>}
@@ -3271,6 +3262,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                           )}
                         </div>
                       </td>
+                      <td className="py-2.5 px-3 text-slate-500">{emp.department}</td>
                       <td className="py-2.5 px-3 text-right font-mono text-slate-800 font-semibold">{emp.salary.toLocaleString()}</td>
                       <td className="py-2.5 px-3 text-center font-mono">{emp.year}年</td>
                       {isHR && (
@@ -3296,7 +3288,7 @@ export default function ListingsReportTab({ user, onLogAction }: ListingsReportT
                     </tr>
                     {expandedEmpIds[emp.id] && hasDetails && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={isHR ? 6 : 5} className="p-4 border-t border-b border-slate-200">
+                        <td colSpan={isHR ? 7 : 6} className="p-4 border-t border-b border-slate-200">
                           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3 max-w-4xl mx-auto">
                             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                               <h5 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
