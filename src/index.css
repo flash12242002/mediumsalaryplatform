@@ -5,9 +5,12 @@
 /* PRINT MEDIA CUSTOM STYLESHEET (A4 FORMAL DOCUMENTS)                        */
 /* -------------------------------------------------------------------------- */
 @media print {
-  /* Hide everything in #root except the active print modal overlay */
-  #root > :not(.print-modal-overlay) {
-    display: none !important;
+  /* Hide everything except the active print modal overlay using visibility to support deeply nested modals */
+  body * {
+    visibility: hidden;
+  }
+  .print-modal-overlay, .print-modal-overlay * {
+    visibility: visible !important;
   }
   
   /* Reset background and scrollbars for clean printing */
