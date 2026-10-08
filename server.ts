@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import fs from 'fs';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
@@ -2458,7 +2459,7 @@ app.post('/api/hr/change-password', (req, res) => {
 });
 
 // Request Forgot Password (Simulated Email reset link)
-app.post('/api/hr/forgot-password', (req, res) => {
+app.post('/api/hr/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: '請輸入電子郵件' });
@@ -2486,18 +2487,62 @@ app.post('/api/hr/forgot-password', (req, res) => {
   const protocol = req.protocol || 'http';
   const resetLink = `${protocol}://${host}/?reset_token=${token}`;
 
-  console.log(`\n==========================================\n[模擬電子郵件通知 SMS / EMAIL SIMULATOR]\n==========================================\n收件者 (To): ${normalizedEmail}\n標題 (Subject): 雲朗集團人事系統 - HR管理者重設密碼信件\n內容 (Body):\n您好，請點選以下連結重設您的 HR 後台登入密碼（連結 30 分鐘內有效）：\n${resetLink}\n==========================================\n`);
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_PASS;
 
-  return res.json({
-    success: true,
-    message: '重設密碼信件已成功發送 (本系統已為您模擬收信通知)！',
-    simulatedEmail: {
-      to: normalizedEmail,
-      subject: '雲朗集團人事系統 - HR管理者重設密碼信件',
-      link: resetLink,
-      token: token
+  if (gmailUser && gmailPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailPass
+        }
+      });
+
+      await transporter.sendMail({
+        from: `"雲朗集團人事系統" <${gmailUser}>`,
+        to: normalizedEmail,
+        subject: '雲朗集團人事系統 - HR管理者重設密碼信件',
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: #4f46e5;">HR 管理者密碼重置</h2>
+            <p>您好，</p>
+            <p>請點選下方按鈕重設您的 HR 後台登入密碼（此連結將在 30 分鐘後失效）：</p>
+            <div style="margin: 30px 0;">
+              <a href="${resetLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">重設密碼</a>
+            </div>
+            <p style="color: #64748b; font-size: 12px; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+              如果您並未要求重設密碼，請忽略此封信件。<br>
+              若有任何問題，請聯絡系統管理員。
+            </p>
+          </div>
+        `
+      });
+
+      return res.json({
+        success: true,
+        message: '重設密碼信件已成功發送至您的信箱！'
+      });
+    } catch (err: any) {
+      console.error('發送郵件失敗:', err);
+      return res.status(500).json({ error: '郵件發送失敗，請檢查系統 Gmail 設定。錯誤訊息: ' + err.message });
     }
-  });
+  } else {
+    // Fallback to simulated email
+    console.log(`\n==========================================\n[模擬電子郵件通知 SMS / EMAIL SIMULATOR]\n==========================================\n收件者 (To): ${normalizedEmail}\n標題 (Subject): 雲朗集團人事系統 - HR管理者重設密碼信件\n內容 (Body):\n您好，請點選以下連結重設您的 HR 後台登入密碼（連結 30 分鐘內有效）：\n${resetLink}\n==========================================\n`);
+
+    return res.json({
+      success: true,
+      message: '【系統未設定 GMAIL_USER，已啟用模擬發送】重設密碼信件已成功發送 (本系統已為您模擬收信通知)！',
+      simulatedEmail: {
+        to: normalizedEmail,
+        subject: '雲朗集團人事系統 - HR管理者重設密碼信件',
+        link: resetLink,
+        token: token
+      }
+    });
+  }
 });
 
 // Confirm Password Reset with Token
