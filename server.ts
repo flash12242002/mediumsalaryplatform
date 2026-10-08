@@ -2466,11 +2466,17 @@ app.post('/api/hr/forgot-password', async (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const normalized = getNormalizedAdmins();
-  const exists = normalized.some(admin => admin.email === normalizedEmail);
-
-  if (!exists) {
-    return res.status(404).json({ error: '此電子郵件非授權之 HR 管理者，請與主要負責人聯絡' });
+  
+  try {
+    const db = await getDb();
+    const userRecord = await db.get(`SELECT * FROM users WHERE LOWER(email) = ? OR LOWER(username) = ?`, [normalizedEmail, normalizedEmail]);
+    
+    if (!userRecord) {
+      return res.status(404).json({ error: '此電子郵件非授權之 HR 管理者，請與主要負責人聯絡' });
+    }
+  } catch (err: any) {
+    console.error("Forgot password db error:", err);
+    return res.status(500).json({ error: "伺服器錯誤: " + err.message });
   }
 
   // Generate simple token: "tok_xxxx"
@@ -2546,7 +2552,7 @@ app.post('/api/hr/forgot-password', async (req, res) => {
 });
 
 // Confirm Password Reset with Token
-app.post('/api/hr/reset-password', (req, res) => {
+app.post('/api/hr/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || !newPassword) {
     return res.status(400).json({ error: '請提供重設 Token 與新密碼' });
@@ -2563,31 +2569,34 @@ app.post('/api/hr/reset-password', (req, res) => {
   }
 
   const normalizedEmail = record.email.toLowerCase().trim();
-  const normalized = getNormalizedAdmins();
-  const adminIndex = normalized.findIndex(admin => admin.email === normalizedEmail);
+  
+  try {
+    const db = await getDb();
+    const userRecord = await db.get(`SELECT * FROM users WHERE LOWER(email) = ? OR LOWER(username) = ?`, [normalizedEmail, normalizedEmail]);
 
-  if (adminIndex === -1) {
+    if (!userRecord) {
+      delete forgotPasswordTokens[token];
+      return res.status(404).json({ error: '找不到該管理員帳號' });
+    }
+
+    if (newPassword.length < 3) {
+      return res.status(400).json({ error: '密碼長度至少需 3 個字元' });
+    }
+
+    // Overwrite password in SQLite DB
+    await db.run(`UPDATE users SET password = ? WHERE id = ?`, [newPassword, userRecord.id]);
+
+    // Burn token
     delete forgotPasswordTokens[token];
-    return res.status(404).json({ error: '找不到該管理員帳號' });
+
+    logActivity(req, '人資管理系統', 'RESET_PASSWORD', `HR管理員依靠重設信完成重設密碼: ${normalizedEmail}`);
+    saveDatabase();
+
+    return res.json({ success: true, message: '密碼重設成功！請回到登入頁面並使用新密碼進行登入。' });
+  } catch (err: any) {
+    console.error("Reset password error:", err);
+    return res.status(500).json({ error: "伺服器錯誤: " + err.message });
   }
-
-  if (newPassword.length < 3) {
-    return res.status(400).json({ error: '密碼長度至少需 3 個字元' });
-  }
-
-  // Overwrite password
-  hrAdmins[adminIndex] = {
-    email: normalizedEmail,
-    password: newPassword
-  };
-
-  // Burn token
-  delete forgotPasswordTokens[token];
-
-  logActivity(req, '人資管理系統', 'RESET_PASSWORD', `HR管理員依靠重設信完成重設密碼: ${normalizedEmail}`);
-  saveDatabase();
-
-  return res.json({ success: true, message: '密碼重設成功！請回到登入頁面並使用新密碼進行登入。' });
 });
 
 // 3. Employee Endpoints
